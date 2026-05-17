@@ -11,9 +11,15 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
+    "autoprefixer": "^10.5.0",
+    "axios": "^1.16.1",
+    "postcss": "^8.5.14",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "tailwindcss": "^4.3.0"
+    "react-router-dom": "^7.15.1",
+    "recharts": "^3.8.1",
+    "tailwindcss": "^4.3.0",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
