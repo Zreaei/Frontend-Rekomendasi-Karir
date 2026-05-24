@@ -1,4 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import PublicRoute from './PublicRoute'
+import ProtectedRoute from './ProtectedRoute'
+import LandingPage from '../pages/LandingPage.page'
+import LoginPage from '../pages/LoginPage.page'
+import AdminDashboard from '../pages/admin/AdminDashboard.page'
+import UniversityDashboard from '../pages/university/UniversityDashboard.page'
+import CompanyDashboard from '../pages/company/CompanyDashboard.page'
+import UniversityStaffDashboard from '../pages/university_staff/UniversityStaffDashboard.page'
+import CompanyStaffDashboard from '../pages/company_staff/CompanyStaffDashboard.page'
+import StudentDashboard from '../pages/student/StudentDashboard.page'
 
 const AppRouter = () => {
   return (
@@ -7,6 +17,74 @@ const AppRouter = () => {
         path='/'
         element={
           <Navigate to='/landing' replace />
+        }
+      />
+      
+      {/* Public Routes */}
+      <Route
+        path='/landing'
+        element={
+          <PublicRoute>
+            <LandingPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/login'
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
+
+      {/* Protected Routes */}
+      <Route
+        path='/admin'
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path='/university'
+        element={
+          <ProtectedRoute allowedRoles={['university']}>
+            <UniversityDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path='/company'
+        element={
+          <ProtectedRoute allowedRoles={['company']}>
+            <CompanyDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path='/university-staff'
+        element={
+          <ProtectedRoute allowedRoles={['university_staff']}>
+            <UniversityStaffDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path='/company-staff'
+        element={
+          <ProtectedRoute allowedRoles={['company_staff']}>
+            <CompanyStaffDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path='/student'
+        element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentDashboard />
+          </ProtectedRoute>
         }
       />
     </Routes>
