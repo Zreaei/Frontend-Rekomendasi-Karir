@@ -9,6 +9,8 @@ import CompanyDashboard from '../pages/company/CompanyDashboard.page'
 import UniversityStaffDashboard from '../pages/university_staff/UniversityStaffDashboard.page'
 import CompanyStaffDashboard from '../pages/company_staff/CompanyStaffDashboard.page'
 import StudentDashboard from '../pages/student/StudentDashboard.page'
+import StudentJobMatching from '../pages/student/StudentJobMatching.page'
+import StudentJobApply from '../pages/student/StudentJobApply.page'
 
 const AppRouter = () => {
   return (
@@ -82,9 +84,25 @@ const AppRouter = () => {
       <Route
         path='/student'
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <PublicRoute>
             <StudentDashboard />
-          </ProtectedRoute>
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/job-matching'
+        element={
+          <PublicRoute>
+            <StudentJobMatching />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/job-apply'
+        element={
+          <PublicRoute>
+            <StudentJobApply />
+          </PublicRoute>
         }
       />
     </Routes>
