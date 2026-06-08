@@ -11,7 +11,7 @@ const StatusPill = ({ label, tone = 'info' }: StatusPillProps) => {
     info: 'text-[#0d6efd]',
   }[tone]
 
-  return <span className={`inline-flex items-center justify-start text-sm font-semibold ${toneClass}`}>{label}</span>
+  return <span className={`inline-flex items-center justify-start text-[13px] font-semibold ${toneClass}`}>{label}</span>
 }
 
 export default StatusPill

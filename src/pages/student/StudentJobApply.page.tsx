@@ -51,7 +51,7 @@ const StudentJobApply = () => {
         description="Pantau status lowongan pekerjaan yang Anda lamar"
       />
 
-      <div className="grid grid-cols-4 gap-[clamp(14px,1.5vw,22px)] max-[960px]:grid-cols-2">
+      <div className="grid grid-cols-4 gap-3.5 max-[960px]:grid-cols-2">
         {stats.map((stat) => (
           <StatCard
             key={stat.title}
@@ -62,15 +62,15 @@ const StudentJobApply = () => {
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2.5">
         {filters.map((filter, index) => (
           <FilterPill key={filter} label={filter} active={index === 0} />
         ))}
       </div>
 
       <section>
-        <div className="mt-[26px] grid min-w-0 gap-4">
-          <div className="grid grid-cols-5 items-center gap-3 text-[clamp(16px,1.15vw,18px)] font-bold text-[#050505] max-sm:grid-cols-1">
+        <div className="mt-5 grid min-w-0 gap-3.5">
+          <div className="grid grid-cols-5 items-center gap-3 text-[14px] font-bold text-[#050505] max-sm:grid-cols-1">
             <span>Posisi</span>
             <span>Tanggal</span>
             <span>Match</span>
@@ -78,14 +78,14 @@ const StudentJobApply = () => {
             <span>Aksi</span>
           </div>
           {applications.map((item) => (
-            <div className="grid grid-cols-5 items-center gap-3 text-sm max-sm:grid-cols-1" key={item.role}>
+            <div className="grid grid-cols-5 items-center gap-3 text-[13px] max-sm:grid-cols-1" key={item.role}>
               <span>{item.role}</span>
               <span>{item.date}</span>
               <span className={`font-semibold ${Number.parseInt(item.match) < 80 ? 'text-[#c46d00]' : 'text-[#007f65]'}`}>
                 {item.match}
               </span>
               <StatusPill label={item.status} tone={item.tone} />
-              <button className="w-fit rounded-[5px] bg-[#0d6efd] px-3 py-1.5 text-sm font-semibold text-white transition-transform hover:-translate-y-px" type="button">
+              <button className="w-fit rounded-[5px] bg-[#0d6efd] px-3 py-1.5 text-[13px] font-semibold text-white transition-transform hover:-translate-y-px" type="button">
                 Detail
               </button>
             </div>

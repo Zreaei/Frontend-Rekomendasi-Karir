@@ -11,6 +11,7 @@ import CompanyStaffDashboard from '../pages/company_staff/CompanyStaffDashboard.
 import StudentDashboard from '../pages/student/StudentDashboard.page'
 import StudentJobMatching from '../pages/student/StudentJobMatching.page'
 import StudentJobApply from '../pages/student/StudentJobApply.page'
+import StudentCompetencyProfile from '../pages/student/StudentCompetencyProfile.page'
 
 const AppRouter = () => {
   return (
@@ -102,6 +103,14 @@ const AppRouter = () => {
         element={
           <PublicRoute>
             <StudentJobApply />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/competency-profile'
+        element={
+          <PublicRoute>
+            <StudentCompetencyProfile />
           </PublicRoute>
         }
       />

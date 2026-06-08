@@ -48,16 +48,16 @@ const StudentJobMatching = () => {
         description="Rekomendasi lowongan pekerjaan berdasarkan kompetensi Anda"
       />
 
-      <div className="grid gap-6">
+      <div className="grid gap-4">
         <SearchBar placeholder="Search" />
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2.5">
           {filters.map((filter) => (
             <FilterPill key={filter} label={filter} caret />
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-[clamp(28px,4vw,64px)] max-[960px]:grid-cols-1">
+      <div className="grid grid-cols-3 gap-10 max-[960px]:grid-cols-1">
         {jobs.map((job) => (
           <JobCard key={job.title} {...job} />
         ))}

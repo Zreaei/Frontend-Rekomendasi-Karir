@@ -54,14 +54,14 @@ const StudentDashboard = () => {
 
   return (
     <StudentLayout>
-      <div className="flex flex-wrap items-center justify-between gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-[clamp(26px,2vw,32px)] font-bold leading-tight text-[#050505]">Selamat Datang, Christian</h1>
-          <p className="mt-2.5 text-sm text-[#050505]">Mulai cari, pantau, dan terima lowongan pekerjaan sesuai kriteria Anda</p>
+          <h1 className="text-[26px] font-bold leading-tight text-[#050505]">Selamat Datang, Christian</h1>
+          <p className="mt-2 text-[14px] text-[#050505]">Mulai cari, pantau, dan terima lowongan pekerjaan sesuai kriteria Anda</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-[clamp(14px,1.5vw,22px)] max-[960px]:grid-cols-2">
+      <div className="grid grid-cols-4 gap-3.5 max-[960px]:grid-cols-2">
         {stats.map((stat) => (
           <StatCard
             key={stat.title}
@@ -76,17 +76,17 @@ const StudentDashboard = () => {
         <section>
           <SectionHeader
             title="Rekomendasi Lowongan Terbaru"
-            action={<button className="border-none bg-transparent text-sm font-normal text-[#050505]">Lihat Semua</button>}
+            action={<button className="border-none bg-transparent text-[13px] font-normal text-[#050505]">Lihat Semua</button>}
           />
-          <div className="mt-[clamp(22px,2.4vw,30px)] grid gap-[clamp(20px,2.2vw,28px)]">
+          <div className="mt-6 grid gap-5">
             {recommendedJobs.map((job) => (
-              <div className="flex items-center gap-[18px]" key={job.title}>
-                <div className="grid h-12 w-12 flex-none place-items-center rounded-[5px] bg-[#0d6efd] text-white [&_svg]:h-[23px] [&_svg]:w-[23px]" aria-hidden="true">
+              <div className="flex items-center gap-4" key={job.title}>
+                <div className="grid h-11 w-11 flex-none place-items-center rounded-[5px] bg-[#0d6efd] text-white [&_svg]:h-[20px] [&_svg]:w-[20px]" aria-hidden="true">
                   {job.icon}
                 </div>
                 <div>
-                  <p className="text-[clamp(16px,1.15vw,18px)] font-semibold text-[#050505]">{job.title}</p>
-                  <p className="mt-0.5 text-sm text-[#050505]">
+                  <p className="text-[15px] font-semibold text-[#050505]">{job.title}</p>
+                  <p className="mt-0.5 text-[13px] text-[#050505]">
                     {job.location} ({job.type})
                   </p>
                 </div>
@@ -98,16 +98,16 @@ const StudentDashboard = () => {
         <section>
           <SectionHeader
             title="Berkas Lamaran Terbaru"
-            action={<button className="border-none bg-transparent text-sm font-normal text-[#050505]">Detail</button>}
+            action={<button className="border-none bg-transparent text-[13px] font-normal text-[#050505]">Detail</button>}
           />
-          <div className="mt-[clamp(22px,2.4vw,30px)] grid gap-[clamp(20px,2.2vw,28px)]">
-            <div className="flex items-center gap-[18px]">
-              <div className="grid h-12 w-12 flex-none place-items-center rounded-[5px] bg-[#0d6efd] text-white [&_svg]:h-[23px] [&_svg]:w-[23px]" aria-hidden="true">
-                <Network size={22} strokeWidth={2} />
+          <div className="mt-6 grid gap-5">
+            <div className="flex items-center gap-4">
+              <div className="grid h-11 w-11 flex-none place-items-center rounded-[5px] bg-[#0d6efd] text-white [&_svg]:h-[20px] [&_svg]:w-[20px]" aria-hidden="true">
+                <Network size={20} strokeWidth={2} />
               </div>
               <div>
-                <p className="text-[clamp(16px,1.15vw,18px)] font-semibold text-[#050505]">Fullstack Developer</p>
-                <p className="mt-0.5 text-sm text-[#050505]">Bandung (Full-Time)</p>
+                <p className="text-[15px] font-semibold text-[#050505]">Fullstack Developer</p>
+                <p className="mt-0.5 text-[13px] text-[#050505]">Bandung (Full-Time)</p>
               </div>
             </div>
           </div>
@@ -117,17 +117,17 @@ const StudentDashboard = () => {
       <section>
         <SectionHeader
           title="Lamaran Terbaru"
-          action={<button className="border-none bg-transparent text-sm font-normal text-[#050505]">Lihat Semua</button>}
+          action={<button className="border-none bg-transparent text-[13px] font-normal text-[#050505]">Lihat Semua</button>}
         />
-        <div className="mt-[26px] grid min-w-0 gap-4">
-          <div className="grid grid-cols-4 items-center gap-3 text-[clamp(16px,1.15vw,18px)] font-bold text-[#050505] max-sm:grid-cols-1">
+        <div className="mt-5 grid min-w-0 gap-3.5">
+          <div className="grid grid-cols-4 items-center gap-3 text-[14px] font-bold text-[#050505] max-sm:grid-cols-1">
             <span>Posisi</span>
             <span>Tanggal</span>
             <span>Match</span>
             <span>Status</span>
           </div>
           {recentApplications.map((item) => (
-            <div className="grid grid-cols-4 items-center gap-3 text-sm max-sm:grid-cols-1" key={item.role}>
+            <div className="grid grid-cols-4 items-center gap-3 text-[13px] max-sm:grid-cols-1" key={item.role}>
               <span>{item.role}</span>
               <span>{item.date}</span>
               <span className={`font-semibold ${Number.parseInt(item.match) < 80 ? 'text-[#c46d00]' : 'text-[#007f65]'}`}>

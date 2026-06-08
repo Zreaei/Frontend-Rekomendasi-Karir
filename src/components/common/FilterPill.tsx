@@ -9,7 +9,7 @@ interface FilterPillProps {
 const FilterPill = ({ label, active, caret }: FilterPillProps) => {
   return (
     <button
-      className={`inline-flex h-7 min-w-[76px] items-center justify-center gap-1.5 rounded-full border px-3 text-xs font-semibold ${
+      className={`inline-flex h-7 min-w-[68px] items-center justify-center gap-1.5 rounded-full border px-3 text-[11px] font-semibold ${
         active ? 'border-transparent bg-[#5aa2ff] text-white' : 'border-[#aeb4bf] bg-white text-[#050505]'
       }`}
       type="button"
