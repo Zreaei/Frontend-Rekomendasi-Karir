@@ -23,7 +23,6 @@ const JobCard = ({
   type,
   salary,
   posted,
-  actionLabel = 'Detail',
 }: JobCardProps) => {
   return (
     <article className="grid min-w-0 gap-4">
@@ -35,9 +34,6 @@ const JobCard = ({
           <h3 className="text-[16px] font-bold text-[#050505]">{title}</h3>
           <p className="mt-1 text-[13px] text-[#050505]">{category}</p>
         </div>
-        <button className="rounded-[5px] bg-[#0d6efd] px-3 py-1.5 text-[13px] font-semibold text-white" type="button">
-          {actionLabel}
-        </button>
       </div>
       <div className="flex flex-wrap gap-2.5">
         {tags.map((tag) => (

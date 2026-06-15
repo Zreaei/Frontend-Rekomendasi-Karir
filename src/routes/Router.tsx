@@ -12,6 +12,8 @@ import StudentDashboard from '../pages/student/StudentDashboard.page'
 import StudentJobMatching from '../pages/student/StudentJobMatching.page'
 import StudentJobApply from '../pages/student/StudentJobApply.page'
 import StudentCompetencyProfile from '../pages/student/StudentCompetencyProfile.page'
+import StudentNotification from '../pages/student/StudentNotification.page'
+import StudentHelp from '../pages/student/StudentHelp.page'
 
 const AppRouter = () => {
   return (
@@ -111,6 +113,22 @@ const AppRouter = () => {
         element={
           <PublicRoute>
             <StudentCompetencyProfile />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/notification'
+        element={
+          <PublicRoute>
+            <StudentNotification />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/help'
+        element={
+          <PublicRoute>
+            <StudentHelp />
           </PublicRoute>
         }
       />

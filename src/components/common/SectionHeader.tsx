@@ -8,7 +8,7 @@ interface SectionHeaderProps {
 
 const SectionHeader = ({ title, action, description }: SectionHeaderProps) => {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3 mt-3">
       <div>
         <h2 className={`${description ? 'text-[24px]' : 'text-[17px]'} font-bold leading-tight text-[#050505]`}>
           {title}

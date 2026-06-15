@@ -3,6 +3,8 @@ import {
   Briefcase,
   FileInput,
   GraduationCap,
+  ChevronLeft,
+  ChevronRight,
   LayoutDashboard,
   Bell,
   CircleQuestionMark,
@@ -10,82 +12,123 @@ import {
   User,
 } from 'lucide-react'
 
-const StudentSidebar = () => {
+interface StudentSidebarProps {
+  collapsed: boolean
+  onToggle: () => void
+}
+
+const StudentSidebar = ({ collapsed, onToggle }: StudentSidebarProps) => {
   const navBase =
-    'group flex min-h-9 items-center gap-2 rounded px-2 py-1.5 text-[15px] font-medium leading-none !text-white transition-colors hover:bg-white/10 hover:!text-white'
+    `group grid h-11 min-h-11 w-full grid-cols-[44px_minmax(0,1fr)] items-center overflow-hidden rounded-md px-0 text-[15px] font-medium leading-none !text-white transition-[width,background-color,margin] duration-300 ease-in-out hover:bg-white/10 hover:!text-white`
+  const navState = collapsed ? 'mx-auto w-11' : ''
   const navActive = '!bg-[#0d6efd] !text-white hover:!bg-[#0d6efd] hover:!text-white'
-  const iconBase = 'grid h-4 w-4 flex-none place-items-center !text-white transition-colors group-hover:!text-white'
+  const iconBase =
+    'grid h-auto w-auto flex-none place-items-center !text-white transition-colors group-hover:!text-white'
+  const labelClass = `whitespace-nowrap text-sm text-left transition-[max-width,opacity,transform] duration-300 ease-in-out ${
+    collapsed ? 'max-w-0 opacity-0 translate-x-0' : 'max-w-[180px] opacity-100 translate-x-0'
+  }`
 
   return (
-    <aside className="sticky top-0 flex h-[100svh] flex-col gap-9 overflow-y-auto border-r border-[#0a2c66] bg-[#052960] px-4 pb-5 pt-4 max-[1200px]:static max-[1200px]:h-auto max-[1200px]:flex-row max-[1200px]:items-center max-[1200px]:overflow-x-auto">
-      <div className="flex items-center gap-3">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-[#0d6efd] text-white" aria-hidden="true">
-          <GraduationCap size={22} strokeWidth={2} />
+    <aside
+      className={`sticky top-0 flex h-[100svh] shrink-0 flex-col gap-9 overflow-hidden overflow-y-auto border-r border-[#0a2c66] bg-[#052960] px-4 pb-5 pt-4 transition-[width] duration-300 ease-in-out max-[1200px]:static max-[1200px]:h-auto max-[1200px]:w-full max-[1200px]:flex-row max-[1200px]:items-center max-[1200px]:overflow-x-auto ${
+        collapsed ? 'w-[76px]' : 'w-[280px]'
+      }`}
+    >
+      {!collapsed ? (
+        <button
+          className="absolute right-4 top-6 grid h-8 w-8 place-items-center rounded-md text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+          type="button"
+          aria-label="Collapse sidebar"
+          onClick={onToggle}
+        >
+          <ChevronLeft size={20} strokeWidth={2} />
+        </button>
+      ) : null}
+
+      <div className={`grid grid-cols-[44px_minmax(0,1fr)] items-center gap-3 pr-8 transition-all duration-300 ease-in-out ${collapsed ? 'mx-0' : ''}`}>
+        <div className="group/brand relative flex h-11 w-11 min-w-11 max-w-11 flex-none items-center justify-center rounded-lg bg-[#0d6efd] text-white" aria-hidden="true">
+          <GraduationCap size={20} strokeWidth={2} />
+          {collapsed ? (
+            <button
+              className="absolute grid h-10 w-10 place-items-center rounded-lg bg-[#0d6efd] text-white opacity-0 transition-opacity group-hover/brand:opacity-100"
+              type="button"
+              aria-label="Expand sidebar"
+              onClick={onToggle}
+            >
+              <ChevronRight size={20} strokeWidth={2.5} />
+            </button>
+          ) : null}
         </div>
-        <div>
-          <p className="text-[17px] font-semibold !text-white">CareerSync</p>
-          <p className="mt-0.5 text-[15px] !text-white">Mahasiswa</p>
+        <div className={labelClass}>
+          <p className="text-[17px] font-semibold text-white!">CareerSync</p>
+          <p className="mt-0.5 text-[15px] text-white!">Mahasiswa</p>
         </div>
       </div>
 
-      <nav className="grid gap-2 max-[1200px]:flex max-[1200px]:gap-2" aria-label="Student navigation">
+      <nav className="grid gap-2 transition-all duration-300 ease-in-out max-[1200px]:flex max-[1200px]:gap-2" aria-label="Student navigation">
         <NavLink
           to="/student"
           end
-          className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}
+          className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}
         >
           <span className={iconBase} aria-hidden="true">
-            <LayoutDashboard size={18} strokeWidth={2} />
+            <LayoutDashboard size={20} strokeWidth={2} />
           </span>
-          Dashboard
+          <span className={labelClass}>Dashboard</span>
         </NavLink>
         <NavLink
           to="/student/job-matching"
-          className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}
+          className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}
         >
           <span className={iconBase} aria-hidden="true">
             <Briefcase size={20} strokeWidth={2} />
           </span>
-          Job Matching
+          <span className={labelClass}>Job Matching</span>
         </NavLink>
         <NavLink
           to="/student/job-apply"
-          className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}
+          className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}
         >
           <span className={iconBase} aria-hidden="true">
             <FileInput size={20} strokeWidth={2} />
           </span>
-          Job Apply
+          <span className={labelClass}>Job Apply</span>
         </NavLink>
         <NavLink
           to="/student/competency-profile"
-          className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}
+          className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}
         >
           <span className={iconBase} aria-hidden="true">
             <User size={20} strokeWidth={2} />
           </span>
-          Competency Profile
+          <span className={labelClass}>Competency Profile</span>
         </NavLink>
       </nav>
 
-      <div className="mt-auto grid gap-3 max-[1200px]:mt-0 max-[1200px]:flex max-[1200px]:gap-2">
-        <button className={navBase} type="button">
+      <div className="mt-auto grid gap-3 transition-all duration-300 ease-in-out max-[1200px]:mt-0 max-[1200px]:flex max-[1200px]:gap-2">
+        <NavLink
+          to="/student/notification"
+          className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}
+        >
           <span className={iconBase} aria-hidden="true">
-            <Bell size={17} strokeWidth={2} />
+            <Bell size={20} strokeWidth={2} />
           </span>
-          Notification
-        </button>
-        <button className={navBase} type="button">
+          <span className={labelClass}>Notification</span>
+        </NavLink>
+        <NavLink
+          to="/student/help"
+          className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}
+        >
           <span className={iconBase} aria-hidden="true">
-            <CircleQuestionMark size={17} strokeWidth={2} />
+            <CircleQuestionMark size={20} strokeWidth={2} />
           </span>
-          Help
-        </button>
-        <button className={navBase} type="button">
+          <span className={labelClass}>Help</span>
+        </NavLink>
+        <button className={`${navBase} ${navState}`} type="button">
           <span className={iconBase} aria-hidden="true">
-            <LogOut size={17} strokeWidth={2} />
+            <LogOut size={20} strokeWidth={2} />
           </span>
-          Exit
+          <span className={labelClass}>Exit</span>
         </button>
       </div>
     </aside>

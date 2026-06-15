@@ -38,8 +38,8 @@ const StudentCompetencyProfile = () => {
       />
       <div className="space-y-10">
         <section className="grid grid-cols-[170px_minmax(0,1fr)] items-start gap-8 max-[960px]:grid-cols-1">
-          <div className="flex h-[170px] w-[170px] items-center justify-center rounded-[4px] bg-[#0d6efd] text-white">
-            <User size={34} strokeWidth={2} />
+          <div className="flex h-[170px] w-[170px] items-center justify-center rounded-sm bg-[#0d6efd] text-white">
+            <User size={50} strokeWidth={2} />
           </div>
 
           <div className="grid grid-cols-3 gap-x-10 gap-y-8 max-[960px]:grid-cols-2 max-sm:grid-cols-1">
@@ -61,7 +61,7 @@ const StudentCompetencyProfile = () => {
         </div>
 
         <section className="space-y-6">
-          <div className="flex items-center gap-8 overflow-x-auto border-b border-[#0d6efd] pb-4 text-[15px] text-[#050505]">
+          <div className="flex items-center gap-18 overflow-x-auto border-b border-[#0d6efd] pb-4 text-[15px] text-[#050505]">
             {semesters.map((semester, index) => (
               <button
                 key={semester}
@@ -73,7 +73,7 @@ const StudentCompetencyProfile = () => {
                 {semester}
               </button>
             ))}
-            <span className="ml-auto text-xl leading-none text-[#5c5c5c]">...</span>
+            <span className="text-xl leading-none text-[#5c5c5c]">...</span>
             <span className="text-xl leading-none text-[#5c5c5c]">&raquo;</span>
           </div>
 
