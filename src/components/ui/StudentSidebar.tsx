@@ -6,9 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
-  Bell,
-  CircleQuestionMark,
-  LogOut,
   User,
 } from 'lucide-react'
 
@@ -30,8 +27,8 @@ const StudentSidebar = ({ collapsed, onToggle }: StudentSidebarProps) => {
 
   return (
     <aside
-      className={`sticky top-0 flex h-[100svh] shrink-0 flex-col gap-9 overflow-hidden overflow-y-auto border-r border-[#0a2c66] bg-[#052960] px-4 pb-5 pt-4 transition-[width] duration-300 ease-in-out max-[1200px]:static max-[1200px]:h-auto max-[1200px]:w-full max-[1200px]:flex-row max-[1200px]:items-center max-[1200px]:overflow-x-auto ${
-        collapsed ? 'w-[76px]' : 'w-[280px]'
+      className={`sticky rounded-l-xl top-0 flex h-full shrink-0 flex-col gap-9 overflow-hidden bg-[#052960] px-4 pb-5 pt-4 transition-[width] duration-300 ease-in-out ${
+        collapsed ? 'w-19' : 'w-70'
       }`}
     >
       {!collapsed ? (
@@ -104,33 +101,6 @@ const StudentSidebar = ({ collapsed, onToggle }: StudentSidebarProps) => {
           <span className={labelClass}>Competency Profile</span>
         </NavLink>
       </nav>
-
-      <div className="mt-auto grid gap-3 transition-all duration-300 ease-in-out max-[1200px]:mt-0 max-[1200px]:flex max-[1200px]:gap-2">
-        <NavLink
-          to="/student/notification"
-          className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}
-        >
-          <span className={iconBase} aria-hidden="true">
-            <Bell size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Notification</span>
-        </NavLink>
-        <NavLink
-          to="/student/help"
-          className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}
-        >
-          <span className={iconBase} aria-hidden="true">
-            <CircleQuestionMark size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Help</span>
-        </NavLink>
-        <button className={`${navBase} ${navState}`} type="button">
-          <span className={iconBase} aria-hidden="true">
-            <LogOut size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Exit</span>
-        </button>
-      </div>
     </aside>
   )
 }

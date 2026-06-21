@@ -69,7 +69,7 @@ const StudentJobApply = () => {
       </div>
 
       <section>
-        <div className="mt-5 grid min-w-0 gap-3.5">
+        <div className="grid min-w-0 gap-3.5 bg-white p-6 rounded-xl shadow-md">
           <div className="grid grid-cols-5 items-center gap-3 text-[14px] font-bold text-[#050505] max-sm:grid-cols-1">
             <span>Posisi</span>
             <span>Tanggal</span>

@@ -25,7 +25,7 @@ const JobCard = ({
   posted,
 }: JobCardProps) => {
   return (
-    <article className="grid min-w-0 gap-4">
+    <article className="grid min-w-0 gap-4 bg-white p-6 rounded-xl shadow-md">
       <div className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-[5px] bg-[#0d6efd] text-white [&_svg]:h-5 [&_svg]:w-5" aria-hidden="true">
           {icon}

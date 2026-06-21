@@ -3,7 +3,7 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Raleway', system-ui, sans-serif;
   color: #050505;
   background: #ffffff;
   overflow-x: hidden;
@@ -17,3 +17,12 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+.no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
