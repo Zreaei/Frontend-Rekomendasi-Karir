@@ -71,7 +71,7 @@ const StudentDashboard = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-5 max-[960px]:grid-cols-1">
-        <section className="bg-white p-6 rounded-xl shadow-md">
+        <section className="bg-white p-6 rounded-xl shadow-sm">
           <SectionHeader
             title="Rekomendasi Lowongan Terbaru"
             action={<button className="border-none bg-transparent text-[13px] font-medium">Lihat Semua</button>}
@@ -93,7 +93,7 @@ const StudentDashboard = () => {
           </div>
         </section>
 
-        <section className="bg-white p-6 rounded-xl shadow-md">
+        <section className="bg-white p-6 rounded-xl shadow-sm">
           <SectionHeader
             title="Berkas Lamaran Terbaru"
             action={<button className="border-none bg-transparent text-[13px] font-medium">Detail</button>}
@@ -112,7 +112,7 @@ const StudentDashboard = () => {
         </section>
       </div>
 
-      <section className="bg-white p-6 rounded-xl shadow-md">
+      <section className="bg-white p-6 rounded-xl shadow-sm">
         <SectionHeader
           title="Lamaran Terbaru"
           action={<button className="border-none bg-transparent text-[13px] font-medium">Lihat Semua</button>}

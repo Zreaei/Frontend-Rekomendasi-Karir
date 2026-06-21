@@ -37,7 +37,7 @@ const StudentCompetencyProfile = () => {
         description="Informasi pengguna, data akademik, dan capaian pembelajaran mata kuliah"
       />
       <div className="space-y-10">
-        <section className="grid bg-white p-6 rounded-xl shadow-md grid-cols-[170px_minmax(0,1fr)] items-start gap-8 max-[960px]:grid-cols-1">
+        <section className="grid bg-white p-6 rounded-xl shadow-sm grid-cols-[170px_minmax(0,1fr)] items-start gap-8 max-[960px]:grid-cols-1">
           <div className="flex h-42.5 w-42.5 items-center justify-center rounded-sm bg-[#0d6efd] text-white">
             <User size={50} strokeWidth={2} />
           </div>
@@ -60,7 +60,7 @@ const StudentCompetencyProfile = () => {
           ))}
         </div>
 
-        <section className="space-y-6 bg-white p-6 rounded-xl shadow-md">
+        <section className="space-y-6 bg-white p-6 rounded-xl shadow-sm">
           <div className="flex items-center gap-18 overflow-x-auto border-b border-[#0d6efd] pb-4 text-[15px] text-[#050505]">
             {semesters.map((semester, index) => (
               <button

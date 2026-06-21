@@ -13,12 +13,23 @@ interface StudentUiState {
 export const useStudentUiStore = create<StudentUiState>()(
   persist(
     (set) => ({
+      // Default state
       sidebarCollapsed: false,
       rightsideMenuCollapsed: false,
-      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-      toggleRightsideMenu: () => set((state) => ({ rightsideMenuCollapsed: !state.rightsideMenuCollapsed })),
-      setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
-      setRightsideMenuCollapsed: (value) => set({ rightsideMenuCollapsed: value }),
+
+      // Actions
+      toggleSidebar: () => set((state) => ({ 
+        sidebarCollapsed: !state.sidebarCollapsed 
+      })),
+      toggleRightsideMenu: () => set((state) => ({ 
+        rightsideMenuCollapsed: !state.rightsideMenuCollapsed 
+      })),
+      setSidebarCollapsed: (value) => set({ 
+        sidebarCollapsed: value 
+      }),
+      setRightsideMenuCollapsed: (value) => set({ 
+        rightsideMenuCollapsed: value 
+      }),
     }),
     { name: 'student-ui-store' },
   ),

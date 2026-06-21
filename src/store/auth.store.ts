@@ -22,19 +22,56 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
 	persist(
 		(set) => ({
+			// Default state
 			isAuthenticated: false,
 			role: null,
 			token: null,
-			loginAsAdmin: (token) => set({ isAuthenticated: true, role: 'admin', token: token ?? null }),
-			loginAsUniversity: (token) => set({ isAuthenticated: true, role: 'university', token: token ?? null }),
-			loginAsCompany: (token) => set({ isAuthenticated: true, role: 'company', token: token ?? null }),
-			loginAsUniversityStaff: (token) => set({ isAuthenticated: true, role: 'university_staff', token: token ?? null }),
-			loginAsCompanyStaff: (token) => set({ isAuthenticated: true, role: 'company_staff', token: token ?? null }),
-			loginAsStudent: (token) => set({ isAuthenticated: true, role: 'student', token: token ?? null }),
-			logout: () => set({ isAuthenticated: false, role: null, token: null }),
-			setAuthenticated: (value) => set({ isAuthenticated: value }),
-			setRole: (role) => set({ role }),
-			setToken: (token) => set({ token }),
+			
+			// Actions
+			loginAsAdmin: (token) => set({ 
+				isAuthenticated: true,
+				role: 'admin',
+				token: token ?? null 
+			}),
+			loginAsUniversity: (token) => set({ 
+				isAuthenticated: true, 
+				role: 'university', 
+				token: token ?? null 
+			}),
+			loginAsCompany: (token) => set({ 
+				isAuthenticated: true, 
+				role: 'company', 
+				token: token ?? null 
+			}),
+			loginAsUniversityStaff: (token) => set({ 
+				isAuthenticated: true, 
+				role: 'university_staff', 
+				token: token ?? null 
+			}),
+			loginAsCompanyStaff: (token) => set({ 
+				isAuthenticated: true, 
+				role: 'company_staff', 
+				token: token ?? null 
+			}),
+			loginAsStudent: (token) => set({ 
+				isAuthenticated: true, 
+				role: 'student', 
+				token: token ?? null 
+			}),
+			logout: () => set({ 
+				isAuthenticated: false,
+				role: null, 
+				token: null 
+			}),
+			setAuthenticated: (value) => set({ 
+				isAuthenticated: value 
+			}),
+			setRole: (role) => set({ 
+				role 
+			}),
+			setToken: (token) => set({ 
+				token 
+			}),
 		}),
 		{ name: 'auth-store' },
 	),

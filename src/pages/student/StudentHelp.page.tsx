@@ -51,24 +51,24 @@ const StudentHelp = () => {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-gray-200 content-center">
       <button
-        className="flex fixed top-8 left-8 py-2 items-center gap-2 rounded-md border border-[#d9dce5] bg-white px-3 text-[14px] font-semibold text-[#232342] shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition-colors hover:bg-[#f4f6fb]"
+        className="flex fixed top-8 left-8 py-2 items-center gap-2 rounded-md border border-[#d9dce5] bg-white px-3 text-[14px] font-semibold text-[#232342] shadow-sm transition-colors hover:bg-[#f4f6fb]"
         type="button"
         onClick={handleBack}
       >
         <ArrowLeft size={18} strokeWidth={2} aria-hidden="true" />
       </button>
 
-      <section className="bg-[#f0eefc] px-14 pb-16 pt-8">
+      <section className="pb-10">
         <div className="relative mx-auto text-center">
-          <h1 className="mt-10 text-[30px] font-bold leading-tight text-[#050505]">
+          <h1 className="text-[30px] font-bold">
             Butuh bantuan?
           </h1>
-          <div className="mx-auto mt-5 flex h-11 max-w-[435px] items-center gap-3 rounded-md bg-white px-4 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+          <div className="mx-auto mt-5 flex h-11 max-w-100 items-center gap-3 rounded-md bg-white px-4 shadow-sm">
             <Search className="text-[#9a9aaa]" size={18} strokeWidth={1.8} aria-hidden="true" />
             <input
-              className="h-full min-w-0 flex-1 border-none bg-transparent text-[13px] text-[#232342] outline-none placeholder:text-[#9a9aaa]"
+              className="h-full min-w-0 flex-1 border-none bg-transparent text-[13px] outline-none placeholder:text-[#9a9aaa]"
               placeholder="Search for help"
               type="search"
             />
@@ -76,13 +76,13 @@ const StudentHelp = () => {
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-[760px] grid-cols-2 gap-x-10 gap-y-8 pt-2 max-[860px]:grid-cols-1">
+      <section className="mx-auto grid w-full max-w-190 grid-cols-2 gap-5 max-[860px]:grid-cols-1">
         {helpTopics.map((topic) => {
           const Icon = topic.icon
 
           return (
             <article
-              className="grid min-h-[145px] place-items-center border border-transparent bg-white px-8 py-8 text-center shadow-[0_14px_34px_rgba(15,23,42,0.05)]"
+              className="grid rounded-xl min-h-36 place-items-center border border-transparent bg-white px-8 py-8 text-center shadow-sm"
               key={topic.title}
             >
               <div className={`grid h-14 w-14 place-items-center rounded-full ${topic.bg}`}>

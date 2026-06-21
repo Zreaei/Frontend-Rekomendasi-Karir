@@ -13,16 +13,16 @@ const StudentNotification = () => {
   }
 
   return (
-    <main className="min-h-screen bg-[#fbfbfc] px-6 py-8">
+    <main className="min-h-screen bg-gray-200 px-6 py-8">
       <button
-        className="flex fixed top-8 left-8 py-2 items-center gap-2 rounded-md border border-[#d9dce5] bg-white px-3 text-[14px] font-semibold text-[#232342] shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition-colors hover:bg-[#f4f6fb]"
+        className="flex fixed top-8 left-8 py-2 items-center gap-2 rounded-md border border-[#d9dce5] bg-white px-3 text-[14px] font-semibold text-[#232342] shadow-sm transition-colors hover:bg-[#f4f6fb]"
         type="button"
         onClick={handleBack}
       >
         <ArrowLeft size={18} strokeWidth={2} aria-hidden="true" />
       </button>
 
-      <section className="mx-auto w-full max-w-[530px]">
+      <section className="mx-auto w-full max-w-132">
         <div className="mb-9">
           <h1 className="text-[30px] font-bold leading-tight text-[#050505]">Notifikasi</h1>
           <p className="mt-2 text-[16px] leading-relaxed text-[#232342]">
@@ -30,7 +30,7 @@ const StudentNotification = () => {
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white px-6 py-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+        <div className="rounded-2xl bg-white px-6 py-6 shadow-sm">
           <div className="flex items-center justify-between gap-4 border-b border-[#dedede] pb-4">
             <div className="flex items-center gap-6 text-[14px] font-semibold text-[#232342]">
               <button
@@ -54,7 +54,7 @@ const StudentNotification = () => {
             </button>
           </div>
 
-          <div className="grid min-h-[220px] place-items-center text-center">
+          <div className="grid min-h-55 place-items-center text-center">
             <div>
               <Bell
                 className="mx-auto text-[#6f7787]"

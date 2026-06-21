@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import IconBase from '../common/IconBase'
 import {
   Bell,
-  ChevronRight,
+  ChevronLeft,
   CircleQuestionMark,
   LogOut,
   Menu,
@@ -19,7 +19,7 @@ const RightsideMenu = ({ collapsed, onToggle }: RightsideMenuProps) => {
 
   return (
     <div
-      className={`fixed right-8 top-8 z-20 flex w-fit rounded-xl bg-[#052960] p-1 transition-all duration-300 ease-in-out ${
+      className={`fixed right-0 top-0 z-20 flex w-fit rounded-bl-xl bg-[#052960] p-1.5 transition-all duration-300 ease-in-out ${
         collapsed ? 'w-auto gap-0' : 'w-auto gap-2'
       }`}
     >
@@ -64,7 +64,7 @@ const RightsideMenu = ({ collapsed, onToggle }: RightsideMenuProps) => {
         {collapsed ? (
           <Menu className="text-white" size={20} strokeWidth={2} />
         ) : (
-          <ChevronRight className="text-white" size={20} strokeWidth={2.5} />
+          <ChevronLeft className="text-white" size={20} strokeWidth={2.5} />
         )}
       </button>
     </div>

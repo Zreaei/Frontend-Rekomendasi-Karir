@@ -3,6 +3,7 @@ import PublicRoute from './PublicRoute'
 import ProtectedRoute from './ProtectedRoute'
 import LandingPage from '../pages/LandingPage.page'
 import LoginPage from '../pages/LoginPage.page'
+import RegisterPage from '../pages/Register.page'
 import AdminDashboard from '../pages/admin/AdminDashboard.page'
 import UniversityDashboard from '../pages/university/UniversityDashboard.page'
 import CompanyDashboard from '../pages/company/CompanyDashboard.page'
@@ -39,6 +40,14 @@ const AppRouter = () => {
         element={
           <PublicRoute>
             <LoginPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/register'
+        element={
+          <PublicRoute>
+            <RegisterPage />
           </PublicRoute>
         }
       />
