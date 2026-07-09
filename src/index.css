@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: 'Raleway', system-ui, sans-serif;
+  color: #050505;
+  background: #ffffff;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* === Animated Background Classes === */
+
+.orb-1 { animation: drift1 12s ease-in-out infinite; }
+.orb-2 { animation: drift2 10s ease-in-out infinite; }
+.orb-3 { animation: drift3 14s ease-in-out infinite; }
+.orb-4 { animation: drift1 11s ease-in-out infinite reverse; }
+
+/* Swirl & waves geser sejauh -50% (= 1 tile dari total 2 tile) biar seamless */
+.swirl-line { animation: seamlessScroll 18s linear infinite; }
+.wave-1     { animation: seamlessScroll 10s linear infinite; }
+.wave-2     { animation: seamlessScroll 15s linear infinite reverse; }
+.wave-3     { animation: seamlessScroll 20s linear infinite; }
+
+/* === Keyframes === */
+
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(22px, 16px) scale(1.04); }
+  66%       { transform: translate(-10px, 24px) scale(0.97); }
+}
+
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%       { transform: translate(-18px, 20px) scale(1.06); }
+  70%       { transform: translate(12px, -10px) scale(0.95); }
+}
+
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30%       { transform: translate(-20px, -18px) scale(1.05); }
+  65%       { transform: translate(14px, 10px) scale(0.96); }
+}
+
+/* Geser tepat -50% karena SVG berisi 2 tile identik — loop jadi 100% seamless */
+@keyframes seamlessScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
