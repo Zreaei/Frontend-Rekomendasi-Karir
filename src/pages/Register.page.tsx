@@ -77,7 +77,6 @@ export default function RegisterPage() {
     if (!/^\d+$/.test(formData.nib)) return setError('NIB hanya boleh berisi angka. Huruf tidak valid.')
     if (formData.nib.length !== 13) return setError(`NIB harus terdiri dari tepat 13 digit angka. Saat ini baru ${formData.nib.length} digit.`)
     if (!formData.izinUsahaFile) return setError('Izin Usaha wajib diunggah.')
-    // Checkboxes untuk syarat & privasi sudah dihapus, jadi tidak perlu validasi
     setError('')
     setStep(4)
   }
@@ -136,7 +135,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Card 2 - Komitmen Privasi (dikembalikan) */}
+            {/* Card 2 - Komitmen Privasi*/}
             <div className="bg-white rounded-[22px] border border-[#e4e9f4] shadow-sm p-6">
               <div className="flex items-start gap-2">
                 <svg className="w-4 h-4 text-[#0f5ce0] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -280,8 +279,6 @@ export default function RegisterPage() {
                     <p className="text-[12px] text-[#5b6170] mt-1 leading-relaxed">Permohonan Anda akan ditinjau oleh Superadmin. Proses ini biasanya memakan waktu 1–2 hari kerja.</p>
                   </div>
                 </div>
-
-                {/* Checkboxes untuk Syarat & Ketentuan dan Kebijakan Privasi telah dihapus */}
               </div>
 
               <div className="space-y-5">

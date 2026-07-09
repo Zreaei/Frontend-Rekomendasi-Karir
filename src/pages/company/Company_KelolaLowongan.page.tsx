@@ -9,7 +9,7 @@ const Company_KelolaLowongan = () => {
   const [activeTab, setActiveTab] = useState<'Semua' | 'Aktif' | 'Draft' | 'Selesai'>('Semua')
   const [sortBy, setSortBy] = useState('Terbaru')
 
-  // Menghitung angka untuk Metric Cards secara otomatis
+  // Menghitung angka untuk Metric Cards 
   const stats = useMemo(() => {
     const total = jobs.length
     const pelamarBaru = jobs.reduce((acc, job) => acc + (job.applicantsCount || 0), 0)
@@ -90,14 +90,12 @@ const Company_KelolaLowongan = () => {
         </button>
       </div>
 
-      {/* Filter Kontainer Tabel Utama */}
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
         
         {/* Kontrol Kategori Tab Atas */}
         <div className="flex flex-wrap items-center justify-between border-b border-[#f1f4f9] px-6 py-2 gap-4 bg-white">
           <div className="flex gap-6">
             {(['Semua', 'Aktif', 'Draft', 'Selesai'] as const).map((tab) => {
-              // PERBAIKAN: Ditambahkan keyword 'return' di sini agar elemen mau merender ke layar
               return (
                 <button
                   key={tab}

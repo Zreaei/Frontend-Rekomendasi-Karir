@@ -24,12 +24,7 @@ const LandingPage = () => {
         <div className="absolute rounded-full bottom-20 -left-14 orb-4"
           style={{ width: 260, height: 260, background: 'radial-gradient(circle at 50% 50%, #d4e2fa, #e4eefb 60%, transparent 100%)' }} />
 
-        {/*
-          Swirl lines — kunci seamless:
-          Setiap path mulai dan berakhir di Y yang SAMA (misal y=300),
-          dengan control point simetris. Tile ke-2 offset +1400 persis.
-          Animasi geser -50% dari total width 2800 = geser tepat 1 tile.
-        */}
+        {/* Swirl Lines */}
         <svg
           className="absolute top-0 left-0 h-full swirl-line"
           style={{ width: '200%' }}
@@ -37,24 +32,17 @@ const LandingPage = () => {
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Line 1 — y start=300, y end=300, simetris */}
           <path d="M0 300 C175 220, 350 380, 700 300 C1050 220, 1225 380, 1400 300" fill="none" stroke="#a8c2e8" strokeWidth="1" opacity="0.5"/>
           <path d="M1400 300 C1575 220, 1750 380, 2100 300 C2450 220, 2625 380, 2800 300" fill="none" stroke="#a8c2e8" strokeWidth="1" opacity="0.5"/>
-
-          {/* Line 2 — y start=400, y end=400 */}
           <path d="M0 400 C175 320, 350 480, 700 400 C1050 320, 1225 480, 1400 400" fill="none" stroke="#afc6ea" strokeWidth="0.8" opacity="0.4"/>
           <path d="M1400 400 C1575 320, 1750 480, 2100 400 C2450 320, 2625 480, 2800 400" fill="none" stroke="#afc6ea" strokeWidth="0.8" opacity="0.4"/>
-
-          {/* Line 3 — y start=520, y end=520 */}
           <path d="M0 520 C175 450, 350 590, 700 520 C1050 450, 1225 590, 1400 520" fill="none" stroke="#b5cbed" strokeWidth="0.7" opacity="0.3"/>
           <path d="M1400 520 C1575 450, 1750 590, 2100 520 C2450 450, 2625 590, 2800 520" fill="none" stroke="#b5cbed" strokeWidth="0.7" opacity="0.3"/>
-
-          {/* Line 4 — y start=620, y end=620, lebih lebar amplitudonya */}
           <path d="M0 620 C175 555, 350 685, 700 620 C1050 555, 1225 685, 1400 620" fill="none" stroke="#c0d2ef" strokeWidth="0.6" opacity="0.2"/>
           <path d="M1400 620 C1575 555, 1750 685, 2100 620 C2450 555, 2625 685, 2800 620" fill="none" stroke="#c0d2ef" strokeWidth="0.6" opacity="0.2"/>
         </svg>
 
-        {/* Waves bottom — lebih pendek, tidak mepet ke konten */}
+        {/* Wave Background */}
         <div className="absolute bottom-0 left-0 w-full h-16 overflow-hidden">
           <svg
             className="absolute bottom-0 left-0 h-full wave-1"
