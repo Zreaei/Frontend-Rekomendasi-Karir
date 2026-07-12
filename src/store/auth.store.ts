@@ -1,7 +1,14 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type UserRole = 'admin' | 'university' | 'company' | 'university_staff' | 'company_staff' | 'student' | null
+export type UserRole =
+'admin' 
+| 'university' 
+| 'company' 
+| 'university_staff' 
+| 'company_staff' 
+| 'student' 
+| null
 
 interface AuthState {
 	isAuthenticated: boolean

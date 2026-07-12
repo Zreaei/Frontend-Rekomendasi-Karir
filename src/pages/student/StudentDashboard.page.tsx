@@ -117,24 +117,28 @@ const StudentDashboard = () => {
           title="Lamaran Terbaru"
           action={<button className="border-none bg-transparent text-[13px] font-medium">Lihat Semua</button>}
         />
-        <div className="mt-5 grid min-w-0 gap-3.5 p-4">
-          <div className="grid grid-cols-4 items-center gap-3 text-[14px] font-bold max-sm:grid-cols-1">
-            <span>Posisi</span>
-            <span>Tanggal</span>
-            <span>Match</span>
-            <span>Status</span>
-          </div>
-          {recentApplications.map((item) => (
-            <div className="grid grid-cols-4 items-center gap-3 text-[13px] max-sm:grid-cols-1" key={item.role}>
-              <span>{item.role}</span>
-              <span>{item.date}</span>
-              <span className={`font-semibold ${Number.parseInt(item.match) < 80 ? 'text-[#c46d00]' : 'text-[#007f65]'}`}>
-                {item.match}
-              </span>
-              <StatusPill label={item.status} tone={item.tone} />
-            </div>
-          ))}
-        </div>
+        <table className="mt-5 grid p-4 border border-gray-400">
+          <thead>
+            <tr className="grid grid-cols-4 items-center text-left gap-3 text-md font-bold">
+              <th>Posisi</th>
+              <th>Tanggal</th>
+              <th>Match</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentApplications.map((item) => (
+              <tr className="grid grid-cols-4 items-center gap-3 text-sm" key={item.role}>
+                <td>{item.role}</td>
+                <td>{item.date}</td>
+                <td className={`font-semibold ${Number.parseInt(item.match) < 80 ? 'text-[#c46d00]' : 'text-[#007f65]'}`}>
+                  {item.match}
+                </td>
+                <td><StatusPill label={item.status} tone={item.tone} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
     </StudentLayout>
   )

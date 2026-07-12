@@ -27,7 +27,7 @@ const StudentSidebar = ({ collapsed, onToggle }: StudentSidebarProps) => {
 
   return (
     <aside
-      className={`sticky rounded-l-xl top-0 flex h-full shrink-0 flex-col gap-9 overflow-hidden bg-[#052960] px-4 pb-5 pt-4 m-3 transition-[width] duration-300 ease-in-out ${
+      className={`sticky rounded-l-xl top-0 flex h-full shrink-0 flex-col gap-9 overflow-hidden bg-[#052960] px-4 pb-5 pt-4 m-1 transition-[width] duration-300 ease-in-out ${
         collapsed ? 'w-19' : 'w-60'
       }`}
     >

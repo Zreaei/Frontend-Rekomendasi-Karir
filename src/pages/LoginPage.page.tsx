@@ -1,39 +1,68 @@
-import { type FormEvent, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
-
-interface LoginForm {
-  email: string
-  password: string
-}
+import { login } from '../services/auth.service'
 
 const LoginPage = () => {
   const navigate = useNavigate()
-  const loginAsCompany = useAuthStore((state) => state.loginAsCompany)
-  const [form, setForm] = useState<LoginForm>({
-    email: '',
-    password: '',
-  })
-  const [error, setError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+	const [email, setEmail] = useState('')
+	const [password, setPassword] = useState('')
+	const [loading, setLoading] = useState(false)
+	const [error, setError] = useState<string | null>(null)
+	const { loginAsAdmin, loginAsUniversity, loginAsCompany, loginAsUniversityStaff, loginAsCompanyStaff, loginAsStudent, } = useAuthStore()
 
-  const updateField = (field: keyof LoginForm, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }))
-    setError('')
-  }
+	async function handleSubmit(e: React.FormEvent) {
+		e.preventDefault()
+		setError(null)
+		setLoading(true)
+		try {
+      const data = await login({ email, password });
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+      // Get the exact role from the server response
+      const role = data.user?.role; 
 
-    if (!form.email.trim() || !form.password.trim()) {
-      setError('Please enter your email and password.')
-      return
-    }
+      // Extract the token
+      const token = data.accessToken 
+        || data.token 
+        || (data as any).jwt
+        || (data as any)?.data?.token
+        || (data as any)?.data?.accessToken
+        || null;
 
-    setIsSubmitting(true)
-    loginAsCompany('demo-company-session')
-    navigate('/company', { replace: true })
-  }
+      if (!token) {
+        throw new Error('Token tidak ditemukan dalam respons');
+      }
+
+      // Check based on the role, call the appropriate login function and navigate to the corresponding dashboard
+      if (role === 'admin') {
+        loginAsAdmin(token);
+        navigate('/admin/dashboard');
+      } else if (role === 'university') {
+        loginAsUniversity(token);
+        navigate('/university/dashboard');
+      } else if (role === 'company') {
+        loginAsCompany(token);
+        navigate('/company/dashboard');
+      } else if (role === 'university_staff') {
+        loginAsUniversityStaff(token);
+        navigate('/university-staff/dashboard');
+      } else if (role === 'company_staff') {
+        loginAsCompanyStaff(token);
+        navigate('/company-staff/dashboard');
+      } else if (role === 'student') {
+        loginAsStudent(token);
+        navigate('/student/dashboard');
+      } else {
+        throw new Error(`Role tidak valid atau tidak dikenali: ${role}`);
+      }
+		} catch (err: any) {
+			const message = err?.message || err?.data?.message || 'Gagal masuk. Coba lagi.'
+			setError(message)
+		} finally {
+			setLoading(false)
+		}
+	}
 
   return (
     <main className="min-h-screen bg-gray-200 px-5 py-10 text-[#111318]">
@@ -55,10 +84,11 @@ const LoginPage = () => {
               className="h-10 w-full rounded-[5px] border border-[#d8dce2] px-3 text-[14px] outline-none transition focus:border-[#0d6efd] focus:ring-2 focus:ring-[#0d6efd]/15"
               id="email"
               name="email"
-              onChange={(event) => updateField('email', event.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
               placeholder="email@example.com"
               type="email"
-              value={form.email}
+              value={email}
+              required
             />
 
             <label className="block text-[14px] font-semibold leading-none" htmlFor="password">
@@ -68,10 +98,11 @@ const LoginPage = () => {
               className="h-10 w-full rounded-[5px] border border-[#d8dce2] px-3 text-[14px] outline-none transition focus:border-[#0d6efd] focus:ring-2 focus:ring-[#0d6efd]/15"
               id="password"
               name="password"
-              onChange={(event) => updateField('password', event.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
               placeholder="Password"
               type="password"
-              value={form.password}
+              value={password}
+              required
             />
           </div>
 
@@ -85,10 +116,10 @@ const LoginPage = () => {
 
           <button
             className="mt-6 h-10 w-full rounded-[7px] bg-[#0d6efd] text-[14px] font-medium text-white transition hover:bg-[#075bd8] focus:outline-none focus:ring-2 focus:ring-[#0d6efd]/30 disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={isSubmitting}
+            disabled={loading}
             type="submit"
           >
-            {isSubmitting ? 'Continuing...' : 'Continue'}
+            {loading ? 'Continuing...' : 'Continue'}
           </button>
 
           <p className="mt-6 text-center text-[12px] text-[#17191d]">
