@@ -10,11 +10,18 @@ import CompanyDashboard from '../pages/company/CompanyDashboard.page'
 import UniversityStaffDashboard from '../pages/university_staff/UniversityStaffDashboard.page'
 import CompanyStaffDashboard from '../pages/company_staff/CompanyStaffDashboard.page'
 import StudentDashboard from '../pages/student/StudentDashboard.page'
-import StudentJobMatching from '../pages/student/StudentJobMatching.page'
+import StudentJobMatching from '../pages/student/StudentJobRecommendation.page'
+import StudentJobDetail from '../pages/student/StudentJobDetail.page'
+import CompanyDetail from '../pages/student/StudentCompanyDetail.page'
 import StudentJobApply from '../pages/student/StudentJobApply.page'
 import StudentCompetencyProfile from '../pages/student/StudentCompetencyProfile.page'
+import StudentCertification from '../pages/student/StudentCertification.page'
+import StudentCertificationUpload from '../pages/student/StudentCertificationUpload.page'
+import StudentCertificationDetail from '../pages/student/StudentCertificationDetail.page'
+import StudentCertificationDenied from '../pages/student/StudentCertificationDenied.page'
 import StudentNotification from '../pages/student/StudentNotification.page'
 import StudentHelp from '../pages/student/StudentHelp.page'
+import StudentInvitation from '../pages/student/StudentInvitation.page'
 
 const AppRouter = () => {
   return (
@@ -110,6 +117,22 @@ const AppRouter = () => {
         }
       />
       <Route
+        path='/student/job-matching/:jobId'
+        element={
+          <PublicRoute>
+            <StudentJobDetail />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/company/:companyId'
+        element={
+          <PublicRoute>
+            <CompanyDetail />
+          </PublicRoute>
+        }
+      />
+      <Route
         path='/student/job-apply'
         element={
           <PublicRoute>
@@ -118,10 +141,50 @@ const AppRouter = () => {
         }
       />
       <Route
+        path='/student/invitation'
+        element={
+          <PublicRoute>
+            <StudentInvitation />
+          </PublicRoute>
+        }
+      />
+      <Route
         path='/student/competency-profile'
         element={
           <PublicRoute>
             <StudentCompetencyProfile />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/certification'
+        element={
+          <PublicRoute>
+            <StudentCertification />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/certification/upload'
+        element={
+          <PublicRoute>
+            <StudentCertificationUpload />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/certification/:certId'
+        element={
+          <PublicRoute>
+            <StudentCertificationDetail />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/certification/:certId/denied'
+        element={
+          <PublicRoute>
+            <StudentCertificationDenied />
           </PublicRoute>
         }
       />
