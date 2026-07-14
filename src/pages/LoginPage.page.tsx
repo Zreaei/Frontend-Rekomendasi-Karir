@@ -175,12 +175,12 @@ const LoginPage = () => {
 
           {/* Submit Button */}
           <button
-            className="mb-6 h-11 w-full rounded-[8px] bg-black text-[14px] font-semibold text-white transition hover:bg-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-black/30 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center gap-2"
+            className="mb-6 h-11 w-full rounded-[8px] bg-[#0f5ce0] text-[14px] font-semibold text-white transition hover:bg-[#0d4ebf] focus:outline-none focus:ring-2 focus:ring-[#0f5ce0]/30 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center gap-2"
             disabled={isSubmitting}
             type="submit"
           >
             {isSubmitting ? 'Memproses...' : 'Masuk Ke Akun'}
-                  </button>
+          </button>
 
           {/* Divider */}
           <div className="mb-6 flex items-center gap-3">

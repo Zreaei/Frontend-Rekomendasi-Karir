@@ -1,21 +1,20 @@
 import { useMemo } from 'react'
 import { TrendingUp, Users, Briefcase, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { initialApplicants } from './CompanyData' // Mengambil sumber data yang sama
+import { initialApplicants } from './CompanyData'
 
 const CompanyDashboard = () => {
   const navigate = useNavigate()
 
-  // Mengambil data dari applicantsData Mengurutkan berdasarkan Match Score tertinggi (descending) Mengambil 5 kandidat teratas saja
   const topCandidates = useMemo(() => {
     return [...initialApplicants]
       .sort((a, b) => b.match - a.match)
       .slice(0, 5)
   }, [])
 
-  // Menghitung statistik berdasarkan seluruh data pelamar agar sinkron
   const totalPelamar = initialApplicants.length
   const rekomendasiKandidat = initialApplicants.filter(a => a.match >= 85).length
+  
   const getDummySkills = (role: string) => {
     switch (role) {
       case 'Software Engineer': return ['React.js', 'TypeScript', 'GraphQL']
@@ -27,22 +26,20 @@ const CompanyDashboard = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 bg-[#f8faff] min-h-screen">
+    <div className="w-full flex flex-col gap-6">
 
-      {/* Header */}
-      <div className="mb-8">
+      <div>
         <h1 className="text-2xl font-bold text-[#111827]">Ringkasan Perusahaan</h1>
         <p className="text-sm text-[#5b6170] mt-1">Real-time metrics for your hiring ecosystem.</p>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {[
           { icon: <Briefcase size={22} />, label: 'Lowongan Aktif', value: '24' },
           { icon: <Users size={22} />, label: 'Total Pelamar', value: totalPelamar.toLocaleString('id-ID') },
           { icon: <TrendingUp size={22} />, label: 'Rekomendasi Kandidat', value: rekomendasiKandidat.toString() },
         ].map((m, i) => (
-          <div key={i} className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex items-center gap-4">
+          <div key={i} className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex items-center gap-4 shadow-sm">
             <div className="bg-[#eef4ff] p-3 rounded-[10px] text-[#0f5ce0] shrink-0">
               {m.icon}
             </div>
@@ -54,7 +51,6 @@ const CompanyDashboard = () => {
         ))}
       </div>
 
-      {/* Kandidat Rekomendasi Teratas */}
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
         <div className="flex justify-between items-center px-6 py-4 border-b border-[#f1f4f9]">
           <h2 className="text-[16px] font-bold text-[#111827]">Kandidat Rekomendasi Teratas (5 Tertinggi)</h2>
@@ -62,14 +58,13 @@ const CompanyDashboard = () => {
             onClick={() => navigate('/company/daftar-pelamar')}
             className="text-sm text-[#0f5ce0] hover:underline font-semibold"
           >
-            Lihat Semua Kandidat →
+            Lihat Semua Kandidat 
           </button>
         </div>
 
         <div className="divide-y divide-[#f1f4f9]">
           {topCandidates.map((k, idx) => (
             <div key={idx} className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-6 py-5 hover:bg-[#fafbfe] transition">
-              {/* Kiri: Avatar + Info */}
               <div className="flex items-start gap-4 flex-1 min-w-0">
                 <div className="w-14 h-14 rounded-[12px] bg-[#eef4ff] flex items-center justify-center text-[#0f5ce0] shrink-0 border border-[#d0e0ff]">
                   <User size={28} />

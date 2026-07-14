@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { 
-  Users, Clock, UserCheck, Download, Plus, MoreVertical, RotateCcw, Lightbulb, CheckCircle2, XCircle, AlertCircle 
+  Users, Clock, UserCheck, Plus, MoreVertical, RotateCcw, CheckCircle2, XCircle, AlertCircle 
 } from 'lucide-react'
 import { initialApplicants } from './CompanyData' // Import Data Di Sini
 
@@ -72,9 +72,10 @@ const Company_DaftarPelamar = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 bg-[#f8faff] min-h-screen">
+    <div className="w-full flex flex-col gap-6">
+      
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#111827]">Daftar Pelamar</h1>
           <p className="text-sm text-[#5b6170] mt-1">Pantau dan kelola seluruh berkas lamaran yang masuk.</p>
@@ -88,27 +89,33 @@ const Company_DaftarPelamar = () => {
       </div>
 
       {/* Statistik */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start shadow-sm">
           <div>
             <p className="text-sm font-medium text-[#7b8191]">Total Pelamar</p>
             <p className="text-3xl font-bold text-[#111827] mt-2">{stats.total}</p>
           </div>
-          <div className="bg-[#eef4ff] p-2.5 rounded-[10px] text-[#0f5ce0]"><Users size={20} /></div>
+          <div className="bg-[#eef4ff] p-2.5 rounded-[10px] text-[#0f5ce0]">
+            <Users size={20} />
+          </div>
         </div>
-        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start">
+        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start shadow-sm">
           <div>
             <p className="text-sm font-medium text-[#7b8191]">Menunggu Review</p>
             <p className="text-3xl font-bold text-[#111827] mt-2">{stats.pending}</p>
           </div>
-          <div className="bg-[#fffbe6] p-2.5 rounded-[10px] text-amber-500"><Clock size={20} /></div>
+          <div className="bg-[#fffbe6] p-2.5 rounded-[10px] text-amber-500">
+            <Clock size={20} />
+          </div>
         </div>
-        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start">
+        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start shadow-sm">
           <div>
             <p className="text-sm font-medium text-[#7b8191]">Kandidat Terpilih</p>
             <p className="text-3xl font-bold text-[#111827] mt-2">{stats.diterima}</p>
           </div>
-          <div className="bg-[#e6f9f0] p-2.5 rounded-[10px] text-[#10b981]"><UserCheck size={20} /></div>
+          <div className="bg-[#e6f9f0] p-2.5 rounded-[10px] text-[#10b981]">
+            <UserCheck size={20} />
+          </div>
         </div>
       </div>
 
@@ -186,7 +193,6 @@ const Company_DaftarPelamar = () => {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm">
           <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="text-sm font-semibold text-[#7b8191] disabled:opacity-40">Sebelumnya</button>
           <div className="flex items-center gap-1">
@@ -201,4 +207,4 @@ const Company_DaftarPelamar = () => {
   )
 }
 
-export default Company_DaftarPelamar 
+export default Company_DaftarPelamar

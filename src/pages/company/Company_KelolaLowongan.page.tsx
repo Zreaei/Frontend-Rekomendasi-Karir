@@ -9,7 +9,6 @@ const Company_KelolaLowongan = () => {
   const [activeTab, setActiveTab] = useState<'Semua' | 'Aktif' | 'Draft' | 'Selesai'>('Semua')
   const [sortBy, setSortBy] = useState('Terbaru')
 
-  // Menghitung angka untuk Metric Cards 
   const stats = useMemo(() => {
     const total = jobs.length
     const pelamarBaru = jobs.reduce((acc, job) => acc + (job.applicantsCount || 0), 0)
@@ -17,7 +16,6 @@ const Company_KelolaLowongan = () => {
     return { total, pelamarBaru, ditutup }
   }, [jobs])
 
-  // Filter Data berdasarkan Tab yang dipilih
   const filteredJobs = useMemo(() => {
     if (activeTab === 'Semua') return jobs
     return jobs.filter(job => job.status === activeTab)
@@ -37,19 +35,17 @@ const Company_KelolaLowongan = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 bg-[#f8faff] min-h-screen">
-      
-      {/* Header Utama */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div className="w-full flex flex-col gap-6">
+
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#111827]">Kelola Lowongan</h1>
           <p className="text-sm text-[#5b6170] mt-1">Pantau performa lowongan dan kelola proses rekrutmen Anda.</p>
         </div>
       </div>
 
-      {/* Tiga Metric Cards Atas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start shadow-sm">
           <div>
             <p className="text-sm font-medium text-[#7b8191]">Total Lowongan</p>
             <p className="text-3xl font-bold text-[#111827] mt-2">{stats.total}</p>
@@ -59,7 +55,7 @@ const Company_KelolaLowongan = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start">
+        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start shadow-sm">
           <div>
             <p className="text-sm font-medium text-[#7b8191]">Pelamar Baru</p>
             <p className="text-3xl font-bold text-[#111827] mt-2">{stats.pelamarBaru}</p>
@@ -69,7 +65,7 @@ const Company_KelolaLowongan = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start">
+        <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start shadow-sm">
           <div>
             <p className="text-sm font-medium text-[#7b8191]">Lowongan Ditutup</p>
             <p className="text-3xl font-bold text-[#111827] mt-2">{stats.ditutup}</p>
@@ -81,8 +77,7 @@ const Company_KelolaLowongan = () => {
         </div>
       </div>
 
-      {/* Bagian Navigasi Filter Tab dan Tombol Tambah Lowongan */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-2">
         <h2 className="text-lg font-bold text-[#111827]">Daftar Lowongan</h2>
         <button className="flex items-center gap-2 px-5 py-2.5 bg-[#0f5ce0] rounded-full text-sm font-bold text-white hover:bg-[#0d4ebf] transition shadow-sm self-start sm:self-auto">
           <Plus size={18} />
@@ -91,8 +86,7 @@ const Company_KelolaLowongan = () => {
       </div>
 
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
-        
-        {/* Kontrol Kategori Tab Atas */}
+
         <div className="flex flex-wrap items-center justify-between border-b border-[#f1f4f9] px-6 py-2 gap-4 bg-white">
           <div className="flex gap-6">
             {(['Semua', 'Aktif', 'Draft', 'Selesai'] as const).map((tab) => {
@@ -125,7 +119,6 @@ const Company_KelolaLowongan = () => {
           </div>
         </div>
 
-        {/* Tabel Data List Lowongan Pekerjaan */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -244,7 +237,7 @@ const Company_KelolaLowongan = () => {
           </table>
         </div>
 
-        {/* Footer Navigasi Halaman (Pagination) */}
+        {/* Footer Navigasi Halaman */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm">
           <div className="text-xs text-[#7b8191] font-medium">
             Menampilkan <span className="text-[#111827] font-semibold">1-10</span> dari {filteredJobs.length} lowongan
