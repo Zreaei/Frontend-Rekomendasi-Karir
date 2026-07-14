@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Briefcase, Users, Archive, Plus, Eye, Edit3 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { initialLowongan } from './CompanyData' // Satu file manajemen data tunggal

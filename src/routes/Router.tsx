@@ -4,6 +4,7 @@ import ProtectedRoute from './ProtectedRoute'
 import LandingPage from '../pages/LandingPage.page'
 import LoginPage from '../pages/LoginPage.page'
 import RegisterPage from '../pages/Register.page'
+import ForgotPasswordPage from '../pages/ForgotPassword.page'
 import AdminDashboard from '../pages/admin/AdminDashboard.page'
 import UniversityDashboard from '../pages/university/UniversityDashboard.page'
 import CompanyLayout from '../layouts/CompanyLayout'
@@ -61,6 +62,7 @@ const AppRouter = () => {
       <Route path="/landing" element={<PublicRoute><LandingPage /></PublicRoute>} />
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
 
       {/* ===== PROTECTED ROUTES ===== */}
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

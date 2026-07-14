@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { TrendingUp, Users, Briefcase, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { initialApplicants } from './CompanyData' // Mengambil sumber data yang sama

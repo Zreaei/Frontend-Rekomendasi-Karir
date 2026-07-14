@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { 
   Users, Clock, UserCheck, Download, Plus, MoreVertical, RotateCcw, Lightbulb, CheckCircle2, XCircle, AlertCircle 
 } from 'lucide-react'

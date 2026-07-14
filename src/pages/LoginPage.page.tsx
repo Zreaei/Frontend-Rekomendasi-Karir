@@ -42,7 +42,7 @@ const LoginPage = () => {
     }
 
     if (!emailRegex.test(trimmedEmail)) {
-      setError('Format email tidak valid. Contoh: nama@email.com')
+      setError('Format email tidak valid. Contoh: nama@Gmail.com')
       return
     }
 
@@ -110,7 +110,7 @@ const LoginPage = () => {
                 id="email"
                 name="email"
                 onChange={(event) => updateField('email', event.target.value)}
-                placeholder="nama@email.com"
+                placeholder="nama@Gmail.com"
                 type="email"
                 value={form.email}
               />
