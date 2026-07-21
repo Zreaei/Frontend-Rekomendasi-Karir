@@ -6,7 +6,6 @@ import {
   FileInput,
   User,
   LogOut,
-  UserPlus,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -45,7 +44,7 @@ const CompanySidebar = ({ collapsed, onToggle }: CompanySidebarProps) => {
     >
       {!collapsed ? (
         <button
-          className="absolute right-4 top-7 grid h-8 w-8 place-items-center rounded-md text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+          className="absolute right-4 top-7 grid h-8 w-8 place-items-center rounded-md text-white/95 transition-colors hover:bg-white/10 hover:text-white"
           type="button"
           aria-label="Collapse sidebar"
           onClick={onToggle}
@@ -74,7 +73,6 @@ const CompanySidebar = ({ collapsed, onToggle }: CompanySidebarProps) => {
         </div>
       </div>
 
-      {/* Menu Navigasi */}
       <nav className="grid gap-2 transition-all duration-300 ease-in-out flex-1 content-start" aria-label="Company navigation">
         <NavLink to="/company" end className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}>
           <span className={iconBase} aria-hidden="true">
@@ -104,13 +102,6 @@ const CompanySidebar = ({ collapsed, onToggle }: CompanySidebarProps) => {
           <span className={labelClass}>Rekomendasi Kandidat</span>
         </NavLink>
 
-        <NavLink to="/company/kandidat-diundang" className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}>
-          <span className={iconBase} aria-hidden="true">
-            <UserPlus size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Kandidat Diundang</span>
-        </NavLink>
-
         <NavLink to="/company/profil-perusahaan" className={({ isActive }) => `${navBase} ${navState} ${isActive ? navActive : ''}`}>
           <span className={iconBase} aria-hidden="true">
             <Building2 size={20} strokeWidth={2} />
@@ -119,7 +110,6 @@ const CompanySidebar = ({ collapsed, onToggle }: CompanySidebarProps) => {
         </NavLink>
       </nav>
 
-      {/* Logout */}
       <div className={`mt-auto border-t border-white/10 pt-4 ${collapsed ? 'w-11 mx-auto' : 'w-full'}`}>
         <button
           type="button"

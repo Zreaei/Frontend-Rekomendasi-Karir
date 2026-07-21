@@ -53,7 +53,7 @@ const CompanyDashboard = () => {
 
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
         <div className="flex justify-between items-center px-6 py-4 border-b border-[#f1f4f9]">
-          <h2 className="text-[16px] font-bold text-[#111827]">Kandidat Rekomendasi Teratas (5 Tertinggi)</h2>
+          <h2 className="text-[16px] font-bold text-[#111827]">Pelamar Teratas (5 Tertinggi)</h2>
           <button
             onClick={() => navigate('/company/daftar-pelamar')}
             className="text-sm text-[#0f5ce0] hover:underline font-semibold"
@@ -92,7 +92,6 @@ const CompanyDashboard = () => {
                 </div>
               </div>
 
-              {/* Kanan: Match + Role + Tombol Aksi */}
               <div className="flex items-center gap-6 lg:gap-10 shrink-0 justify-between lg:justify-end">
                 {/* Match + Role badge */}
                 <div className="flex flex-col items-center gap-1.5 w-[180px]">

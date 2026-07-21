@@ -1,13 +1,32 @@
-import { useState, useMemo } from 'react'
-import { Briefcase, Users, Archive, Plus, Eye, Edit3 } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Briefcase, Users, Archive, Plus, Trash2, Edit } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { initialLowongan } from './CompanyData' // Satu file manajemen data tunggal
+import { initialLowongan } from './CompanyData' 
 
 const Company_KelolaLowongan = () => {
   const navigate = useNavigate()
-  const [jobs] = useState(initialLowongan)
+  
+  const [jobs, setJobs] = useState(initialLowongan)
   const [activeTab, setActiveTab] = useState<'Semua' | 'Aktif' | 'Draft' | 'Selesai'>('Semua')
-  const [sortBy, setSortBy] = useState('Terbaru')
+  const [sortBy, setSortBy] = useState<'Terbaru' | 'Terlama'>('Terbaru')
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 10
+
+  useEffect(() => {
+    setJobs([...initialLowongan])
+  }, [])
+
+  const handleDeleteJob = (id: number) => {
+    const confirmDelete = window.confirm('Apakah Anda yakin ingin menghapus lowongan ini?')
+    if (confirmDelete) {
+      setJobs(prevJobs => prevJobs.filter(job => job.id !== id))
+      
+      const index = initialLowongan.findIndex(job => job.id === id)
+      if (index > -1) {
+        initialLowongan.splice(index, 1)
+      }
+    }
+  }
 
   const stats = useMemo(() => {
     const total = jobs.length
@@ -17,9 +36,70 @@ const Company_KelolaLowongan = () => {
   }, [jobs])
 
   const filteredJobs = useMemo(() => {
-    if (activeTab === 'Semua') return jobs
-    return jobs.filter(job => job.status === activeTab)
-  }, [jobs, activeTab])
+    let result = [...jobs]
+    
+    if (activeTab !== 'Semua') {
+      result = jobs.filter(job => job.status === activeTab)
+    }
+
+    return result.sort((a, b) => {
+      const getTimestamp = (dateStr: string) => {
+        if (!dateStr) return 0
+        
+        const mapBulan: Record<string, string> = {
+          januari: 'Jan', februari: 'Feb', maret: 'Mar', april: 'Apr', mei: 'May', juni: 'Jun',
+          juli: 'Jul', agustus: 'Aug', september: 'Sep', oktober: 'Oct', november: 'Nov', desember: 'Dec',
+          jan: 'Jan', feb: 'Feb', mar: 'Mar', apr: 'Apr', jun: 'Jun', jul: 'Jul', 
+          agu: 'Aug', agt: 'Aug', sep: 'Sep', okt: 'Oct', nov: 'Nov', des: 'Dec'
+        }
+        
+        let parsedStr = dateStr.toLowerCase()
+        Object.keys(mapBulan).forEach(k => { 
+          parsedStr = parsedStr.replace(k, mapBulan[k]) 
+        })
+        
+        const time = new Date(parsedStr).getTime()
+        return isNaN(time) ? 0 : time
+      }
+
+      const timeA = getTimestamp(a.date)
+      const timeB = getTimestamp(b.date)
+
+      if (timeA === 0 || timeB === 0) {
+        const idA = String(a.id)
+        const idB = String(b.id)
+        return sortBy === 'Terbaru' 
+          ? idB.localeCompare(idA, undefined, { numeric: true })
+          : idA.localeCompare(idB, undefined, { numeric: true })
+      }
+
+      return sortBy === 'Terbaru' ? timeB - timeA : timeA - timeB
+    })
+  }, [jobs, activeTab, sortBy])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, sortBy])
+
+  const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const paginatedJobs = filteredJobs.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+
+  const getPaginationGroup = () => {
+    let pages = []
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      if (currentPage <= 3) {
+        pages = [1, 2, 3, 4, '...', totalPages]
+      } else if (currentPage >= totalPages - 2) {
+        pages = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+      } else {
+        pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages]
+      }
+    }
+    return pages
+  }
 
   const getStatusStyle = (status: 'Aktif' | 'Draft' | 'Selesai') => {
     switch (status) {
@@ -79,7 +159,10 @@ const Company_KelolaLowongan = () => {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-2">
         <h2 className="text-lg font-bold text-[#111827]">Daftar Lowongan</h2>
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-[#0f5ce0] rounded-full text-sm font-bold text-white hover:bg-[#0d4ebf] transition shadow-sm self-start sm:self-auto">
+        <button 
+          onClick={() => navigate('/company/tambah-lowongan')}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#0f5ce0] rounded-full text-sm font-bold text-white hover:bg-[#0d4ebf] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 active:scale-95 shadow-sm self-start sm:self-auto"
+        >
           <Plus size={18} />
           Tambah Lowongan Baru
         </button>
@@ -110,11 +193,11 @@ const Company_KelolaLowongan = () => {
             <span className="text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">Urutkan:</span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-1.5 bg-[#f8faff] border border-[#e4e9f4] rounded-xl text-sm font-semibold text-[#5b6170] focus:outline-none cursor-pointer"
+              onChange={(e) => setSortBy(e.target.value as 'Terbaru' | 'Terlama')}
+              className="px-3 py-1.5 bg-[#f8faff] border border-[#e4e9f4] rounded-xl text-sm font-semibold text-[#5b6170] focus:outline-none cursor-pointer hover:border-[#cbd5e1] transition-colors"
             >
-              <option>Terbaru</option>
-              <option>Populer</option>
+              <option value="Terbaru">Terbaru</option>
+              <option value="Terlama">Terlama</option>
             </select>
           </div>
         </div>
@@ -123,19 +206,18 @@ const Company_KelolaLowongan = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#f1f4f9] bg-[#f8faff] text-[10px] font-bold text-[#7b8191] tracking-widest uppercase">
-                <th className="px-6 py-4 w-[45%]">Informasi Lowongan</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-center">Pelamar</th>
-                <th className="px-6 py-4 text-center">Avg Match</th>
-                <th className="px-6 py-4 text-center">Aksi</th>
+                <th className="px-6 py-4 w-[35%]">Informasi Lowongan</th>
+                <th className="px-4 py-4 w-[15%] text-center">Status</th>
+                <th className="px-4 py-4 w-[15%] text-center">Pelamar</th>
+                <th className="px-4 py-4 w-[15%] text-center">Avg Match</th>
+                <th className="px-6 py-4 w-[20%] text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f1f4f9]">
-              {filteredJobs.length > 0 ? (
-                filteredJobs.map((job) => (
+              {paginatedJobs.length > 0 ? (
+                paginatedJobs.map((job) => (
                   <tr key={job.id} className="hover:bg-[#fafbfe] transition">
                     
-                    {/* Kolom Info Lowongan */}
                     <td className="px-6 py-5">
                       <div className="flex items-start gap-4">
                         <div className="w-10 h-10 rounded-[10px] bg-[#eef4ff] text-[#0f5ce0] flex items-center justify-center shrink-0 border border-[#d0e0ff]">
@@ -153,15 +235,16 @@ const Company_KelolaLowongan = () => {
                       </div>
                     </td>
 
-                    {/* Kolom Badge Status */}
-                    <td className="px-6 py-5 text-center whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded-[6px] text-[11px] font-bold tracking-wide ${getStatusStyle(job.status)}`}>
-                        • {job.status}
-                      </span>
+                    <td className="px-4 py-5 whitespace-nowrap">
+                      <div className="flex justify-center">
+                        <span className={`flex items-center justify-center gap-1.5 w-[85px] py-1 rounded-[6px] text-[11px] font-bold tracking-wide ${getStatusStyle(job.status)}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                          {job.status}
+                        </span>
+                      </div>
                     </td>
 
-                    {/* Kolom Jumlah Pelamar */}
-                    <td className="px-6 py-5 text-center whitespace-nowrap text-sm font-bold text-[#111827]">
+                    <td className="px-4 py-5 text-center whitespace-nowrap text-sm font-bold text-[#111827]">
                       {job.applicantsCount !== null ? (
                         <div>
                           {job.applicantsCount}{' '}
@@ -172,8 +255,7 @@ const Company_KelolaLowongan = () => {
                       )}
                     </td>
 
-                    {/* Kolom Rata-rata Match Score */}
-                    <td className="px-6 py-5 text-center whitespace-nowrap">
+                    <td className="px-4 py-5 text-center whitespace-nowrap">
                       {job.avgMatch !== null ? (
                         <span className="text-sm font-bold text-[#0f5ce0] border-b-2 border-[#0f5ce0]/30 pb-0.5">
                           {job.avgMatch}%
@@ -183,44 +265,52 @@ const Company_KelolaLowongan = () => {
                       )}
                     </td>
 
-                    {/* Kolom Tombol Aksi Kontekstual */}
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-end gap-2">
+                        
                         {job.status === 'Aktif' && (
-                          <>
-                            <button 
-                              onClick={() => navigate('/company/daftar-pelamar')}
-                              className="px-3 py-1.5 bg-[#eef4ff] text-[#0f5ce0] hover:bg-[#dbe7ff] text-[12px] font-bold rounded-[8px] transition"
-                            >
-                              Lihat Pelamar
-                            </button>
-                            <button className="p-2 border border-[#e4e9f4] text-[#7b8191] hover:text-[#111827] hover:bg-gray-50 rounded-[8px] transition">
-                              <Edit3 size={15} />
-                            </button>
-                          </>
+                          <button 
+                            onClick={() => navigate('/company/daftar-pelamar', { state: { filterRole: job.role } })}
+                            className="w-[110px] py-1.5 bg-[#eef4ff] text-[#0f5ce0] hover:bg-[#dbe7ff] text-[12px] font-bold rounded-[8px] transition active:scale-95 flex justify-center items-center"
+                          >
+                            Lihat Pelamar
+                          </button>
                         )}
 
                         {job.status === 'Draft' && (
-                          <>
-                            <button className="px-4 py-1.5 bg-black text-white hover:bg-zinc-800 text-[12px] font-bold rounded-[8px] transition">
-                              Lanjutkan Post
-                            </button>
-                            <button className="p-2 border border-[#e4e9f4] text-[#7b8191] hover:text-[#111827] hover:bg-gray-50 rounded-[8px] transition">
-                              <Edit3 size={15} />
-                            </button>
-                          </>
+                          <button 
+                            onClick={() => navigate('/company/tambah-lowongan', { state: { editJob: job } })}
+                            className="w-[110px] py-1.5 bg-black text-white hover:bg-zinc-800 text-[12px] font-bold rounded-[8px] transition active:scale-95 flex justify-center items-center"
+                          >
+                            Lanjutkan Post
+                          </button>
                         )}
 
                         {job.status === 'Selesai' && (
-                          <>
-                            <button className="px-4 py-1.5 bg-white border border-[#e4e9f4] text-[#5b6170] hover:bg-gray-50 text-[12px] font-bold rounded-[8px] transition">
-                              Archive
-                            </button>
-                            <button className="p-2 border border-[#e4e9f4] text-[#7b8191] hover:text-[#111827] hover:bg-gray-50 rounded-[8px] transition">
-                              <Eye size={15} />
-                            </button>
-                          </>
+                          <button className="w-[110px] py-1.5 bg-white border border-[#e4e9f4] text-[#5b6170] hover:bg-gray-50 hover:border-[#cbd5e1] text-[12px] font-bold rounded-[8px] transition active:scale-95 flex justify-center items-center">
+                            Archive
+                          </button>
                         )}
+
+                        {job.status !== 'Selesai' ? (
+                          <button 
+                            onClick={() => navigate('/company/tambah-lowongan', { state: { editJob: job } })}
+                            className="w-8 h-8 flex items-center justify-center text-[#7b8191] hover:text-[#0f5ce0] hover:bg-[#eef4ff] rounded-[8px] transition"
+                            title="Edit Lowongan"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        ) : (
+                          <div className="w-8 h-8"></div>
+                        )}
+
+                        <button 
+                          onClick={() => handleDeleteJob(job.id)}
+                          className="w-8 h-8 flex items-center justify-center text-[#7b8191] hover:text-[#ef4444] hover:bg-[#fee2e2] rounded-[8px] transition"
+                          title="Hapus Lowongan"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </td>
 
@@ -237,20 +327,51 @@ const Company_KelolaLowongan = () => {
           </table>
         </div>
 
-        {/* Footer Navigasi Halaman */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm">
           <div className="text-xs text-[#7b8191] font-medium">
-            Menampilkan <span className="text-[#111827] font-semibold">1-10</span> dari {filteredJobs.length} lowongan
+            Menampilkan <span className="text-[#111827] font-semibold">
+              {filteredJobs.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredJobs.length)}
+            </span> dari {filteredJobs.length} lowongan
           </div>
           
           <div className="flex items-center gap-1">
-            <button className="w-8 h-8 rounded-lg text-[#5b6170] hover:bg-gray-50 font-bold text-xs flex items-center justify-center border border-[#e4e9f4] opacity-50 cursor-not-allowed">‹</button>
-            <button className="w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center bg-[#0f5ce0] text-white">1</button>
-            <button className="w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center text-[#5b6170] hover:bg-gray-50">2</button>
-            <button className="w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center text-[#5b6170] hover:bg-gray-50">3</button>
-            <span className="px-1 text-[#7b8191] text-xs font-bold">...</span>
-            <button className="w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center text-[#5b6170] hover:bg-gray-50">6</button>
-            <button className="w-8 h-8 rounded-lg text-[#5b6170] hover:bg-gray-50 font-bold text-xs flex items-center justify-center border border-[#e4e9f4]">›</button>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
+                currentPage === 1 ? 'text-[#7b8191] opacity-40 cursor-not-allowed border border-[#e4e9f4]' : 'text-[#0f5ce0] hover:bg-[#eef4ff] border border-[#e4e9f4]'
+              }`}
+            >
+              ‹
+            </button>
+            
+            {getPaginationGroup().map((item, index) => (
+              item === '...' ? (
+                <span key={index} className="px-1 text-[#7b8191] text-xs font-bold">...</span>
+              ) : (
+                <button
+                  key={index}
+                  onClick={() => setCurrentPage(item as number)}
+                  className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
+                    currentPage === item 
+                      ? 'bg-[#0f5ce0] text-white shadow-sm' 
+                      : 'text-[#5b6170] hover:bg-gray-50 border border-transparent'
+                  }`}
+                >
+                  {item}
+                </button>
+              )
+            ))}
+
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
+                (currentPage === totalPages || totalPages === 0) ? 'text-[#7b8191] opacity-40 cursor-not-allowed border border-[#e4e9f4]' : 'text-[#0f5ce0] hover:bg-[#eef4ff] border border-[#e4e9f4]'
+              }`}
+            >
+              ›
+            </button>
           </div>
         </div>
 
