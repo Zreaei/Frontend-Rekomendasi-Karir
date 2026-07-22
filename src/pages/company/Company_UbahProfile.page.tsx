@@ -60,7 +60,7 @@ const Company_UbahProfile = () => {
     const file = e.target.files?.[0]
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        setErrorMessage('Ukuran file logo terlalu besar. Maksimal ukuran file adalah 2MB.')
+        setErrorMessage('Ukuran file logo terlalu besar. Maksimal ukuran file adalah 10MB.')
         errorBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
         return
       }
@@ -346,7 +346,7 @@ const Company_UbahProfile = () => {
               
               <div className="text-center mt-2">
                 <p className="text-sm font-bold text-[#0f5ce0] group-hover:underline underline-offset-2">Klik untuk Unggah Logo</p>
-                <p className="text-xs text-[#7b8191] mt-1.5 font-medium">Format: JPG, PNG, atau SVG. <br className="sm:hidden" />Maksimal ukuran file 2MB.</p>
+                <p className="text-xs text-[#7b8191] mt-1.5 font-medium">Format: JPG, PNG, atau SVG. <br className="sm:hidden" />Maksimal ukuran file 10MB.</p>
               </div>
             </label>
           </div>

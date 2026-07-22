@@ -7,12 +7,25 @@ const Company_KelolaLowongan = () => {
   const navigate = useNavigate()
   
   const [jobs, setJobs] = useState(initialLowongan)
-  const [activeTab, setActiveTab] = useState<'Semua' | 'Aktif' | 'Draft' | 'Selesai'>('Semua')
+  const [activeTab, setActiveTab] = useState<'Aktif' | 'Draft' | 'Selesai'>('Aktif')
   const [sortBy, setSortBy] = useState<'Terbaru' | 'Terlama'>('Terbaru')
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
   useEffect(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    for (let i = 0; i < initialLowongan.length; i++) {
+      const job = initialLowongan[i]
+      if (job.status === 'Aktif' && job.tanggalBatas) {
+        const batas = new Date(job.tanggalBatas)
+        if (!isNaN(batas.getTime()) && batas < today) {
+          initialLowongan[i] = { ...job, status: 'Selesai' }
+        }
+      }
+    }
+
     setJobs([...initialLowongan])
   }, [])
 
@@ -36,11 +49,7 @@ const Company_KelolaLowongan = () => {
   }, [jobs])
 
   const filteredJobs = useMemo(() => {
-    let result = [...jobs]
-    
-    if (activeTab !== 'Semua') {
-      result = jobs.filter(job => job.status === activeTab)
-    }
+    const result = jobs.filter(job => job.status === activeTab)
 
     return result.sort((a, b) => {
       const getTimestamp = (dateStr: string) => {
@@ -172,7 +181,7 @@ const Company_KelolaLowongan = () => {
 
         <div className="flex flex-wrap items-center justify-between border-b border-[#f1f4f9] px-6 py-2 gap-4 bg-white">
           <div className="flex gap-6">
-            {(['Semua', 'Aktif', 'Draft', 'Selesai'] as const).map((tab) => {
+            {(['Aktif', 'Draft', 'Selesai'] as const).map((tab) => {
               return (
                 <button
                   key={tab}

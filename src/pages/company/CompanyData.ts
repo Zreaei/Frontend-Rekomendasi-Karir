@@ -1,4 +1,3 @@
-// ==========================================
 // 1. MANAJEMEN DATA PELAMAR 
 // ==========================================
 export interface Applicant {
@@ -29,7 +28,6 @@ export const initialApplicants: Applicant[] = [
   { id: 12, name: 'Rizky Fauzi', university: 'Universitas Sumatera Utara', role: 'Senior UI/UX Designer', type: 'Internship', match: 70, date: '28 Sep 2023', status: 'Ditolak', initial: 'RF', bgColor: 'bg-zinc-600' }
 ];
 
-// ==========================================
 // 2. MANAJEMEN DATA LOWONGAN (JOBS)
 // ==========================================
 export interface Lowongan {
@@ -42,6 +40,8 @@ export interface Lowongan {
   status: 'Aktif' | 'Draft' | 'Selesai';
   applicantsCount: number | null;
   avgMatch: number | null;
+  tanggalPosting?: string; 
+  tanggalBatas?: string;
 }
 
 export const initialLowongan: Lowongan[] = [
@@ -54,7 +54,6 @@ export const initialLowongan: Lowongan[] = [
   { id: 7, role: 'Content Strategist', department: 'Marketing', type: 'Contract', location: 'Jakarta', date: 'DIBUAT 05 SEP 2023', status: 'Draft', applicantsCount: null, avgMatch: null }
 ];
 
-// ==========================================
 // 3. MANAJEMEN DATA PROFIL PERUSAHAAN
 // ==========================================
 export interface CompanyProfileData {
@@ -88,7 +87,6 @@ export const initialCompanyProfile: CompanyProfileData = {
   logo: null
 };
 
-// ==========================================
 // 4. SERVICE TANPA LOCALSTORAGE
 // ==========================================
 export const CompanyService = {
