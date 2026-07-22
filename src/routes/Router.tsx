@@ -26,9 +26,7 @@ import Company_Dashboard from '../pages/company/Company_Dashboard.page'
 import Company_DaftarPelamar from '../pages/company/Company_DaftarPelamar.page'
 import Company_KelolaLowongan from '../pages/company/Company_KelolaLowongan.page'
 import Company_TambahLowongan from '../pages/company/Company_TambahLowongan.page'
-
-// TODO: Buat file Company_RekomendasiKandidat.page.tsx
-// import Company_RekomendasiKandidat from '../pages/company/Company_RekomendasiKandidat.page'
+import Company_RekomendasiKandidat from '../pages/company/Company_RekomendasiKandidat.page'
 
 // TODO: Buat file Company_KandidatDiundang.page.tsx
 // import Company_KandidatDiundang from '../pages/company/Company_KandidatDiundang.page'
@@ -73,7 +71,7 @@ const AppRouter = () => {
         <Route path="daftar-pelamar" element={<Company_DaftarPelamar />} />
         <Route path="kelola-lowongan" element={<Company_KelolaLowongan />} />
         <Route path="tambah-lowongan" element={<Company_TambahLowongan />} />
-        <Route path="rekomendasi-kandidat" element={<PlaceholderPage title="Rekomendasi Kandidat" />} />
+        <Route path="rekomendasi-kandidat" element={<Company_RekomendasiKandidat />} />
         <Route path="kandidat-diundang" element={<PlaceholderPage title="Kandidat Diundang" />} />
         <Route path="profil-perusahaan" element={<Company_ProfilePerusahaan />} />
         <Route path="ubah-profil-perusahaan" element={<Company_UbahProfile />} />

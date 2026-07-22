@@ -11,6 +11,9 @@ export interface Applicant {
   status: string;
   initial: string;
   bgColor: string;
+  source?: string; 
+  major?: string;    
+  skills?: string[];
 }
 
 export const initialApplicants: Applicant[] = [
@@ -87,7 +90,32 @@ export const initialCompanyProfile: CompanyProfileData = {
   logo: null
 };
 
-// 4. SERVICE TANPA LOCALSTORAGE
+// 4. MANAJEMEN DATA REKOMENDASI KANDIDAT
+// ==========================================
+export interface Recommendation {
+  id: number;
+  name: string;
+  major: string;
+  university: string;
+  skills: string[];
+  matchScore: number;
+  roleMatch: string;
+  status: 'Pending' | 'Diterima' | 'Ditolak';
+}
+
+export const initialRecommendations: Recommendation[] = [
+  { id: 1, name: 'Budi Santoso', major: 'Computer Science', university: 'Universitas Indonesia', skills: ['REACT.JS', 'TYPESCRIPT', 'GRAPHQL'], matchScore: 96, roleMatch: 'SENIOR FRONTEND ENGINEER', status: 'Pending' },
+  { id: 2, name: 'Anisa Rahmawati', major: 'Information Systems', university: 'ITB', skills: ['UI/UX DESIGN', 'REACT NATIVE', 'FIGMA'], matchScore: 92, roleMatch: 'PRODUCT DESIGNER', status: 'Pending' },
+  { id: 3, name: 'Dimas Pratama', major: 'Software Engineering', university: 'Binus University', skills: ['REDUX', 'NEXT.JS', 'TAILWIND CSS'], matchScore: 88, roleMatch: 'BACKEND ARCHITECT', status: 'Pending' },
+  { id: 4, name: 'Siti Aminah', major: 'Informatics', university: 'Telkom University', skills: ['VUE.JS', 'TESTING'], matchScore: 85, roleMatch: 'MOBILE DEVELOPER', status: 'Pending' },
+  { id: 5, name: 'Andi Wijaya', major: 'Data Science', university: 'UGM', skills: ['PYTHON', 'SQL', 'TABLEAU'], matchScore: 94, roleMatch: 'DATA ANALYST', status: 'Diterima' },
+  { id: 6, name: 'Reza Saputra', major: 'Cyber Security', university: 'Universitas Airlangga', skills: ['AWS', 'PEN-TESTING', 'LINUX'], matchScore: 65, roleMatch: 'SECURITY ENGINEER', status: 'Ditolak' },
+  { id: 7, name: 'Diana Fitri', major: 'Computer Science', university: 'Universitas Diponegoro', skills: ['NODE.JS', 'GO', 'DOCKER'], matchScore: 91, roleMatch: 'BACKEND ARCHITECT', status: 'Pending' },
+  { id: 8, name: 'Kevin Pratama', major: 'Information Technology', university: 'Universitas Padjadjaran', skills: ['FIGMA', 'ADOBE XD', 'USER RESEARCH'], matchScore: 89, roleMatch: 'PRODUCT DESIGNER', status: 'Diterima' },
+  { id: 9, name: 'Rina Ayu', major: 'Information Systems', university: 'Universitas Hasanuddin', skills: ['REACT.JS', 'TAILWIND CSS', 'VERCEL'], matchScore: 72, roleMatch: 'SENIOR FRONTEND ENGINEER', status: 'Ditolak' }
+];
+
+// 5. SERVICE TANPA LOCALSTORAGE
 // ==========================================
 export const CompanyService = {
   // Ambil data langsung dari variabel dummy di file ini
@@ -100,5 +128,9 @@ export const CompanyService = {
   // Nanti saat ada BE, tinggal ubah ini menjadi `await axios.put('/api/company', updatedData);`
   saveProfile: async (updatedData: CompanyProfileData): Promise<void> => {
     Object.assign(initialCompanyProfile, updatedData);
+  },
+
+  getRecommendations: async (): Promise<Recommendation[]> => {
+    return initialRecommendations;
   }
 };

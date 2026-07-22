@@ -1,18 +1,21 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { 
-  Users, Clock, UserCheck, Plus, MoreVertical, RotateCcw, CheckCircle2, XCircle, AlertCircle, Download 
+  Users, Clock, UserCheck, Plus, RotateCcw, Download,
+  MoreVertical, CheckCircle2, XCircle, AlertCircle 
 } from 'lucide-react'
-import { initialApplicants, initialLowongan } from './CompanyData' 
+import { initialApplicants, initialLowongan, initialRecommendations } from './CompanyData' 
 
 const Company_DaftarPelamar = () => {
   const location = useLocation()
+  const navigate = useNavigate()
 
   const passedRole = location.state?.filterRole
 
   const [applicants, setApplicants] = useState(initialApplicants)
   const [positionFilter, setPositionFilter] = useState(passedRole || 'Semua Posisi')
   const [statusFilter, setStatusFilter] = useState('Semua Status')
+  const [sourceFilter, setSourceFilter] = useState('Semua Sumber')
   
   const [currentPage, setCurrentPage] = useState(1)
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null)
@@ -34,10 +37,45 @@ const Company_DaftarPelamar = () => {
     return Array.from(roles)
   }, [])
 
+  const getApplicantSource = (applicant: any) => {
+    if (applicant.source) return applicant.source
+    if (applicant.id === 2 || applicant.id === 4) return 'Undangan'
+    return 'Lamar'
+  }
+
   const handleUpdateStatus = (id: number, newStatus: string) => {
-    setApplicants(prev => prev.map(applicant => 
-      applicant.id === id ? { ...applicant, status: newStatus } : applicant
-    ))
+    setApplicants(prev => {
+      const updatedList = prev.map(applicant => {
+        if (applicant.id === id) {
+          const updatedApp = { ...applicant, status: newStatus }
+          
+          const appIndex = initialApplicants.findIndex(a => a.id === id)
+          if (appIndex > -1) initialApplicants[appIndex].status = newStatus
+
+          if (getApplicantSource(updatedApp) === 'Undangan') {
+            const recIndex = initialRecommendations.findIndex(r => r.name === updatedApp.name)
+            
+            if (recIndex > -1) {
+              initialRecommendations[recIndex].status = newStatus as 'Pending' | 'Diterima' | 'Ditolak'
+            } else {
+              initialRecommendations.push({
+                id: Date.now() + id,
+                name: updatedApp.name,
+                major: updatedApp.major || 'Computer Science',
+                university: updatedApp.university,
+                skills: updatedApp.skills || ['REACT.JS', 'TYPESCRIPT'],
+                matchScore: updatedApp.match,
+                roleMatch: updatedApp.role,
+                status: newStatus as 'Pending' | 'Diterima' | 'Ditolak'
+              })
+            }
+          }
+          return updatedApp
+        }
+        return applicant
+      })
+      return updatedList
+    })
     setActiveMenuId(null)
   }
 
@@ -52,23 +90,27 @@ const Company_DaftarPelamar = () => {
     return applicants.filter((applicant) => {
       const matchPosition = positionFilter === 'Semua Posisi' || applicant.role === positionFilter
       const matchStatus = statusFilter === 'Semua Status' || applicant.status === statusFilter
-      return matchPosition && matchStatus
+      const matchSource = sourceFilter === 'Semua Sumber' || getApplicantSource(applicant) === sourceFilter
+      
+      return matchPosition && matchStatus && matchSource
     })
-  }, [applicants, positionFilter, statusFilter])
+  }, [applicants, positionFilter, statusFilter, sourceFilter])
 
   const handleResetFilter = () => {
     setPositionFilter('Semua Posisi')
     setStatusFilter('Semua Status')
+    setSourceFilter('Semua Sumber')
     setCurrentPage(1)
   }
 
   const handleExportCSV = () => {
     if (filteredApplicants.length === 0) return
 
-    const headers = ['Nama Kandidat', 'Posisi Tujuan', 'Tipe Pekerjaan', 'Match Score (%)', 'Tanggal Melamar', 'Status', 'Universitas']
+    const headers = ['Nama Kandidat', 'Sumber', 'Posisi Tujuan', 'Tipe Pekerjaan', 'Match Score (%)', 'Tanggal Melamar', 'Status', 'Universitas']
     
     const csvData = filteredApplicants.map(app => [
       `"${app.name}"`,
+      `"${getApplicantSource(app)}"`,
       `"${app.role}"`,
       `"${app.type}"`,
       app.match,
@@ -111,8 +153,23 @@ const Company_DaftarPelamar = () => {
     }
   }
 
+  const renderSourceBadge = (source: string) => {
+    if (source === 'Undangan') {
+      return (
+        <span className="inline-flex items-center justify-center gap-1.5 w-[100px] py-1.5 bg-[#fffbe6] text-[#f59e0b] rounded-full text-[11px] font-bold">
+           Undangan
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center justify-center gap-1.5 w-[100px] py-1.5 bg-[#eef4ff] text-[#0f5ce0] rounded-full text-[11px] font-bold">
+         Lamar
+      </span>
+    )
+  }
+
   return (
-    <div className="w-full flex flex-col gap-6">
+    <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300">
       
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -127,7 +184,10 @@ const Company_DaftarPelamar = () => {
             <Download size={18} />
             Ekspor CSV
           </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-semibold text-white hover:bg-[#0d4ebf] transition shadow-sm active:scale-95">
+          <button 
+            onClick={() => navigate('/company/rekomendasi-kandidat')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-semibold text-white hover:bg-[#0d4ebf] transition shadow-sm active:scale-95"
+          >
             <Plus size={18} />
             Undang Kandidat
           </button>
@@ -167,13 +227,23 @@ const Company_DaftarPelamar = () => {
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-[#f1f4f9]">
           <div className="flex flex-wrap items-center gap-3">
+            
+            <select 
+              value={sourceFilter} 
+              onChange={(e) => { setSourceFilter(e.target.value); setCurrentPage(1); }} 
+              className="px-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none cursor-pointer"
+            >
+              <option value="Semua Sumber">Semua Sumber</option>
+              <option value="Lamar">Melamar</option>
+              <option value="Undangan">Diundang</option>
+            </select>
+
             <select 
               value={positionFilter} 
               onChange={(e) => { setPositionFilter(e.target.value); setCurrentPage(1); }} 
               className="px-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none cursor-pointer max-w-[200px] truncate"
             >
               <option value="Semua Posisi">Semua Posisi</option>
-              {/* Opsi posisi didapat secara dinamis */}
               {uniqueRoles.map(role => (
                 <option key={role} value={role}>{role}</option>
               ))}
@@ -204,11 +274,12 @@ const Company_DaftarPelamar = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="border-b border-[#f1f4f9] bg-[#f8faff] text-[10px] font-bold text-[#7b8191] uppercase tracking-wider">
+              <tr className="border-b border-[#f1f4f9] bg-[#f8faff] text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">
                 <th className="px-6 py-4 w-[25%]">Nama Kandidat</th>
-                <th className="px-6 py-4 w-[25%]">Posisi Tujuan</th>
+                <th className="px-6 py-4">Sumber</th>
+                <th className="px-6 py-4 w-[20%]">Posisi Tujuan</th>
                 <th className="px-6 py-4 text-center">Match Score</th>
                 <th className="px-6 py-4">Tgl Melamar</th>
                 <th className="px-6 py-4">Status</th>
@@ -219,27 +290,50 @@ const Company_DaftarPelamar = () => {
               {displayedApplicants.length > 0 ? (
                 displayedApplicants.map((applicant) => (
                   <tr key={applicant.id} className="hover:bg-[#fafbfe] transition">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    
+                    {/* Nama Kandidat */}
+                    <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full ${applicant.bgColor} text-white flex items-center justify-center font-bold text-xs`}>{applicant.initial}</div>
-                        <div>
-                          <p className="text-sm font-bold text-[#111827]">{applicant.name}</p>
-                          <p className="text-[12px] text-[#7b8191]">{applicant.university}</p>
+                        <div className={`w-10 h-10 rounded-full ${applicant.bgColor} text-white flex items-center justify-center font-bold text-sm shrink-0`}>
+                          {applicant.initial}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-[#111827] truncate">{applicant.name}</p>
+                          <p className="text-[12px] text-[#7b8191] truncate">{applicant.university}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="text-sm font-semibold text-[#111827] truncate max-w-[180px]">{applicant.role}</p>
+
+                    {/* Sumber */}
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      {renderSourceBadge(getApplicantSource(applicant))}
+                    </td>
+
+                    {/* Posisi Tujuan */}
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <p className="text-sm font-semibold text-[#111827] truncate">{applicant.role}</p>
                       <p className="text-[12px] text-[#7b8191]">{applicant.type}</p>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm font-bold text-[#0f5ce0]">{applicant.match}%</span>
+
+                    {/* Match Score */}
+                    <td className="px-6 py-5 whitespace-nowrap text-center">
+                      <span className="text-[15px] font-bold text-[#0f5ce0]">{applicant.match}%</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#5b6170] font-medium">{applicant.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${getStatusStyle(applicant.status)}`}>{applicant.status}</span>
+
+                    {/* Tanggal Melamar */}
+                    <td className="px-6 py-5 whitespace-nowrap text-sm text-[#5b6170] font-medium">
+                      {applicant.date}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center relative">
+
+                    {/* Status */}
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <span className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold ${getStatusStyle(applicant.status)}`}>
+                        {applicant.status}
+                      </span>
+                    </td>
+
+                    {/* Aksi */}
+                    <td className="px-6 py-5 whitespace-nowrap text-center relative">
                       <button 
                         onClick={() => setActiveMenuId(activeMenuId === applicant.id ? null : applicant.id)} 
                         className="text-[#7b8191] hover:text-[#0f5ce0] p-1.5 rounded-lg transition hover:bg-[#eef4ff]"
@@ -255,11 +349,12 @@ const Company_DaftarPelamar = () => {
                         </div>
                       )}
                     </td>
+
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
+                  <td colSpan={7} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
                     Tidak ada data pelamar yang sesuai dengan filter.
                   </td>
                 </tr>

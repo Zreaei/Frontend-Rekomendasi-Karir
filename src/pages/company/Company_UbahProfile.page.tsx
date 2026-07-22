@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Globe, UploadCloud, ChevronDown, ArrowLeft,
+  Globe, UploadCloud, ChevronDown, 
   Bold, Italic, Underline, List, Link2, Building2, ImagePlus, Edit3
 } from 'lucide-react'
 import { CompanyService, initialCompanyProfile, type CompanyProfileData } from './CompanyData'

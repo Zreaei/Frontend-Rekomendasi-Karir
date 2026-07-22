@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Info, MapPin, Plus, X, Send, ChevronDown, Save, AlertCircle, Calendar, ArrowLeft, CheckCircle2, ClipboardCheck } from 'lucide-react'
+import { Info, MapPin, Plus, X, ChevronDown, Save, AlertCircle, Calendar, CheckCircle2, ClipboardCheck } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { initialLowongan } from './CompanyData' 
 
