@@ -1,29 +1,31 @@
-import { useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { TrendingUp, Users, Briefcase, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { initialApplicants } from './CompanyData'
+import { getApplicantSource, CompanyService, type Applicant } from './CompanyData'
 
 const CompanyDashboard = () => {
   const navigate = useNavigate()
 
-  const topCandidates = useMemo(() => {
-    return [...initialApplicants]
-      .sort((a, b) => b.match - a.match)
-      .slice(0, 5)
+  const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [lowonganAktif, setLowonganAktif] = useState(0)
+  const [totalPelamar, setTotalPelamar] = useState(0)
+  const [rekomendasiKandidat, setRekomendasiKandidat] = useState(0)
+
+  useEffect(() => {
+    CompanyService.getApplicants().then(data => setApplicants(data))
+    CompanyService.getDashboardSummary().then(data => {
+      setLowonganAktif(data.lowonganAktif)
+      setTotalPelamar(data.totalPelamar)
+      setRekomendasiKandidat(data.rekomendasiKandidat)
+    })
   }, [])
 
-  const totalPelamar = initialApplicants.length
-  const rekomendasiKandidat = initialApplicants.filter(a => a.match >= 85).length
-  
-  const getDummySkills = (role: string) => {
-    switch (role) {
-      case 'Software Engineer': return ['React.js', 'TypeScript', 'GraphQL']
-      case 'Data Analyst': return ['Python', 'SQL', 'Tableau']
-      case 'Product Designer': return ['UI/UX Design', 'Figma', 'Prototyping']
-      case 'Marketing Associate': return ['SEO', 'Copywriting', 'Google Analytics']
-      default: return ['Teamwork', 'Communication']
-    }
-  }
+  const topCandidates = useMemo(() => {
+    return [...applicants]
+      .filter(a => getApplicantSource(a) === 'Lamar' && a.status === 'Pending')
+      .sort((a, b) => b.match - a.match)
+      .slice(0, 5)
+  }, [applicants])
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -35,7 +37,7 @@ const CompanyDashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {[
-          { icon: <Briefcase size={22} />, label: 'Lowongan Aktif', value: '24' },
+          { icon: <Briefcase size={22} />, label: 'Lowongan Aktif', value: lowonganAktif.toString() },
           { icon: <Users size={22} />, label: 'Total Pelamar', value: totalPelamar.toLocaleString('id-ID') },
           { icon: <TrendingUp size={22} />, label: 'Rekomendasi Kandidat', value: rekomendasiKandidat.toString() },
         ].map((m, i) => (
@@ -83,7 +85,7 @@ const CompanyDashboard = () => {
                   
                   {/* Skill tags */}
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    {getDummySkills(k.role).map((s, si) => (
+                    {(k.skills || []).map((s, si) => (
                       <span key={si} className="text-[10px] font-semibold bg-[#f1f4f9] text-[#5b6170] px-2 py-0.5 rounded-[4px]">
                         {s}
                       </span>

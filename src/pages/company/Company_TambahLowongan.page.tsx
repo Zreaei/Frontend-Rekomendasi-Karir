@@ -144,8 +144,6 @@ const Company_TambahLowongan = () => {
         location: jobLocation || 'Remote',
         date: 'HARI INI', 
         status: statusToSave,
-        applicantsCount: 0,
-        avgMatch: 0,
         tanggalPosting: tanggalPosting || undefined,
         tanggalBatas: tanggalBatas || undefined,
       }

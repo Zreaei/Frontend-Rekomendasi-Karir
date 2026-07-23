@@ -1,32 +1,34 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Briefcase, Users, Archive, Plus, Trash2, Edit } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { initialLowongan } from './CompanyData' 
+import { initialLowongan, getApplicantCountForRole, getAvgMatchForRole, CompanyService, type Lowongan } from './CompanyData' 
 
 const Company_KelolaLowongan = () => {
   const navigate = useNavigate()
   
-  const [jobs, setJobs] = useState(initialLowongan)
+  const [jobs, setJobs] = useState<Lowongan[]>([])
   const [activeTab, setActiveTab] = useState<'Aktif' | 'Draft' | 'Selesai'>('Aktif')
   const [sortBy, setSortBy] = useState<'Terbaru' | 'Terlama'>('Terbaru')
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
   useEffect(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    CompanyService.getJobs().then(data => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
 
-    for (let i = 0; i < initialLowongan.length; i++) {
-      const job = initialLowongan[i]
-      if (job.status === 'Aktif' && job.tanggalBatas) {
-        const batas = new Date(job.tanggalBatas)
-        if (!isNaN(batas.getTime()) && batas < today) {
-          initialLowongan[i] = { ...job, status: 'Selesai' }
+      for (let i = 0; i < data.length; i++) {
+        const job = data[i]
+        if (job.status === 'Aktif' && job.tanggalBatas) {
+          const batas = new Date(job.tanggalBatas)
+          if (!isNaN(batas.getTime()) && batas < today) {
+            data[i] = { ...job, status: 'Selesai' }
+          }
         }
       }
-    }
 
-    setJobs([...initialLowongan])
+      setJobs([...data])
+    })
   }, [])
 
   const handleDeleteJob = (id: number) => {
@@ -43,7 +45,7 @@ const Company_KelolaLowongan = () => {
 
   const stats = useMemo(() => {
     const total = jobs.length
-    const pelamarBaru = jobs.reduce((acc, job) => acc + (job.applicantsCount || 0), 0)
+    const pelamarBaru = jobs.reduce((acc, job) => acc + (job.status !== 'Draft' ? getApplicantCountForRole(job.role) : 0), 0)
     const ditutup = jobs.filter(j => j.status === 'Selesai').length
     return { total, pelamarBaru, ditutup }
   }, [jobs])
@@ -95,18 +97,11 @@ const Company_KelolaLowongan = () => {
   const paginatedJobs = filteredJobs.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
   const getPaginationGroup = () => {
+    if (totalPages <= 0) return [1]
+    const start = currentPage
+    const end = Math.min(currentPage + 1, totalPages)
     let pages = []
-    if (totalPages <= 5) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i)
-    } else {
-      if (currentPage <= 3) {
-        pages = [1, 2, 3, 4, '...', totalPages]
-      } else if (currentPage >= totalPages - 2) {
-        pages = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
-      } else {
-        pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages]
-      }
-    }
+    for (let i = start; i <= end; i++) pages.push(i)
     return pages
   }
 
@@ -254,9 +249,9 @@ const Company_KelolaLowongan = () => {
                     </td>
 
                     <td className="px-4 py-5 text-center whitespace-nowrap text-sm font-bold text-[#111827]">
-                      {job.applicantsCount !== null ? (
+                      {job.status !== 'Draft' ? (
                         <div>
-                          {job.applicantsCount}{' '}
+                          {getApplicantCountForRole(job.role)}{' '}
                           <span className="text-[10px] text-[#7b8191] font-bold tracking-wider block sm:inline">ORANG</span>
                         </div>
                       ) : (
@@ -265,9 +260,9 @@ const Company_KelolaLowongan = () => {
                     </td>
 
                     <td className="px-4 py-5 text-center whitespace-nowrap">
-                      {job.avgMatch !== null ? (
+                      {job.status !== 'Draft' && getAvgMatchForRole(job.role) !== null ? (
                         <span className="text-sm font-bold text-[#0f5ce0] border-b-2 border-[#0f5ce0]/30 pb-0.5">
-                          {job.avgMatch}%
+                          {getAvgMatchForRole(job.role)}%
                         </span>
                       ) : (
                         <span className="text-[11px] text-[#a0a6b5] font-semibold">N/A</span>
@@ -347,39 +342,31 @@ const Company_KelolaLowongan = () => {
             <button 
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                currentPage === 1 ? 'text-[#7b8191] opacity-40 cursor-not-allowed border border-[#e4e9f4]' : 'text-[#0f5ce0] hover:bg-[#eef4ff] border border-[#e4e9f4]'
-              }`}
+              className="text-sm font-semibold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#7b8191] disabled:opacity-40 transition mr-2"
             >
-              ‹
+              Sebelumnya
             </button>
             
-            {getPaginationGroup().map((item, index) => (
-              item === '...' ? (
-                <span key={index} className="px-1 text-[#7b8191] text-xs font-bold">...</span>
-              ) : (
-                <button
-                  key={index}
-                  onClick={() => setCurrentPage(item as number)}
-                  className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                    currentPage === item 
-                      ? 'bg-[#0f5ce0] text-white shadow-sm' 
-                      : 'text-[#5b6170] hover:bg-gray-50 border border-transparent'
-                  }`}
-                >
-                  {item}
-                </button>
-              )
+            {getPaginationGroup().map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
+                  currentPage === pageNum 
+                    ? 'bg-[#0f5ce0] text-white shadow-sm' 
+                    : 'text-[#5b6170] hover:bg-gray-50 border border-transparent'
+                }`}
+              >
+                {pageNum}
+              </button>
             ))}
 
             <button 
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                (currentPage === totalPages || totalPages === 0) ? 'text-[#7b8191] opacity-40 cursor-not-allowed border border-[#e4e9f4]' : 'text-[#0f5ce0] hover:bg-[#eef4ff] border border-[#e4e9f4]'
-              }`}
+              className="text-sm font-semibold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#7b8191] disabled:opacity-40 transition ml-2"
             >
-              ›
+              Selanjutnya
             </button>
           </div>
         </div>

@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { 
   Building2, Globe, MapPin, Mail, Phone, Edit3, 
   Users, Briefcase, Eye, CheckCircle2, ShieldCheck, Hash, UserCheck
 } from 'lucide-react'
-import { CompanyService, initialCompanyProfile, initialLowongan, initialApplicants, type CompanyProfileData } from './CompanyData'
+import { CompanyService, initialCompanyProfile, getActiveJobsCount, getTotalPelamarCount, type CompanyProfileData } from './CompanyData'
 
 const Company_ProfilePerusahaan = () => {
   const navigate = useNavigate()
@@ -25,8 +26,8 @@ const Company_ProfilePerusahaan = () => {
   }, [])
 
   const stats = useMemo(() => {
-    const activeJobs = initialLowongan.filter(j => j.status === 'Aktif').length
-    const totalApplicants = initialApplicants.length
+    const activeJobs = getActiveJobsCount()
+    const totalApplicants = getTotalPelamarCount()
     const profileViews = 4890
     return { activeJobs, totalApplicants, profileViews }
   }, [])
@@ -251,7 +252,7 @@ const Company_ProfilePerusahaan = () => {
             <div 
               className="text-sm text-[#5b6170] leading-relaxed text-justify font-normal 
                          [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&>p]:mb-4 last:[&>p]:mb-0 [&>a]:text-[#0f5ce0] [&>a]:underline"
-              dangerouslySetInnerHTML={{ __html: profile.description }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(profile.description) }}
             />
           </div>
 

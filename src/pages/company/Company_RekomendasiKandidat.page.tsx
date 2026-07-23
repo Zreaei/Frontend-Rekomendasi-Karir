@@ -8,6 +8,7 @@ const Company_RekomendasiKandidat = () => {
   
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [activeFilter, setActiveFilter] = useState<'Pending' | 'Diterima' | 'Ditolak'>('Pending')
+  const [sortOrder, setSortOrder] = useState<'Tertinggi' | 'Terendah'>('Tertinggi')
   
   // Menampilkan 10 kandidat per halaman
   const [currentPage, setCurrentPage] = useState(1)
@@ -19,8 +20,8 @@ const Company_RekomendasiKandidat = () => {
 
   const filteredCandidates = useMemo(() => {
     const filtered = recommendations.filter(cand => cand.status === activeFilter)
-    return filtered.sort((a, b) => b.matchScore - a.matchScore)
-  }, [recommendations, activeFilter])
+    return filtered.sort((a, b) => sortOrder === 'Tertinggi' ? b.matchScore - a.matchScore : a.matchScore - b.matchScore)
+  }, [recommendations, activeFilter, sortOrder])
 
   const totalPages = Math.ceil(filteredCandidates.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -32,8 +33,11 @@ const Company_RekomendasiKandidat = () => {
   }
 
   const getPaginationGroup = () => {
+    if (totalPages <= 0) return [1]
+    const start = currentPage
+    const end = Math.min(currentPage + 1, totalPages)
     let pages = []
-    for (let i = 1; i <= totalPages; i++) {
+    for (let i = start; i <= end; i++) {
       pages.push(i)
     }
     return pages
@@ -121,21 +125,29 @@ const Company_RekomendasiKandidat = () => {
           </button>
         </div>
         
-        <button className="w-10 h-10 rounded-xl bg-[#f8faff] border border-[#e4e9f4] text-[#7b8191] hover:text-[#111827] hover:border-[#cbd5e1] flex items-center justify-center shrink-0 transition mr-1">
+        <button 
+          onClick={() => setSortOrder(prev => prev === 'Tertinggi' ? 'Terendah' : 'Tertinggi')}
+          className="w-10 h-10 rounded-xl bg-[#f8faff] border border-[#e4e9f4] text-[#7b8191] hover:text-[#111827] hover:border-[#cbd5e1] flex items-center justify-center shrink-0 transition mr-1"
+          title="Urutkan berdasarkan Match Score"
+        >
           <Filter size={18} />
         </button>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between px-2 mb-2">
-          <div className="text-sm font-bold text-[#111827]">
-            Kandidat Teratas <span className="text-[#7b8191] font-medium ml-1">({filteredCandidates.length} ditemukan)</span>
-          </div>
-          <div className="text-sm text-[#7b8191]">
-            Urutkan berdasarkan: <span className="font-bold text-[#111827]">Match Tertinggi %</span>
+      {activeFilter === 'Pending' && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between px-2 mb-2">
+            <div className="text-sm font-bold text-[#111827]">
+              Kandidat Teratas <span className="text-[#7b8191] font-medium ml-1">({filteredCandidates.length} ditemukan)</span>
+            </div>
+            <div className="text-sm text-[#7b8191]">
+              Urutkan berdasarkan: <span className="font-bold text-[#111827]">Match {sortOrder} %</span>
+            </div>
           </div>
         </div>
+      )}
 
+      <div className="flex flex-col gap-2">
         <div className="flex flex-col bg-white rounded-2xl border border-[#e4e9f4] shadow-sm">
           {paginatedCandidates.length > 0 ? (
             paginatedCandidates.map((candidate, index) => (
@@ -196,7 +208,10 @@ const Company_RekomendasiKandidat = () => {
                       <XCircle size={16} /> Ditolak
                     </button>
                   )}
-                  <button className="w-full py-2.5 bg-white hover:bg-gray-50 border border-[#e4e9f4] text-[#5b6170] hover:text-[#111827] text-sm font-bold rounded-xl transition shadow-sm active:scale-95">
+                  <button 
+                    onClick={() => navigate(`/company/detail-kandidat/${candidate.id}`)}
+                    className="w-full py-2.5 bg-white hover:bg-gray-50 border border-[#e4e9f4] text-[#5b6170] hover:text-[#111827] text-sm font-bold rounded-xl transition shadow-sm active:scale-95"
+                  >
                     Lihat Detail
                   </button>
                 </div>
