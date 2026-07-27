@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { Info, MapPin, Plus, X, ChevronDown, Save, AlertCircle, Calendar, CheckCircle2, ClipboardCheck } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Info, MapPin, Plus, X, ChevronDown, Save, AlertCircle, Calendar, CheckCircle2, ClipboardCheck, Loader2 } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { initialLowongan } from './CompanyData' 
+import { jobApi } from '../../services/company.service'
 
 interface Responsibility {
   id: number
@@ -12,38 +12,102 @@ interface Responsibility {
 
 const todayISO = () => new Date().toISOString().split('T')[0]
 
+// Label di form <-> nilai yang disimpan backend.
+const TYPE_TO_API: Record<string, string> = {
+  'Full-time': 'fulltime',
+  'Part-time': 'parttime',
+  'Contract': 'contract',
+  'Internship': 'internship',
+}
+const TYPE_FROM_API: Record<string, string> = Object.fromEntries(
+  Object.entries(TYPE_TO_API).map(([label, value]) => [value, label]),
+)
+
+const STANDARD_DEPTS = ['Technology', 'Marketing', 'Design', 'Human Resources']
+
+// ISO date dari backend -> nilai input type="date" (YYYY-MM-DD)
+const toDateInput = (raw?: string | null): string => {
+  if (!raw) return ''
+  const d = new Date(raw)
+  return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0]
+}
+
 const Company_TambahLowongan = () => {
   const navigate = useNavigate()
   const routerLocation = useLocation()
-  
-  const editJob = routerLocation.state?.editJob
 
-  const [jobTitle, setJobTitle] = useState(editJob?.role || '')
-  const [department, setDepartment] = useState(() => {
-    if (!editJob) return ''
-    const standardDepts = ['Technology', 'Marketing', 'Design', 'Human Resources']
-    return standardDepts.includes(editJob.department) ? editJob.department : 'Lainnya'
-  })
-  const [customDepartment, setCustomDepartment] = useState(() => {
-    if (!editJob) return ''
-    const standardDepts = ['Technology', 'Marketing', 'Design', 'Human Resources']
-    return standardDepts.includes(editJob.department) ? '' : editJob.department
-  })
-  const [jobType, setJobType] = useState(editJob?.type || '')
-  const [jobLocation, setJobLocation] = useState(editJob?.location || '')
+  // Halaman Kelola Lowongan mengirim id, bukan objek lowongan.
+  const editJobId: string | undefined = routerLocation.state?.editJobId
+
+  const [jobTitle, setJobTitle] = useState('')
+  const [department, setDepartment] = useState('')
+  const [customDepartment, setCustomDepartment] = useState('')
+  const [jobType, setJobType] = useState('')
+  const [jobLocation, setJobLocation] = useState('')
 
   // Tanggal mulai posting & batas akhir lowongan
-  const [tanggalPosting, setTanggalPosting] = useState(editJob?.tanggalPosting || todayISO())
-  const [tanggalBatas, setTanggalBatas] = useState(editJob?.tanggalBatas || '')
+  const [tanggalPosting, setTanggalPosting] = useState(todayISO())
+  const [tanggalBatas, setTanggalBatas] = useState('')
 
   const [responsibilities, setResponsibilities] = useState<Responsibility[]>([
     { id: Date.now(), description: '', skills: [], skillInput: '' }
   ])
 
   const [errorMessage, setErrorMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(!!editJobId)
+  const [isSaving, setIsSaving] = useState(false)
 
   // cek ulang sebelum benar-benar ditayangkan
   const [step, setStep] = useState<'form' | 'review'>('form')
+
+  // Mode edit: ambil data lowongan dari server (bukan dari router state,
+  // supaya data yang ditampilkan selalu yang terbaru).
+  useEffect(() => {
+    if (!editJobId) return
+    let aktif = true
+
+    jobApi
+      .getById(editJobId)
+      .then((job: any) => {
+        if (!aktif) return
+        setJobTitle(job?.title ?? '')
+
+        const dept = job?.department ?? ''
+        if (STANDARD_DEPTS.includes(dept)) {
+          setDepartment(dept)
+          setCustomDepartment('')
+        } else if (dept) {
+          setDepartment('Lainnya')
+          setCustomDepartment(dept)
+        }
+
+        setJobType(TYPE_FROM_API[job?.type] ?? '')
+        setJobLocation(job?.location ?? '')
+        setTanggalPosting(toDateInput(job?.postingDate) || todayISO())
+        setTanggalBatas(toDateInput(job?.deadline))
+
+        const reqs = job?.requirements ?? []
+        if (reqs.length > 0) {
+          setResponsibilities(
+            reqs.map((r: any, i: number) => ({
+              id: Date.now() + i,
+              description: r.requirement ?? '',
+              skills: Array.isArray(r.skills) ? r.skills : [],
+              skillInput: '',
+            })),
+          )
+        }
+      })
+      .catch((err: any) => {
+        if (!aktif) return
+        setErrorMessage(err?.response?.data?.message ?? 'Gagal memuat data lowongan.')
+      })
+      .finally(() => {
+        if (aktif) setIsLoading(false)
+      })
+
+    return () => { aktif = false }
+  }, [editJobId])
 
   const addResponsibility = () => {
     setResponsibilities([
@@ -93,6 +157,7 @@ const Company_TambahLowongan = () => {
   }
 
   const finalDepartment = department === 'Lainnya' ? customDepartment : department
+
   const validateForPublish = () => {
     if (!jobTitle.trim() || !finalDepartment.trim() || !jobType || !jobLocation.trim()) {
       return 'Harap lengkapi semua Informasi Lowongan dasar sebelum menayangkan.'
@@ -107,6 +172,13 @@ const Company_TambahLowongan = () => {
     if (!hasValidResponsibility) {
       return 'Harap isi setidaknya satu Deskripsi Tanggung Jawab pekerjaan.'
     }
+    // Backend menolak tanggung jawab tanpa keahlian (minimal 1 per baris).
+    const withoutSkill = responsibilities.find(
+      r => r.description.trim() !== '' && r.skills.length === 0,
+    )
+    if (withoutSkill) {
+      return 'Setiap Tanggung Jawab harus memiliki minimal satu keahlian.'
+    }
     return ''
   }
 
@@ -120,49 +192,64 @@ const Company_TambahLowongan = () => {
     setStep('review')
   }
 
-  const persistJob = (statusToSave: 'Aktif' | 'Draft') => {
-    if (editJob) {
-      const index = initialLowongan.findIndex(j => j.id === editJob.id)
-      if (index > -1) {
-        initialLowongan[index] = {
-          ...initialLowongan[index],
-          role: jobTitle || 'Posisi Baru',
-          department: finalDepartment || 'Belum Ditentukan',
-          type: jobType || 'Full-time',
-          location: jobLocation || 'Remote',
-          tanggalPosting: tanggalPosting || undefined,
-          tanggalBatas: tanggalBatas || undefined,
-          status: statusToSave
-        }
-      }
-    } else {
-      const newJob = {
-        id: initialLowongan.length > 0 ? Math.max(...initialLowongan.map(j => j.id)) + 1 : 1,
-        role: jobTitle || 'Posisi Baru',
-        department: finalDepartment || 'Belum Ditentukan',
-        type: jobType || 'Full-time',
-        location: jobLocation || 'Remote',
-        date: 'HARI INI', 
-        status: statusToSave,
-        applicantsCount: 0,
-        avgMatch: 0,
-        tanggalPosting: tanggalPosting || undefined,
-        tanggalBatas: tanggalBatas || undefined,
-      }
-      initialLowongan.unshift(newJob)
-    }
+  // Susun payload sesuai kontrak backend (requirements[] berisi teks + array keahlian).
+  const buildPayload = (statusToSave: 'active' | 'draft') => ({
+    title: jobTitle.trim(),
+    department: finalDepartment.trim(),
+    type: TYPE_TO_API[jobType] ?? 'fulltime',
+    location: jobLocation.trim(),
+    status: statusToSave,
+    postingDate: tanggalPosting || undefined,
+    deadline: tanggalBatas || undefined,
+    requirements: responsibilities
+      .filter(r => r.description.trim() !== '' && r.skills.length > 0)
+      .map(r => ({ requirement: r.description.trim(), skills: r.skills })),
+  })
 
-    navigate('/company/kelola-lowongan')
+  const persistJob = async (statusToSave: 'active' | 'draft') => {
+    setIsSaving(true)
+    setErrorMessage('')
+    try {
+      const payload = buildPayload(statusToSave)
+      if (editJobId) {
+        await jobApi.update(editJobId, payload as any)
+      } else {
+        await jobApi.create(payload as any)
+      }
+      navigate('/company/kelola-lowongan')
+    } catch (err: any) {
+      setErrorMessage(
+        err?.response?.data?.message ??
+          'Gagal menyimpan lowongan. Pastikan perusahaan Anda sudah diverifikasi.',
+      )
+      setStep('form')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const saveDraft = () => {
-    setErrorMessage('')
-    persistJob('Draft')
+    // Draft boleh belum lengkap, tetapi judul & minimal satu tanggung jawab
+    // berkeahlian tetap wajib karena backend memvalidasinya.
+    if (!jobTitle.trim()) {
+      setErrorMessage('Nama Posisi wajib diisi, meskipun disimpan sebagai draft.')
+      return
+    }
+    if (!finalDepartment.trim() || !jobLocation.trim()) {
+      setErrorMessage('Departemen dan Lokasi wajib diisi, meskipun disimpan sebagai draft.')
+      return
+    }
+    const hasUsable = responsibilities.some(r => r.description.trim() !== '' && r.skills.length > 0)
+    if (!hasUsable) {
+      setErrorMessage('Isi minimal satu Tanggung Jawab beserta keahliannya sebelum menyimpan draft.')
+      return
+    }
+    persistJob('draft')
   }
 
   // Dipanggil dari tahap Review setelah HR benar-benar yakin
   const confirmPublish = () => {
-    persistJob('Aktif')
+    persistJob('active')
   }
 
   const formatTanggal = (iso: string) => {
@@ -170,6 +257,15 @@ const Company_TambahLowongan = () => {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return iso
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat data lowongan...</p>
+      </div>
+    )
   }
 
   return (
@@ -180,11 +276,11 @@ const Company_TambahLowongan = () => {
           <button onClick={() => navigate('/company/kelola-lowongan')} className="hover:text-[#111827] transition">Lowongan</button>
           <span>›</span>
           <span className="text-[#0f5ce0]">
-            {step === 'review' ? 'Review Lowongan' : editJob ? 'Edit Lowongan' : 'Tambah Lowongan Baru'}
+            {step === 'review' ? 'Review Lowongan' : editJobId ? 'Edit Lowongan' : 'Tambah Lowongan Baru'}
           </span>
         </div>
         <h1 className="text-2xl font-bold text-[#111827]">
-          {step === 'review' ? 'Review Sebelum Ditayangkan' : editJob ? 'Lanjutkan Pembuatan Lowongan' : 'Buat Lowongan Baru'}
+          {step === 'review' ? 'Review Sebelum Ditayangkan' : editJobId ? 'Lanjutkan Pembuatan Lowongan' : 'Buat Lowongan Baru'}
         </h1>
         <p className="text-sm text-[#5b6170] mt-1">
           {step === 'review'
@@ -341,7 +437,7 @@ const Company_TambahLowongan = () => {
                           {resp.skills.map((skill, sIndex) => (
                             <span key={sIndex} className="flex items-center gap-1.5 px-3 py-1 bg-[#0f5ce0] text-white text-[12px] font-medium rounded-full">
                               {skill}
-                              <button onClick={() => removeSkill(resp.id, skill)} className="hover:text-gray-200 focus:outline-none transition">
+                              <button type="button" onClick={() => removeSkill(resp.id, skill)} className="hover:text-gray-200 focus:outline-none transition">
                                 <X size={12} />
                               </button>
                             </span>
@@ -383,14 +479,16 @@ const Company_TambahLowongan = () => {
           <div className="flex justify-end gap-3 pt-2">
             <button 
               onClick={saveDraft}
-              className="flex items-center gap-2 px-6 py-3 bg-white border border-[#e4e9f4] rounded-xl text-sm font-bold text-[#5b6170] hover:text-[#111827] hover:bg-gray-50 hover:border-[#cbd5e1] transition-all duration-200 shadow-sm active:scale-95"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-3 bg-white border border-[#e4e9f4] rounded-xl text-sm font-bold text-[#5b6170] hover:text-[#111827] hover:bg-gray-50 hover:border-[#cbd5e1] transition-all duration-200 shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save size={16} />
               Simpan sebagai Draft
             </button>
             <button 
               onClick={handleGoToReview}
-              className="flex items-center gap-2 px-6 py-3 bg-[#0f5ce0] border border-transparent rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] hover:shadow-lg transition-all duration-200 shadow-md active:scale-95"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-3 bg-[#0f5ce0] border border-transparent rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] hover:shadow-lg transition-all duration-200 shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ClipboardCheck size={16} />
               Review & Tayangkan
@@ -460,6 +558,13 @@ const Company_TambahLowongan = () => {
             </div>
           </div>
 
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-4 bg-[#fee2e2] text-[#ef4444] rounded-xl text-sm font-medium animate-in fade-in slide-in-from-bottom-2">
+              <AlertCircle size={18} />
+              {errorMessage}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 p-4 bg-[#eef4ff] text-[#0f5ce0] rounded-xl text-sm font-medium">
             <CheckCircle2 size={18} />
             Pastikan semua data di atas sudah benar. Lowongan akan langsung tayang ke kandidat setelah dikonfirmasi.
@@ -468,14 +573,17 @@ const Company_TambahLowongan = () => {
           <div className="flex justify-end gap-3 pt-2">
             <button 
               onClick={() => setStep('form')}
-              className="flex items-center gap-2 px-6 py-3 bg-white border border-[#e4e9f4] rounded-xl text-sm font-bold text-[#5b6170] hover:text-[#111827] hover:bg-gray-50 hover:border-[#cbd5e1] transition-all duration-200 shadow-sm active:scale-95"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-3 bg-white border border-[#e4e9f4] rounded-xl text-sm font-bold text-[#5b6170] hover:text-[#111827] hover:bg-gray-50 hover:border-[#cbd5e1] transition-all duration-200 shadow-sm active:scale-95 disabled:opacity-50"
             >
               Kembali ke Form
             </button>
             <button 
               onClick={confirmPublish}
-              className="flex items-center gap-2 px-6 py-3 bg-[#0f5ce0] border border-transparent rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] hover:shadow-lg transition-all duration-200 shadow-md active:scale-95"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-3 bg-[#0f5ce0] border border-transparent rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] hover:shadow-lg transition-all duration-200 shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {isSaving && <Loader2 size={16} className="animate-spin" />}
               Konfirmasi & Tayangkan
             </button>
           </div>

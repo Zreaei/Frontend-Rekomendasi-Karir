@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { api } from '../services/api.service'
 
 interface RegistrationData {
   fullName: string
@@ -81,7 +82,7 @@ export default function RegisterPage() {
     setStep(4)
   }
 
-  const handleFinalSubmit = (e: FormEvent) => {
+  const handleFinalSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!formData.finalConsent) {
       setError('Anda harus menyetujui pernyataan keakuratan data sebelum mengirimkan.')
@@ -89,7 +90,30 @@ export default function RegisterPage() {
     }
     setError('')
     setIsSubmitting(true)
-    setTimeout(() => navigate('/company', { replace: true }), 1500)
+    try {
+      const fd = new FormData()
+      fd.append('name', formData.fullName)
+      fd.append('email', formData.email)
+      fd.append('password', formData.password)
+      fd.append('companyName', formData.companyName)
+      fd.append('industry', formData.industry === 'Lainnya' ? formData.customIndustry : formData.industry)
+      fd.append('size', formData.companySize)
+      fd.append('website', formData.website)
+      fd.append('address', formData.address)
+      fd.append('description', formData.description)
+      fd.append('nib', formData.nib)
+      if (formData.izinUsahaFile) fd.append('izinUsaha', formData.izinUsahaFile)
+      if (formData.suratResmiFile) fd.append('suratResmi', formData.suratResmiFile)
+
+      await api.post('/auth/register/company', fd)
+
+      // daftar sukses -> ke login (akun pending, belum otomatis login)
+      navigate('/login', { replace: true })
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Gagal terhubung ke server. Pastikan backend berjalan.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const finalIndustryDisplay = formData.industry === 'Lainnya' ? formData.customIndustry : formData.industry

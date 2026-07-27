@@ -1,10 +1,72 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { 
-  Users, Clock, UserCheck, Plus, RotateCcw, Download,
-  MoreVertical, CheckCircle2, XCircle, AlertCircle 
+  Users, Clock, UserCheck, Search, RotateCcw, Download,
+  MoreVertical, CheckCircle2, XCircle, AlertCircle, Loader2
 } from 'lucide-react'
-import { initialApplicants, initialLowongan, initialRecommendations } from './CompanyData' 
+import { applicationApi } from '../../services/company.service'
+
+// ============================================================
+// HELPER
+// ============================================================
+
+// Status backend -> label tampilan
+const STATUS_LABEL: Record<string, string> = {
+  submitted: 'Terkirim',
+  processing: 'Diproses',
+  accepted: 'Diterima',
+  rejected: 'Ditolak',
+}
+
+const pickName = (app: any): string =>
+  app?.student?.user?.name ?? app?.student?.name ?? 'Tanpa Nama'
+
+// Skor kecocokan tidak disimpan sebagai kolom, melainkan di dalam matchSnapshot
+// (JSON yang dicatat saat mahasiswa melamar).
+const pickMatch = (app: any): number => {
+  if (typeof app?.matchScore === 'number') return Math.round(app.matchScore)
+  let snap = app?.matchSnapshot
+  if (typeof snap === 'string') {
+    try { snap = JSON.parse(snap) } catch { snap = null }
+  }
+  const score = snap?.score ?? snap?.matchScore ?? snap?.matchPercentage
+  return typeof score === 'number' ? Math.round(score) : 0
+}
+
+const pickUniversity = (app: any): string =>
+  app?.student?.university?.name ?? app?.student?.major ?? app?.student?.nim ?? '-'
+
+const pickDate = (app: any): string => {
+  const raw = app?.created_at ?? app?.createdAt
+  if (!raw) return '-'
+  return new Date(raw).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// Warna avatar konsisten per nama (bukan acak tiap render)
+const AVATAR_COLORS = ['bg-[#0f5ce0]', 'bg-[#10b981]', 'bg-[#f59e0b]', 'bg-[#8b5cf6]', 'bg-[#ef4444]', 'bg-[#06b6d4]']
+const colorFromName = (name: string) => {
+  let sum = 0
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i)
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length]
+}
+const initialFromName = (name: string) =>
+  name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+
+interface ApplicantRow {
+  id: string              // applicationId
+  name: string
+  email: string
+  university: string
+  major: string
+  nim: string
+  role: string            // judul lowongan yang dilamar
+  type: string            // jenis pekerjaan
+  match: number
+  date: string
+  status: string          // status mentah backend
+  initial: string
+  bgColor: string
+}
 
 const Company_DaftarPelamar = () => {
   const location = useLocation()
@@ -12,13 +74,19 @@ const Company_DaftarPelamar = () => {
 
   const passedRole = location.state?.filterRole
 
-  const [applicants, setApplicants] = useState(initialApplicants)
+  const [applicants, setApplicants] = useState<ApplicantRow[]>([])
+  const [summary, setSummary] = useState<Record<string, number>>({})
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState('')
+
   const [positionFilter, setPositionFilter] = useState(passedRole || 'Semua Posisi')
   const [statusFilter, setStatusFilter] = useState('Semua Status')
-  const [sourceFilter, setSourceFilter] = useState('Semua Sumber')
-  
+  const [searchTerm, setSearchTerm] = useState('')
+
   const [currentPage, setCurrentPage] = useState(1)
-  const [activeMenuId, setActiveMenuId] = useState<number | null>(null)
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const itemsPerPage = 10
 
@@ -32,97 +100,131 @@ const Company_DaftarPelamar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const uniqueRoles = useMemo(() => {
-    const roles = new Set(initialLowongan.map(job => job.role))
-    return Array.from(roles)
+  // Satu request: semua pelamar ke seluruh lowongan perusahaan ini.
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const { applications, summary: sum } = await applicationApi.listByCompany()
+
+      const rows: ApplicantRow[] = (applications ?? []).map((app: any) => {
+        const name = pickName(app)
+        return {
+          id: app.id,
+          name,
+          email: app?.student?.user?.email ?? '-',
+          university: pickUniversity(app),
+          major: app?.student?.major ?? '-',
+          nim: app?.student?.nim ?? '-',
+          role: app?.job?.title ?? '-',
+          type: app?.job?.type ?? '-',
+          match: pickMatch(app),
+          date: pickDate(app),
+          status: app.status,
+          initial: initialFromName(name),
+          bgColor: colorFromName(name),
+        }
+      })
+
+      setApplicants(rows)
+      setSummary(sum ?? {})
+    } catch (err: any) {
+      setLoadError(
+        err?.response?.data?.message ??
+          'Gagal memuat daftar pelamar. Pastikan server berjalan dan akun Anda terhubung dengan perusahaan.',
+      )
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  const getApplicantSource = (applicant: any) => {
-    if (applicant.source) return applicant.source
-    if (applicant.id === 2 || applicant.id === 4) return 'Undangan'
-    return 'Lamar'
-  }
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
-  const handleUpdateStatus = (id: number, newStatus: string) => {
-    setApplicants(prev => {
-      const updatedList = prev.map(applicant => {
-        if (applicant.id === id) {
-          const updatedApp = { ...applicant, status: newStatus }
-          
-          const appIndex = initialApplicants.findIndex(a => a.id === id)
-          if (appIndex > -1) initialApplicants[appIndex].status = newStatus
+  // Daftar posisi diturunkan dari pelamar yang ada (tidak perlu request tambahan).
+  const uniqueRoles = useMemo(
+    () => Array.from(new Set(applicants.map((a) => a.role))).filter((r) => r && r !== '-'),
+    [applicants],
+  )
 
-          if (getApplicantSource(updatedApp) === 'Undangan') {
-            const recIndex = initialRecommendations.findIndex(r => r.name === updatedApp.name)
-            
-            if (recIndex > -1) {
-              initialRecommendations[recIndex].status = newStatus as 'Pending' | 'Diterima' | 'Ditolak'
-            } else {
-              initialRecommendations.push({
-                id: Date.now() + id,
-                name: updatedApp.name,
-                major: updatedApp.major || 'Computer Science',
-                university: updatedApp.university,
-                skills: updatedApp.skills || ['REACT.JS', 'TYPESCRIPT'],
-                matchScore: updatedApp.match,
-                roleMatch: updatedApp.role,
-                status: newStatus as 'Pending' | 'Diterima' | 'Ditolak'
-              })
-            }
-          }
-          return updatedApp
-        }
-        return applicant
-      })
-      return updatedList
-    })
+  // Ubah status lamaran (optimistic: UI berubah dulu, dibalikkan kalau gagal).
+  const handleUpdateStatus = async (id: string, newStatus: 'processing' | 'accepted' | 'rejected') => {
     setActiveMenuId(null)
+    setActionError('')
+    const before = applicants
+    setUpdatingId(id)
+    setApplicants((prev) => prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a)))
+    try {
+      await applicationApi.updateStatus(id, newStatus)
+      // segarkan ringkasan dari server supaya kartu statistik ikut akurat
+      const { summary: sum } = await applicationApi.listByCompany()
+      setSummary(sum ?? {})
+    } catch (err: any) {
+      setApplicants(before)
+      setActionError(err?.response?.data?.message ?? 'Gagal mengubah status lamaran.')
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
+  // Pakai ringkasan dari server bila tersedia; kalau tidak, hitung dari baris.
   const stats = useMemo(() => {
-    const total = applicants.length
-    const pending = applicants.filter(a => a.status === 'Pending').length
-    const diterima = applicants.filter(a => a.status === 'Diterima').length
-    return { total, pending, diterima }
-  }, [applicants])
+    const hasSummary = summary && Object.keys(summary).length > 0
+    if (hasSummary) {
+      return {
+        total: summary.total ?? applicants.length,
+        pending: (summary.submitted ?? 0) + (summary.processing ?? 0),
+        diterima: summary.accepted ?? 0,
+      }
+    }
+    return {
+      total: applicants.length,
+      pending: applicants.filter((a) => a.status === 'submitted' || a.status === 'processing').length,
+      diterima: applicants.filter((a) => a.status === 'accepted').length,
+    }
+  }, [summary, applicants])
 
   const filteredApplicants = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase()
     return applicants.filter((applicant) => {
       const matchPosition = positionFilter === 'Semua Posisi' || applicant.role === positionFilter
       const matchStatus = statusFilter === 'Semua Status' || applicant.status === statusFilter
-      const matchSource = sourceFilter === 'Semua Sumber' || getApplicantSource(applicant) === sourceFilter
-      
-      return matchPosition && matchStatus && matchSource
+      const matchSearch =
+        !q ||
+        applicant.name.toLowerCase().includes(q) ||
+        applicant.nim.toLowerCase().includes(q) ||
+        applicant.major.toLowerCase().includes(q)
+      return matchPosition && matchStatus && matchSearch
     })
-  }, [applicants, positionFilter, statusFilter, sourceFilter])
+  }, [applicants, positionFilter, statusFilter, searchTerm])
 
   const handleResetFilter = () => {
     setPositionFilter('Semua Posisi')
     setStatusFilter('Semua Status')
-    setSourceFilter('Semua Sumber')
+    setSearchTerm('')
     setCurrentPage(1)
   }
 
   const handleExportCSV = () => {
     if (filteredApplicants.length === 0) return
 
-    const headers = ['Nama Kandidat', 'Sumber', 'Posisi Tujuan', 'Tipe Pekerjaan', 'Match Score (%)', 'Tanggal Melamar', 'Status', 'Universitas']
-    
-    const csvData = filteredApplicants.map(app => [
+    const headers = ['Nama Kandidat', 'NIM', 'Email', 'Universitas', 'Jurusan', 'Posisi Tujuan', 'Tipe Pekerjaan', 'Match Score (%)', 'Tanggal Melamar', 'Status']
+
+    const csvData = filteredApplicants.map((app) => [
       `"${app.name}"`,
-      `"${getApplicantSource(app)}"`,
+      `"${app.nim}"`,
+      `"${app.email}"`,
+      `"${app.university}"`,
+      `"${app.major}"`,
       `"${app.role}"`,
       `"${app.type}"`,
       app.match,
       `"${app.date}"`,
-      `"${app.status}"`,
-      `"${app.university}"`
+      `"${STATUS_LABEL[app.status] ?? app.status}"`,
     ])
 
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.join(','))
-    ].join('\n')
+    const csvContent = [headers.join(','), ...csvData.map((row) => row.join(','))].join('\n')
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -132,14 +234,14 @@ const Company_DaftarPelamar = () => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const totalPages = Math.ceil(filteredApplicants.length / itemsPerPage) || 1
-  
+
   const displayedApplicants = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage
-    const end = start + itemsPerPage
-    return filteredApplicants.slice(start, end)
+    return filteredApplicants.slice(start, start + itemsPerPage)
   }, [filteredApplicants, currentPage])
 
   const startIndex = filteredApplicants.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1
@@ -147,24 +249,38 @@ const Company_DaftarPelamar = () => {
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'Diterima': return 'bg-[#e6f9f0] text-[#10b981]'
-      case 'Ditolak': return 'bg-[#fee2e2] text-[#ef4444]'
-      default: return 'bg-[#fffbeb] text-[#f59e0b]'
+      case 'accepted': return 'bg-[#e6f9f0] text-[#10b981]'
+      case 'rejected': return 'bg-[#fee2e2] text-[#ef4444]'
+      case 'processing': return 'bg-[#fffbeb] text-[#f59e0b]'
+      default: return 'bg-[#eef4ff] text-[#0f5ce0]'
     }
   }
 
-  const renderSourceBadge = (source: string) => {
-    if (source === 'Undangan') {
-      return (
-        <span className="inline-flex items-center justify-center gap-1.5 w-[100px] py-1.5 bg-[#fffbe6] text-[#f59e0b] rounded-full text-[11px] font-bold">
-           Undangan
-        </span>
-      )
-    }
+  // ---------- Loading ----------
+  if (loading) {
     return (
-      <span className="inline-flex items-center justify-center gap-1.5 w-[100px] py-1.5 bg-[#eef4ff] text-[#0f5ce0] rounded-full text-[11px] font-bold">
-         Lamar
-      </span>
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat daftar pelamar...</p>
+      </div>
+    )
+  }
+
+  // ---------- Error ----------
+  if (loadError) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl max-w-md">
+          <AlertCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-800">Gagal memuat data</p>
+            <p className="text-xs text-red-700 mt-0.5">{loadError}</p>
+          </div>
+        </div>
+        <button onClick={loadData} className="px-6 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] transition">
+          Coba Lagi
+        </button>
+      </div>
     )
   }
 
@@ -174,12 +290,13 @@ const Company_DaftarPelamar = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#111827]">Daftar Pelamar</h1>
-          <p className="text-sm text-[#5b6170] mt-1">Pantau dan kelola seluruh berkas lamaran yang masuk.</p>
+          <p className="text-sm text-[#5b6170] mt-1">Seluruh mahasiswa yang melamar ke lowongan perusahaan Anda.</p>
         </div>
         <div className="flex gap-3 shrink-0">
           <button 
             onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#e4e9f4] rounded-xl text-sm font-semibold text-[#5b6170] hover:bg-gray-50 transition shadow-sm active:scale-95"
+            disabled={filteredApplicants.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#e4e9f4] rounded-xl text-sm font-semibold text-[#5b6170] hover:bg-gray-50 transition shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download size={18} />
             Ekspor CSV
@@ -188,11 +305,19 @@ const Company_DaftarPelamar = () => {
             onClick={() => navigate('/company/rekomendasi-kandidat')}
             className="flex items-center gap-2 px-4 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-semibold text-white hover:bg-[#0d4ebf] transition shadow-sm active:scale-95"
           >
-            <Plus size={18} />
-            Undang Kandidat
+            <Users size={18} />
+            Rekomendasi Kandidat
           </button>
         </div>
       </div>
+
+      {/* Pesan error saat mengubah status */}
+      {actionError && (
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
+          <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">{actionError}</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 flex justify-between items-start shadow-sm">
@@ -227,16 +352,17 @@ const Company_DaftarPelamar = () => {
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-[#f1f4f9]">
           <div className="flex flex-wrap items-center gap-3">
-            
-            <select 
-              value={sourceFilter} 
-              onChange={(e) => { setSourceFilter(e.target.value); setCurrentPage(1); }} 
-              className="px-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none cursor-pointer"
-            >
-              <option value="Semua Sumber">Semua Sumber</option>
-              <option value="Lamar">Melamar</option>
-              <option value="Undangan">Diundang</option>
-            </select>
+
+            {/* Pencarian nama / NIM / jurusan */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3b1c6]" />
+              <input
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                placeholder="Cari nama / NIM / jurusan"
+                className="pl-9 pr-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none focus:border-[#0f5ce0] w-[230px]"
+              />
+            </div>
 
             <select 
               value={positionFilter} 
@@ -255,9 +381,10 @@ const Company_DaftarPelamar = () => {
               className="px-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none cursor-pointer"
             >
               <option value="Semua Status">Semua Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Diterima">Diterima</option>
-              <option value="Ditolak">Ditolak</option>
+              <option value="submitted">Terkirim</option>
+              <option value="processing">Diproses</option>
+              <option value="accepted">Diterima</option>
+              <option value="rejected">Ditolak</option>
             </select>
             
             <button 
@@ -277,9 +404,8 @@ const Company_DaftarPelamar = () => {
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="border-b border-[#f1f4f9] bg-[#f8faff] text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">
-                <th className="px-6 py-4 w-[25%]">Nama Kandidat</th>
-                <th className="px-6 py-4">Sumber</th>
-                <th className="px-6 py-4 w-[20%]">Posisi Tujuan</th>
+                <th className="px-6 py-4 w-[28%]">Nama Kandidat</th>
+                <th className="px-6 py-4 w-[22%]">Posisi Tujuan</th>
                 <th className="px-6 py-4 text-center">Match Score</th>
                 <th className="px-6 py-4">Tgl Melamar</th>
                 <th className="px-6 py-4">Status</th>
@@ -299,14 +425,11 @@ const Company_DaftarPelamar = () => {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-[#111827] truncate">{applicant.name}</p>
-                          <p className="text-[12px] text-[#7b8191] truncate">{applicant.university}</p>
+                          <p className="text-[12px] text-[#7b8191] truncate">
+                            {applicant.university}{applicant.nim !== '-' ? ` · ${applicant.nim}` : ''}
+                          </p>
                         </div>
                       </div>
-                    </td>
-
-                    {/* Sumber */}
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      {renderSourceBadge(getApplicantSource(applicant))}
                     </td>
 
                     {/* Posisi Tujuan */}
@@ -328,7 +451,7 @@ const Company_DaftarPelamar = () => {
                     {/* Status */}
                     <td className="px-6 py-5 whitespace-nowrap">
                       <span className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold ${getStatusStyle(applicant.status)}`}>
-                        {applicant.status}
+                        {STATUS_LABEL[applicant.status] ?? applicant.status}
                       </span>
                     </td>
 
@@ -336,16 +459,19 @@ const Company_DaftarPelamar = () => {
                     <td className="px-6 py-5 whitespace-nowrap text-center relative">
                       <button 
                         onClick={() => setActiveMenuId(activeMenuId === applicant.id ? null : applicant.id)} 
-                        className="text-[#7b8191] hover:text-[#0f5ce0] p-1.5 rounded-lg transition hover:bg-[#eef4ff]"
+                        disabled={updatingId === applicant.id}
+                        className="text-[#7b8191] hover:text-[#0f5ce0] p-1.5 rounded-lg transition hover:bg-[#eef4ff] disabled:opacity-40"
                       >
-                        <MoreVertical size={18} />
+                        {updatingId === applicant.id
+                          ? <Loader2 size={18} className="animate-spin" />
+                          : <MoreVertical size={18} />}
                       </button>
                       {activeMenuId === applicant.id && (
                         <div ref={menuRef} className="absolute right-6 top-8 mt-1 w-44 bg-white border border-[#e4e9f4] rounded-xl shadow-lg py-1.5 z-50 text-left animate-in fade-in duration-100">
                           <p className="text-[10px] font-bold text-[#7b8191] px-3 py-1.5 uppercase tracking-wider">Ubah Status</p>
-                          <button onClick={() => handleUpdateStatus(applicant.id, 'Pending')} className="w-full px-3 py-2 text-sm text-[#f59e0b] hover:bg-[#fffbeb] font-medium flex items-center gap-2 transition"><AlertCircle size={16} />Set Pending</button>
-                          <button onClick={() => handleUpdateStatus(applicant.id, 'Diterima')} className="w-full px-3 py-2 text-sm text-[#10b981] hover:bg-[#e6f9f0] font-medium flex items-center gap-2 transition"><CheckCircle2 size={16} />Set Diterima</button>
-                          <button onClick={() => handleUpdateStatus(applicant.id, 'Ditolak')} className="w-full px-3 py-2 text-sm text-[#ef4444] hover:bg-[#fee2e2] font-medium flex items-center gap-2 transition"><XCircle size={16} />Set Ditolak</button>
+                          <button onClick={() => handleUpdateStatus(applicant.id, 'processing')} className="w-full px-3 py-2 text-sm text-[#f59e0b] hover:bg-[#fffbeb] font-medium flex items-center gap-2 transition"><AlertCircle size={16} />Set Diproses</button>
+                          <button onClick={() => handleUpdateStatus(applicant.id, 'accepted')} className="w-full px-3 py-2 text-sm text-[#10b981] hover:bg-[#e6f9f0] font-medium flex items-center gap-2 transition"><CheckCircle2 size={16} />Set Diterima</button>
+                          <button onClick={() => handleUpdateStatus(applicant.id, 'rejected')} className="w-full px-3 py-2 text-sm text-[#ef4444] hover:bg-[#fee2e2] font-medium flex items-center gap-2 transition"><XCircle size={16} />Set Ditolak</button>
                         </div>
                       )}
                     </td>
@@ -354,8 +480,10 @@ const Company_DaftarPelamar = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
-                    Tidak ada data pelamar yang sesuai dengan filter.
+                  <td colSpan={6} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
+                    {applicants.length === 0
+                      ? 'Belum ada mahasiswa yang melamar ke lowongan perusahaan Anda.'
+                      : 'Tidak ada data pelamar yang sesuai dengan filter.'}
                   </td>
                 </tr>
               )}

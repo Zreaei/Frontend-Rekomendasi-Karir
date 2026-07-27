@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
+import { authApi, ROLE_HOME } from '../services/api.service'
 
 interface LoginForm {
   email: string
@@ -9,7 +10,7 @@ interface LoginForm {
 
 const LoginPage = () => {
   const navigate = useNavigate()
-  const loginAsCompany = useAuthStore((state) => state.loginAsCompany)
+  const loginWithApi = useAuthStore((state) => state.loginWithApi)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const [form, setForm] = useState<LoginForm>({
     email: '',
@@ -25,7 +26,7 @@ const LoginPage = () => {
     setError('')
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const trimmedEmail = form.email.trim()
@@ -35,17 +36,14 @@ const LoginPage = () => {
       setError('Email dan kata sandi wajib diisi.')
       return
     }
-
     if (!trimmedEmail) {
       setError('Email wajib diisi sebelum masuk.')
       return
     }
-
     if (!emailRegex.test(trimmedEmail)) {
-      setError('Format email tidak valid. Contoh: nama@Gmail.com')
+      setError('Format email tidak valid. Contoh: nama@email.com')
       return
     }
-
     if (!trimmedPassword) {
       setError('Kata sandi wajib diisi.')
       return
@@ -57,8 +55,35 @@ const LoginPage = () => {
     }
 
     setIsSubmitting(true)
-    loginAsCompany('demo-company-session')
-    navigate('/company', { replace: true })
+    try {
+      // panggil API login backend
+      const res = await authApi.login(trimmedEmail, trimmedPassword)
+      const { accessToken, user } = res.data
+
+      // simpan sesi (store + localStorage untuk interceptor)
+      loginWithApi(
+        {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role as Exclude<import('../store/auth.store').UserRole, null>,
+          status: user.status,
+        },
+        accessToken,
+      )
+
+      // redirect sesuai role
+      const target = ROLE_HOME[user.role] ?? '/landing'
+      navigate(target, { replace: true })
+    } catch (err: any) {
+      // tampilkan pesan dari backend (mis. "Email atau password salah", akun suspended)
+      const msg =
+        err?.response?.data?.message ??
+        'Gagal terhubung ke server. Pastikan backend berjalan.'
+      setError(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -110,7 +135,7 @@ const LoginPage = () => {
                 id="email"
                 name="email"
                 onChange={(event) => updateField('email', event.target.value)}
-                placeholder="nama@Gmail.com"
+                placeholder="nama@email.com"
                 type="email"
                 value={form.email}
               />
@@ -175,12 +200,12 @@ const LoginPage = () => {
 
           {/* Submit Button */}
           <button
-            className="mb-6 h-11 w-full rounded-[8px] bg-[#0f5ce0] text-[14px] font-semibold text-white transition hover:bg-[#0d4ebf] focus:outline-none focus:ring-2 focus:ring-[#0f5ce0]/30 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center gap-2"
+            className="mb-6 h-11 w-full rounded-[8px] bg-black text-[14px] font-semibold text-white transition hover:bg-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-black/30 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center gap-2"
             disabled={isSubmitting}
             type="submit"
           >
             {isSubmitting ? 'Memproses...' : 'Masuk Ke Akun'}
-          </button>
+                  </button>
 
           {/* Divider */}
           <div className="mb-6 flex items-center gap-3">

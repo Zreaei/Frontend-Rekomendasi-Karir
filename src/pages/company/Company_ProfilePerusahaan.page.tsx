@@ -1,16 +1,73 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { 
-  Building2, Globe, MapPin, Mail, Phone, Edit3, 
-  Users, Briefcase, Eye, CheckCircle2, ShieldCheck, Hash, UserCheck
+import {
+  Building2, Globe, MapPin, Mail, Phone, Edit3,
+  Users, Briefcase, Eye, CheckCircle2, ShieldCheck, Hash, UserCheck,
+  Clock, XCircle, Loader2, AlertCircle
 } from 'lucide-react'
-import { CompanyService, initialCompanyProfile, initialLowongan, initialApplicants, type CompanyProfileData } from './CompanyData'
+import { initialCompanyProfile, type CompanyProfileData } from './CompanyData'
+import { companyApi, jobApi } from '../../services/company.service'
+import { authApi } from '../../services/api.service'
+import DOMPurify from 'dompurify'
 
+// ============================================================
+// HELPER
+// ============================================================
+
+// Backend bisa mengembalikan { ...company } atau { company: {...}, stats: {...} }.
+// Normalisasi biar halaman tidak peduli bentuknya.
+const pickCompany = (raw: any): any => raw?.company ?? raw ?? {}
+
+// Deskripsi dari backend berupa teks biasa, sedangkan halaman merender pakai
+// dangerouslySetInnerHTML -> escape dulu, baru bungkus jadi paragraf.
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+// Deskripsi dari editor berupa HTML. Disaring DOMPurify supaya tag format
+// (b, i, ul, a) tetap jalan tetapi skrip berbahaya dibuang.
+const toParagraphHtml = (text?: string | null) => {
+  if (!text || !String(text).trim()) return '<p>Belum ada deskripsi perusahaan.</p>'
+  return DOMPurify.sanitize(String(text))
+}
+
+// Petakan data backend -> bentuk yang dipakai tampilan (CompanyProfileData).
+// Disebar dari initialCompanyProfile supaya field lain yang belum dipetakan tetap ada.
+const mapProfile = (company: any, me: any): CompanyProfileData => ({
+  ...initialCompanyProfile,
+  namaPerusahaan: company.name ?? '-',
+  bidangIndustri: company.industry ?? '-',
+  website: company.website ?? '',
+  nib: company.nib ?? '-',
+  lokasi: company.address ?? '-',
+  jumlahKaryawan: company.size ?? '-',
+  logo: company.logoUrl ?? '',
+  description: toParagraphHtml(company.description),
+  namaAdmin: me?.name ?? '-',
+  jabatanAdmin: me?.role === 'company' ? 'Direktur' : 'HRD / Rekruter',
+  email: me?.email ?? '-',
+  phone: me?.phone ?? '-',
+})
+
+type VerifStatus = 'pending' | 'verified' | 'rejected'
+
+const STATUS_BADGE: Record<VerifStatus, { text: string; icon: any; cls: string }> = {
+  verified: { text: 'Terverifikasi', icon: ShieldCheck, cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  pending: { text: 'Menunggu Verifikasi', icon: Clock, cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  rejected: { text: 'Verifikasi Ditolak', icon: XCircle, cls: 'bg-red-50 text-red-700 border-red-200' },
+}
+
+// ============================================================
+// HALAMAN
+// ============================================================
 const Company_ProfilePerusahaan = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  
+
   const [profile, setProfile] = useState<CompanyProfileData>(initialCompanyProfile)
+  const [verifStatus, setVerifStatus] = useState<VerifStatus>('pending')
+  const [stats, setStats] = useState({ activeJobs: 0, totalApplicants: 0, profileViews: 0 })
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   // Toast notifikasi sukses, 3 fase:
   // visible = ada di DOM sama sekali atau tidak
@@ -20,31 +77,51 @@ const Company_ProfilePerusahaan = () => {
     visible: false, entered: false, leaving: false
   })
 
+  // Ambil profil + identitas admin + statistik dari backend.
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const [rawCompany, meRes] = await Promise.all([companyApi.getProfile(), authApi.me()])
+      const company = pickCompany(rawCompany)
+      const me = (meRes as any)?.data ?? null
+
+      setProfile(mapProfile(company, me))
+      setVerifStatus((company.status as VerifStatus) ?? 'pending')
+
+      // Statistik rekrutmen dihitung dari lowongan milik perusahaan.
+      const jobs = await jobApi.listMine()
+      const perJob = await Promise.all(
+        (jobs ?? []).map((j: any) => jobApi.stats(j.id).catch(() => null)),
+      )
+      setStats({
+        activeJobs: (jobs ?? []).filter((j: any) => j.status === 'active').length,
+        totalApplicants: perJob.reduce((acc: number, s: any) => acc + (s?.applicantCount ?? 0), 0),
+        profileViews: perJob.reduce((acc: number, s: any) => acc + (s?.viewCount ?? 0), 0),
+      })
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.message ?? 'Gagal memuat data perusahaan. Pastikan server berjalan.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
-    CompanyService.getProfile().then(data => setProfile(data))
-  }, [])
+    loadData()
+  }, [loadData])
 
-  const stats = useMemo(() => {
-    const activeJobs = initialLowongan.filter(j => j.status === 'Aktif').length
-    const totalApplicants = initialApplicants.length
-    const profileViews = 4890
-    return { activeJobs, totalApplicants, profileViews }
-  }, [])
-
-  // Setelah kembali dari halaman Ubah Profil / Pengaturan Akun, tampilkan data terbaru + toast sukses.
-  // TODO: begitu API sudah ada, ganti ini dengan refetch data profil dari server.
+  // Setelah kembali dari halaman Ubah Profil / Pengaturan Akun, ambil ulang data + toast sukses.
   useEffect(() => {
     const state = location.state as { saved?: boolean } | null
     if (state?.saved) {
-      CompanyService.getProfile().then(data => setProfile(data))
+      loadData()
       setToast({ visible: true, entered: false, leaving: false })
       // Bersihkan state supaya toast tidak muncul lagi kalau halaman di-refresh
       navigate(location.pathname, { replace: true })
     }
-  }, [location.state, navigate, location.pathname])
+  }, [location.state, navigate, location.pathname, loadData])
 
   // Frame berikutnya setelah mount, "mekarkan" toast — ini yang bikin transisi tingginya kepakai
-  // (browser butuh render 1 frame di kondisi collapsed dulu sebelum transisi ke kondisi expanded kedeteksi)
   useEffect(() => {
     if (toast.visible && !toast.entered && !toast.leaving) {
       const raf = requestAnimationFrame(() => setToast(prev => ({ ...prev, entered: true })))
@@ -68,7 +145,7 @@ const Company_ProfilePerusahaan = () => {
     }
   }, [toast.leaving])
 
-  // Pastikan user langsung "diarahin" ke posisi notifikasi, bukan cuma nongol diam-diam di tempat yang mungkin nggak kelihatan
+  // Pastikan user langsung "diarahin" ke posisi notifikasi
   const toastRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (toast.entered && !toast.leaving) {
@@ -80,13 +157,13 @@ const Company_ProfilePerusahaan = () => {
   }, [toast.entered, toast.leaving])
 
   const kotaKantorPusat = useMemo(() => {
-    const segments = profile.lokasi.split(',')
+    const segments = (profile.lokasi ?? '').split(',')
     const lastSegment = segments[segments.length - 1] || ''
     return lastSegment.replace(/\d+/g, '').trim()
   }, [profile.lokasi])
 
   const inisialAdmin = useMemo(() => {
-    return profile.namaAdmin
+    return (profile.namaAdmin ?? '-')
       .trim()
       .split(/\s+/)
       .map((word: string) => word[0])
@@ -98,14 +175,47 @@ const Company_ProfilePerusahaan = () => {
   const detailFields = [
     { icon: Building2, label: 'Nama Resmi Perusahaan', value: profile.namaPerusahaan },
     { icon: Briefcase, label: 'Kategori Industri', value: profile.bidangIndustri },
-    { icon: Globe, label: 'Situs Web Resmi', value: profile.website.replace(/^https?:\/\//, ''), href: profile.website },
+    { icon: Globe, label: 'Situs Web Resmi', value: (profile.website ?? '').replace(/^https?:\/\//, '') || '-', href: profile.website },
     { icon: Hash, label: 'Nomor Induk Berusaha (NIB)', value: profile.nib },
   ]
+
+  const badge = STATUS_BADGE[verifStatus] ?? STATUS_BADGE.pending
+  const BadgeIcon = badge.icon
+
+  // ---------- Loading ----------
+  if (loading) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat profil perusahaan...</p>
+      </div>
+    )
+  }
+
+  // ---------- Error ----------
+  if (loadError) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl max-w-md">
+          <AlertCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-800">Gagal memuat data</p>
+            <p className="text-xs text-red-700 mt-0.5">{loadError}</p>
+          </div>
+        </div>
+        <button
+          onClick={loadData}
+          className="px-6 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] transition"
+        >
+          Coba Lagi
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full flex flex-col gap-8 pb-12 animate-in fade-in duration-300">
 
-      
       {/* Header Halaman */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-[24px] border border-[#e4e9f4] shadow-sm">
         <div className="flex items-center gap-4">
@@ -126,7 +236,22 @@ const Company_ProfilePerusahaan = () => {
         </button>
       </div>
 
-      {/* Toast Notifikasi Sukses — di antara header & hero card, transisi tinggi + fade yang halus */}
+      {/* Banner status pending: fitur posting lowongan masih digembok */}
+      {verifStatus === 'pending' && (
+        <div className="flex items-start gap-3 px-5 py-4 bg-amber-50 border border-amber-200 rounded-2xl">
+          <div className="w-9 h-9 rounded-full bg-white text-amber-600 flex items-center justify-center shrink-0 shadow-sm">
+            <Clock size={18} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-amber-800">Menunggu verifikasi Superadmin</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Dokumen dan NIB Anda sedang ditinjau (1–2 hari kerja). Pemasangan lowongan baru akan terbuka setelah akun diverifikasi.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notifikasi Sukses */}
       {toast.visible && (
         <div
           className={`grid transition-[grid-template-rows,opacity] ease-in-out ${
@@ -169,8 +294,8 @@ const Company_ProfilePerusahaan = () => {
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h2 className="text-2xl font-bold text-[#111827] tracking-tight">{profile.namaPerusahaan}</h2>
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200">
-                <ShieldCheck size={14} /> Terverifikasi
+              <span className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border ${badge.cls}`}>
+                <BadgeIcon size={14} /> {badge.text}
               </span>
             </div>
             <p className="text-sm text-[#7b8191] font-medium mt-1">{profile.bidangIndustri}</p>
@@ -331,7 +456,7 @@ const Company_ProfilePerusahaan = () => {
                   <span className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
                     <Eye size={16} />
                   </span>
-                  Profil Dilihat
+                  Lowongan Dilihat
                 </span>
                 <span className="text-sm font-bold text-[#111827] bg-white px-3 py-1.5 rounded-xl border border-[#e4e9f4] shadow-sm min-w-[60px] text-center">{stats.profileViews.toLocaleString()}</span>
               </div>

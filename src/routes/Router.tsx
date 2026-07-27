@@ -79,7 +79,7 @@ const AppRouter = () => {
 
         <Route path="*" element={<Navigate to="/company" replace />} />
       </Route>
-
+         
       {/* ===== STAFF ROUTES ===== */}
       <Route path="/university-staff" element={<ProtectedRoute allowedRoles={['university_staff']}><UniversityStaffDashboard /></ProtectedRoute>} />
       <Route path="/company-staff" element={<ProtectedRoute allowedRoles={['company_staff']}><CompanyStaffDashboard /></ProtectedRoute>} />

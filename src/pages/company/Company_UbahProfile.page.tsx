@@ -4,7 +4,30 @@ import {
   Globe, UploadCloud, ChevronDown, 
   Bold, Italic, Underline, List, Link2, Building2, ImagePlus, Edit3
 } from 'lucide-react'
-import { CompanyService, initialCompanyProfile, type CompanyProfileData } from './CompanyData'
+import { companyApi } from '../../services/company.service'
+
+// Bentuk data lokal halaman (sebelumnya dari CompanyData) supaya UI tidak berubah.
+interface CompanyProfileData {
+  namaPerusahaan: string
+  bidangIndustri: string
+  jumlahKaryawan: string
+  nib: string
+  website: string
+  lokasi: string
+  description: string
+  logo: string
+}
+
+const emptyProfile: CompanyProfileData = {
+  namaPerusahaan: '',
+  bidangIndustri: '',
+  jumlahKaryawan: '',
+  nib: '',
+  website: '',
+  lokasi: '',
+  description: '',
+  logo: '',
+}
 
 const UKURAN_PERUSAHAAN_OPTIONS = [
   '1-50 Anggota',
@@ -24,12 +47,16 @@ const INDUSTRI_OPTIONS = [
   'Lainnya'
 ]
 
+
 const Company_UbahProfile = () => {
   const navigate = useNavigate()
   
-  const [profile, setProfile] = useState<CompanyProfileData>(initialCompanyProfile)
+  const [profile, setProfile] = useState<CompanyProfileData>(emptyProfile)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [isVerified, setIsVerified] = useState(false)
   const [isCustomIndustri, setIsCustomIndustri] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -38,17 +65,41 @@ const Company_UbahProfile = () => {
   const editorRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    CompanyService.getProfile().then(data => {
-      setProfile(data)
-      setLogoPreview(data.logo)
-      setIsCustomIndustri(!INDUSTRI_OPTIONS.includes(data.bidangIndustri) && data.bidangIndustri !== '')
-      if (editorRef.current) {
-        editorRef.current.innerHTML = data.description
-      }
-    })
+    let aktif = true
+
+    companyApi
+      .getProfile()
+      .then((c: any) => {
+        if (!aktif) return
+        const data: CompanyProfileData = {
+          namaPerusahaan: c?.name ?? '',
+          bidangIndustri: c?.industry ?? '',
+          jumlahKaryawan: c?.size ?? '',
+          nib: c?.nib ?? '',
+          website: c?.website ?? '',
+          lokasi: c?.address ?? '',
+          description: c?.description ?? '',
+          logo: c?.logoUrl ?? '',
+        }
+        setProfile(data)
+        setLogoPreview(data.logo || null)
+        setIsCustomIndustri(!INDUSTRI_OPTIONS.includes(data.bidangIndustri) && data.bidangIndustri !== '')
+        setIsVerified(c?.status === 'verified')
+        if (editorRef.current) {
+          editorRef.current.innerHTML = data.description
+        }
+      })
+      .catch((err: any) => {
+        if (!aktif) return
+        setErrorMessage(
+          err?.response?.data?.message ?? 'Gagal memuat data perusahaan. Pastikan server berjalan.',
+        )
+      })
+
+    return () => { aktif = false }
   }, [])
 
-  const handleChange = (field: keyof CompanyProfileData, value: string) => {
+const handleChange = (field: keyof CompanyProfileData, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: false }))
@@ -58,16 +109,16 @@ const Company_UbahProfile = () => {
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setErrorMessage('Ukuran file logo terlalu besar. Maksimal ukuran file adalah 10MB.')
-        errorBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        return
-      }
-      const url = URL.createObjectURL(file)
-      setLogoPreview(url)
-      handleChange('logo', url)
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      setErrorMessage('Ukuran file logo terlalu besar. Maksimal ukuran file adalah 2MB.')
+      errorBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
     }
+    // Berkas disimpan dulu, diunggah ke Supabase saat form disimpan.
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file)) // pratinjau lokal saja
+    if (errorMessage) setErrorMessage(null)
   }
 
   const handleCancel = () => {
@@ -99,11 +150,37 @@ const Company_UbahProfile = () => {
     }
 
     const finalDescription = editorRef.current ? editorRef.current.innerHTML : profile.description
-    const updatedPayload = { ...profile, description: finalDescription }
-    
-    await CompanyService.saveProfile(updatedPayload)
-    
-    navigate('/company/profil-perusahaan', { state: { saved: true } })
+
+    setIsSaving(true)
+    try {
+      // 1) unggah logo dulu bila ada berkas baru (backend menyimpan URL-nya)
+      if (logoFile) {
+        await companyApi.uploadLogo(logoFile)
+      }
+
+      // 2) simpan data profil (logo tidak ikut, sudah ditangani di atas)
+      await companyApi.updateProfile({
+        name: profile.namaPerusahaan.trim(),
+        industry: profile.bidangIndustri.trim(),
+        size: profile.jumlahKaryawan,
+        address: profile.lokasi.trim(),
+        website: `https://${websiteClean}`,
+        description: finalDescription,
+        // NIB hanya dikirim bila perusahaan belum terverifikasi
+        ...(isVerified ? {} : { nib: profile.nib.trim() }),
+      } as any)
+
+      navigate('/company/profil-perusahaan', { state: { saved: true } })
+    } catch (err: any) {
+      setErrorMessage(
+        err?.response?.data?.message ?? 'Gagal menyimpan perubahan. Periksa koneksi ke server.',
+      )
+      setTimeout(() => {
+        errorBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 50)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleFormat = (e: React.MouseEvent, command: string, value?: string) => {
@@ -250,9 +327,15 @@ const Company_UbahProfile = () => {
                   type="text"
                   value={profile.nib}
                   onChange={(e) => handleChange('nib', e.target.value)}
-                  className={`${getInputStyle('nib')} tracking-widest font-medium`}
-                  placeholder="Contoh: 01230495817260001"
+                  disabled={isVerified}
+                  className={`${getInputStyle('nib')} tracking-widest font-medium ${isVerified ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  placeholder="Contoh: 0123049581726"
                 />
+                {isVerified && (
+                  <p className="text-xs text-[#7b8191] font-medium mt-1.5">
+                    NIB terkunci karena perusahaan sudah terverifikasi. Hubungi admin untuk perubahan.
+                  </p>
+                )}
                 {errors.nib && <p className="text-xs text-red-500 font-medium mt-1.5">NIB wajib diisi.</p>}
               </div>
 
@@ -362,6 +445,7 @@ const Company_UbahProfile = () => {
           </button>
           <button
             type="submit"
+            disabled={isSaving}
             className="w-full sm:w-auto flex justify-center items-center gap-2 px-8 py-3 bg-[#0f5ce0] text-white rounded-xl text-sm font-bold hover:bg-[#0d4ebf] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 shadow-md active:scale-95 active:translate-y-0"
           >
             Simpan Profil

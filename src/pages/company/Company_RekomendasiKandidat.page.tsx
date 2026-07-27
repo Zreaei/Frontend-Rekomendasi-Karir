@@ -1,12 +1,34 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Filter, CheckCircle2, XCircle } from 'lucide-react'
-import { CompanyService, initialApplicants, initialRecommendations, type Recommendation } from './CompanyData'
+import { matchingApi } from '../../services/company.service'
+
+// Bentuk data disamakan dengan yang dipakai tampilan (sebelumnya dari CompanyData),
+// supaya seluruh UI tidak perlu diubah.
+interface Recommendation {
+  id: string
+  name: string
+  major: string
+  university: string
+  skills: string[]
+  matchScore: number
+  roleMatch: string
+  status: 'Pending' | 'Diterima' | 'Ditolak'
+  hasApplied: boolean
+}
+
+// Status lamaran backend -> status tampilan
+const toDisplayStatus = (applicationStatus: string | null): Recommendation['status'] => {
+  if (applicationStatus === 'accepted') return 'Diterima'
+  if (applicationStatus === 'rejected') return 'Ditolak'
+  return 'Pending'
+}
 
 const Company_RekomendasiKandidat = () => {
   const navigate = useNavigate()
   
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [emptyMessage, setEmptyMessage] = useState('')
   const [activeFilter, setActiveFilter] = useState<'Pending' | 'Diterima' | 'Ditolak'>('Pending')
   
   // Menampilkan 10 kandidat per halaman
@@ -14,7 +36,42 @@ const Company_RekomendasiKandidat = () => {
   const ITEMS_PER_PAGE = 10
 
   useEffect(() => {
-    CompanyService.getRecommendations().then((data: Recommendation[]) => setRecommendations(data))
+    let aktif = true
+
+    const muat = async () => {
+      try {
+        // Kandidat lintas seluruh lowongan aktif perusahaan, sudah terurut match desc.
+        const { candidates } = await matchingApi.companyCandidates()
+        if (!aktif) return
+
+        const mapped: Recommendation[] = (candidates ?? []).map((c: any) => ({
+          id: c.studentId,
+          name: c.name ?? 'Tanpa Nama',
+          major: c.major ?? '-',
+          university: c.university ?? '-',
+          // skill yang dimiliki DAN diminta lowongan (bukan seluruh skill mahasiswa)
+          skills: (c.matchedSkills ?? []).map((s: any) => s?.name).filter(Boolean).slice(0, 6),
+          matchScore: Math.round(c.matchScore ?? 0),
+          roleMatch: c.roleMatch ?? '-',
+          status: toDisplayStatus(c.applicationStatus ?? null),
+          hasApplied: !!c.applicationStatus,
+        }))
+
+        setRecommendations(mapped)
+        setEmptyMessage('')
+      } catch (err: any) {
+        if (!aktif) return
+        const pesan =
+          err?.response?.data?.message ??
+          'Gagal memuat rekomendasi kandidat. Pastikan server berjalan.'
+        console.error('[RekomendasiKandidat] gagal memuat:', err?.response?.status, pesan)
+        setRecommendations([])
+        setEmptyMessage(pesan)
+      }
+    }
+
+    muat()
+    return () => { aktif = false }
   }, [])
 
   const filteredCandidates = useMemo(() => {
@@ -39,44 +96,18 @@ const Company_RekomendasiKandidat = () => {
     return pages
   }
 
-  // Logika saat tombol "Undang Melamar" diklik
+  // Backend belum punya fitur undang kandidat (tidak ada endpoint/tabel undangan).
+  // Kandidat yang sudah melamar diarahkan ke daftar pelamar; sisanya diberi tahu
+  // bahwa fiturnya belum tersedia — daripada menyuntik data palsu seperti versi mock.
   const handleUndangMelamar = (kandidat: Recommendation) => {
-    // 1. Format nama jadi inisial (contoh: Budi Santoso -> BS)
-    const initials = kandidat.name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase()
-
-    // 2. Buat objek Applicant baru
-    const newApplicant = {
-      id: initialApplicants.length > 0 ? Math.max(...initialApplicants.map(a => a.id)) + 1 : 1,
-      name: kandidat.name,
-      university: kandidat.university,
-      role: kandidat.roleMatch, 
-      type: 'Full-time', // Tipe default
-      match: kandidat.matchScore,
-      date: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', ' '),
-      status: 'Pending',
-      initial: initials,
-      bgColor: 'bg-[#0f5ce0]',
-      source: 'Undangan',
-      major: kandidat.major,   
-      skills: kandidat.skills
+    if (kandidat.hasApplied) {
+      navigate('/company/daftar-pelamar', { state: { filterRole: kandidat.roleMatch } })
+      return
     }
-
-    // 3. Masukkan ke daftar pelamar di memori (CompanyData)
-    initialApplicants.unshift(newApplicant)
-
-    // 4. Hapus kandidat ini dari daftar rekomendasi agar tidak muncul 2 kali
-    const index = initialRecommendations.findIndex(r => r.id === kandidat.id)
-    if (index > -1) {
-      initialRecommendations.splice(index, 1)
-    }
-
-    // 5. Arahkan ke halaman Daftar Pelamar
-    navigate('/company/daftar-pelamar')
+    window.alert(
+      `Fitur "Undang Melamar" belum tersedia.\n\n${kandidat.name} dapat dihubungi secara manual, ` +
+      `atau tunggu hingga fitur undangan dibangun di backend.`,
+    )
   }
 
   return (
@@ -210,7 +241,7 @@ const Company_RekomendasiKandidat = () => {
               </div>
               <h3 className="text-lg font-bold text-[#111827]">Tidak ada kandidat</h3>
               <p className="text-sm text-[#7b8191] mt-1 max-w-sm">
-                Belum ada kandidat dengan status "{activeFilter}" pada saat ini.
+                {emptyMessage || `Belum ada kandidat dengan status "${activeFilter}" pada saat ini.`}
               </p>
             </div>
           )}

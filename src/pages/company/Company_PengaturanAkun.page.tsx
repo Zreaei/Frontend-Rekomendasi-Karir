@@ -1,11 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, ShieldCheck, CheckCircle2, X, KeyRound, AlertCircle } from 'lucide-react'
-import { CompanyService, initialCompanyProfile, type CompanyProfileData } from './CompanyData'
+import { User, ShieldCheck, CheckCircle2, X, KeyRound, AlertCircle, Loader2 } from 'lucide-react'
+import { authApi } from '../../services/api.service'
+
+// Data akun penanggung jawab (dari tabel User, bukan Company).
+interface AccountData {
+  namaAdmin: string
+  email: string
+  phone: string
+}
+
+const emptyAccount: AccountData = { namaAdmin: '', email: '', phone: '' }
 
 const Company_PengaturanAkun = () => {
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<CompanyProfileData>(initialCompanyProfile)
+  const [profile, setProfile] = useState<AccountData>(emptyAccount)
+  const [originalEmail, setOriginalEmail] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const [pwCurrent, setPwCurrent] = useState('')
   const [pwNew, setPwNew] = useState('')
@@ -13,12 +26,35 @@ const Company_PengaturanAkun = () => {
   
   const [pwError, setPwError] = useState<string | null>(null)
   const [pwSuccess, setPwSuccess] = useState(false)
+  const [pwLoading, setPwLoading] = useState(false)
 
   useEffect(() => {
-    CompanyService.getProfile().then(data => setProfile(data))
+    let aktif = true
+
+    authApi
+      .me()
+      .then((res: any) => {
+        if (!aktif) return
+        const u = res?.data ?? res
+        setProfile({
+          namaAdmin: u?.name ?? '',
+          email: u?.email ?? '',
+          phone: u?.phone ?? '',
+        })
+        setOriginalEmail(u?.email ?? '')
+      })
+      .catch((err: any) => {
+        if (!aktif) return
+        setSaveError(err?.response?.data?.message ?? 'Gagal memuat data akun.')
+      })
+      .finally(() => {
+        if (aktif) setIsLoading(false)
+      })
+
+    return () => { aktif = false }
   }, [])
 
-  const inisialAdmin = profile.namaAdmin
+  const inisialAdmin = (profile.namaAdmin || '-')
     .trim()
     .split(/\s+/)
     .map(w => w[0])
@@ -30,11 +66,12 @@ const Company_PengaturanAkun = () => {
     navigate('/company/profil-perusahaan')
   }
 
-  const handleChange = (field: 'namaAdmin' | 'email' | 'phone', value: string) => {
+  const handleChange = (field: keyof AccountData, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }))
+    if (saveError) setSaveError(null)
   }
 
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     setPwError(null)
 
     if (!pwCurrent || !pwNew || !pwConfirm) {
@@ -52,19 +89,47 @@ const Company_PengaturanAkun = () => {
       return
     }
 
-    setPwSuccess(true)
-    setPwCurrent('')
-    setPwNew('')
-    setPwConfirm('')
-    setTimeout(() => setPwSuccess(false), 3000)
+    setPwLoading(true)
+    try {
+      await authApi.changePassword(pwCurrent, pwNew)
+      setPwSuccess(true)
+      setPwCurrent('')
+      setPwNew('')
+      setPwConfirm('')
+      setTimeout(() => setPwSuccess(false), 3000)
+    } catch (err: any) {
+      setPwError(err?.response?.data?.message ?? 'Gagal memperbarui kata sandi.')
+    } finally {
+      setPwLoading(false)
+    }
   }
 
   const handleSaveAll = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    await CompanyService.saveProfile(profile)
+    setSaveError(null)
 
-    navigate('/company/profil-perusahaan', { state: { saved: true } })
+    const emailBerubah = profile.email.trim().toLowerCase() !== originalEmail.toLowerCase()
+
+    // Email adalah identitas login -> backend meminta konfirmasi kata sandi.
+    // Kolom "Kata Sandi Saat Ini" di bagian Keamanan dipakai ulang untuk ini.
+    if (emailBerubah && !pwCurrent) {
+      setSaveError('Untuk mengubah alamat email, isi dulu "Kata Sandi Saat Ini" pada bagian Keamanan Akun.')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await authApi.updateMe({
+        name: profile.namaAdmin.trim(),
+        phone: profile.phone.trim(),
+        ...(emailBerubah ? { email: profile.email.trim(), password: pwCurrent } : {}),
+      })
+      navigate('/company/profil-perusahaan', { state: { saved: true } })
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message ?? 'Gagal menyimpan perubahan akun.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -86,6 +151,12 @@ const Company_PengaturanAkun = () => {
           </button>
         </div>
 
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-3 text-[#5b6170]">
+            <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+            <p className="text-sm font-medium">Memuat data akun...</p>
+          </div>
+        ) : (
         <form onSubmit={handleSaveAll} className="p-8 flex flex-col gap-6">
 
           {/* Section: Profil Pribadi & Kontak */}
@@ -206,15 +277,23 @@ const Company_PengaturanAkun = () => {
                   <button
                     type="button"
                     onClick={handleUpdatePassword}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#0f5ce0] text-[#0f5ce0] hover:bg-[#0f5ce0] hover:text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95"
+                    disabled={pwLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#0f5ce0] text-[#0f5ce0] hover:bg-[#0f5ce0] hover:text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <KeyRound size={14} />
+                    {pwLoading ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}
                     Perbarui Kata Sandi
                   </button>
                 </div>
               </div>
             </div>
           </div>
+
+          {saveError && (
+            <div className="flex items-center gap-2.5 px-4 py-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs font-semibold animate-in fade-in duration-200">
+              <AlertCircle size={16} className="text-red-600 shrink-0" />
+              <span>{saveError}</span>
+            </div>
+          )}
 
           {/* Footer Aksi */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e4e9f4]">
@@ -227,12 +306,15 @@ const Company_PengaturanAkun = () => {
             </button>
             <button
               type="submit"
-              className="px-8 py-3 bg-[#0f5ce0] text-white rounded-xl text-sm font-bold hover:bg-[#0d4ebf] hover:-translate-y-0.5 transition shadow-md active:scale-95"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-8 py-3 bg-[#0f5ce0] text-white rounded-xl text-sm font-bold hover:bg-[#0d4ebf] hover:-translate-y-0.5 transition shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {isSaving && <Loader2 size={16} className="animate-spin" />}
               Simpan Semua Perubahan
             </button>
           </div>
         </form>
+        )}
 
       </div>
     </div>
