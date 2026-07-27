@@ -15,9 +15,8 @@ const STATUS_BADGE: Record<string, { text: string; cls: string }> = {
   rejected: { text: 'Ditolak', cls: 'bg-[#fee2e2] text-[#ef4444]' },
 }
 
-// Nama & asal kampus bisa datang dari beberapa bentuk relasi, ambil yang ada.
 const pickName = (app: any): string =>
-  app?.student?.user?.name ?? app?.student?.name ?? app?.user?.name ?? 'Tanpa Nama'
+  app?.student?.user?.name ?? app?.student?.name ?? 'Tanpa Nama'
 
 const pickUniversity = (app: any): string =>
   app?.student?.university?.name ??
@@ -25,9 +24,23 @@ const pickUniversity = (app: any): string =>
   app?.student?.nim ??
   'Data kampus belum tersedia'
 
-// Skill kandidat diambil dari matchSnapshot (disimpan saat melamar).
-// Kalau tidak ada, coba dari relasi skill mahasiswa.
+const pickMatch = (app: any): number => {
+  if (typeof app?.matchScore === 'number') return Math.round(app.matchScore)
+  let snap = app?.matchSnapshot
+  if (typeof snap === 'string') {
+    try { snap = JSON.parse(snap) } catch { snap = null }
+  }
+  const score = snap?.score ?? snap?.matchScore ?? snap?.matchPercentage
+  return typeof score === 'number' ? Math.round(score) : 0
+}
+
+// Keahlian yang dimiliki kandidat DAN diminta lowongan (dihitung backend).
+// Cadangan: matchSnapshot, lalu daftar skill mahasiswa.
 const pickSkills = (app: any): string[] => {
+  const matched = app?.matchedSkills
+  if (Array.isArray(matched)) {
+    return matched.map((s: any) => (typeof s === 'string' ? s : s?.name)).filter(Boolean).slice(0, 3)
+  }
   let snap = app?.matchSnapshot
   if (typeof snap === 'string') {
     try { snap = JSON.parse(snap) } catch { snap = null }
@@ -66,51 +79,43 @@ const CompanyDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
+  // Tiga request: daftar lowongan, seluruh pelamar perusahaan, dan talent pool.
   const loadData = useCallback(async () => {
     setLoading(true)
     setLoadError('')
     try {
       const jobs = (await jobApi.listMine()) ?? []
-      const activeJobs = jobs.filter((j: any) => j.status === 'active')
-      setActiveJobCount(activeJobs.length)
+      setActiveJobCount(jobs.filter((j: any) => j.status === 'active').length)
 
-      // Pelamar dari SEMUA lowongan (satu request per lowongan).
-      // Kalau satu lowongan gagal, jangan jatuhkan seluruh dashboard.
-      const perJob = await Promise.all(
-        jobs.map((job: any) =>
-          applicationApi
-            .listByJob(job.id)
-            .then((list) => ({ job, list: list ?? [] }))
-            .catch(() => ({ job, list: [] as any[] })),
-        ),
+      const { applications, summary } = await applicationApi.listByCompany()
+      const list = applications ?? []
+      setTotalPelamar(summary?.total ?? list.length)
+
+      // Pelamar teratas = yang belum diputuskan (belum diterima/ditolak),
+      // supaya kartu ini jadi antrean kerja HRD, bukan sekadar riwayat.
+      const belumDiputuskan = list.filter(
+        (app: any) => app.status !== 'accepted' && app.status !== 'rejected',
       )
 
-      const flatApplicants = perJob.flatMap(({ job, list }) =>
-        list.map((app: any) => ({
-          applicationId: app.id,
-          name: pickName(app),
-          university: pickUniversity(app),
-          status: app.status,
-          match: Math.round(app.matchScore ?? 0),
-          role: job.title,
-          skills: pickSkills(app),
-        })),
+      setTopCandidates(
+        belumDiputuskan
+          .map((app: any) => ({
+            applicationId: app.id,
+            name: pickName(app),
+            university: pickUniversity(app),
+            status: app.status,
+            match: pickMatch(app),
+            role: app?.job?.title ?? '-',
+            skills: pickSkills(app),
+          }))
+          .sort((a: TopCandidate, b: TopCandidate) => b.match - a.match)
+          .slice(0, 5),
       )
-
-      setTotalPelamar(flatApplicants.length)
-      setTopCandidates([...flatApplicants].sort((a, b) => b.match - a.match).slice(0, 5))
 
       // "Rekomendasi Kandidat" = mahasiswa hasil mesin pencocokan dengan skor >= 85
-      // pada lowongan aktif (dihitung unik per mahasiswa).
-      const candidateLists = await Promise.all(
-        activeJobs.map((job: any) => matchingApi.candidates(job.id).catch(() => [] as any[])),
-      )
-      const strongIds = new Set<string>()
-      candidateLists.flat().forEach((c: any) => {
-        const id = c?.studentId ?? c?.student?.id
-        if (id && (c?.matchScore ?? 0) >= 85) strongIds.add(id)
-      })
-      setRekomendasiKandidat(strongIds.size)
+      // pada lowongan aktif (sudah unik per mahasiswa dari backend).
+      const { candidates } = await matchingApi.companyCandidates()
+      setRekomendasiKandidat((candidates ?? []).filter((c: any) => (c?.matchScore ?? 0) >= 85).length)
     } catch (err: any) {
       setLoadError(err?.response?.data?.message ?? 'Gagal memuat data dashboard. Pastikan server berjalan.')
     } finally {

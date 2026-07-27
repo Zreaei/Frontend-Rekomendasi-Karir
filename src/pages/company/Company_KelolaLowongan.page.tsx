@@ -159,18 +159,11 @@ const Company_KelolaLowongan = () => {
   const paginatedJobs = filteredJobs.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
   const getPaginationGroup = () => {
-    let pages: (number | string)[] = []
-    if (totalPages <= 5) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i)
-    } else {
-      if (currentPage <= 3) {
-        pages = [1, 2, 3, 4, '...', totalPages]
-      } else if (currentPage >= totalPages - 2) {
-        pages = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
-      } else {
-        pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages]
-      }
-    }
+    if (totalPages <= 0) return [1]
+    const start = currentPage
+    const end = Math.min(currentPage + 1, totalPages)
+    const pages: number[] = []
+    for (let i = start; i <= end; i++) pages.push(i)
     return pages
   }
 
@@ -464,39 +457,31 @@ const Company_KelolaLowongan = () => {
             <button 
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                currentPage === 1 ? 'text-[#7b8191] opacity-40 cursor-not-allowed border border-[#e4e9f4]' : 'text-[#0f5ce0] hover:bg-[#eef4ff] border border-[#e4e9f4]'
-              }`}
+              className="text-sm font-semibold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#7b8191] disabled:opacity-40 transition mr-2"
             >
-              ‹
+              Sebelumnya
             </button>
             
-            {getPaginationGroup().map((item, index) => (
-              item === '...' ? (
-                <span key={index} className="px-1 text-[#7b8191] text-xs font-bold">...</span>
-              ) : (
-                <button
-                  key={index}
-                  onClick={() => setCurrentPage(item as number)}
-                  className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                    currentPage === item 
-                      ? 'bg-[#0f5ce0] text-white shadow-sm' 
-                      : 'text-[#5b6170] hover:bg-gray-50 border border-transparent'
-                  }`}
-                >
-                  {item}
-                </button>
-              )
+            {getPaginationGroup().map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
+                  currentPage === pageNum 
+                    ? 'bg-[#0f5ce0] text-white shadow-sm' 
+                    : 'text-[#5b6170] hover:bg-gray-50 border border-transparent'
+                }`}
+              >
+                {pageNum}
+              </button>
             ))}
 
             <button 
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                (currentPage === totalPages || totalPages === 0) ? 'text-[#7b8191] opacity-40 cursor-not-allowed border border-[#e4e9f4]' : 'text-[#0f5ce0] hover:bg-[#eef4ff] border border-[#e4e9f4]'
-              }`}
+              className="text-sm font-semibold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#7b8191] disabled:opacity-40 transition ml-2"
             >
-              ›
+              Selanjutnya
             </button>
           </div>
         </div>

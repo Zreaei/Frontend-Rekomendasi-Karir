@@ -5,10 +5,10 @@ import {
   Users, Briefcase, Eye, CheckCircle2, ShieldCheck, Hash, UserCheck,
   Clock, XCircle, Loader2, AlertCircle
 } from 'lucide-react'
+import DOMPurify from 'dompurify'
 import { initialCompanyProfile, type CompanyProfileData } from './CompanyData'
 import { companyApi, jobApi } from '../../services/company.service'
 import { authApi } from '../../services/api.service'
-import DOMPurify from 'dompurify'
 
 // ============================================================
 // HELPER
@@ -17,11 +17,6 @@ import DOMPurify from 'dompurify'
 // Backend bisa mengembalikan { ...company } atau { company: {...}, stats: {...} }.
 // Normalisasi biar halaman tidak peduli bentuknya.
 const pickCompany = (raw: any): any => raw?.company ?? raw ?? {}
-
-// Deskripsi dari backend berupa teks biasa, sedangkan halaman merender pakai
-// dangerouslySetInnerHTML -> escape dulu, baru bungkus jadi paragraf.
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 // Deskripsi dari editor berupa HTML. Disaring DOMPurify supaya tag format
 // (b, i, ul, a) tetap jalan tetapi skrip berbahaya dibuang.
@@ -41,7 +36,7 @@ const mapProfile = (company: any, me: any): CompanyProfileData => ({
   lokasi: company.address ?? '-',
   jumlahKaryawan: company.size ?? '-',
   logo: company.logoUrl ?? '',
-  description: toParagraphHtml(company.description),
+  description: company.description ?? '',
   namaAdmin: me?.name ?? '-',
   jabatanAdmin: me?.role === 'company' ? 'Direktur' : 'HRD / Rekruter',
   email: me?.email ?? '-',
@@ -376,7 +371,7 @@ const Company_ProfilePerusahaan = () => {
             <div 
               className="text-sm text-[#5b6170] leading-relaxed text-justify font-normal 
                          [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&>p]:mb-4 last:[&>p]:mb-0 [&>a]:text-[#0f5ce0] [&>a]:underline"
-              dangerouslySetInnerHTML={{ __html: profile.description }}
+              dangerouslySetInnerHTML={{ __html: toParagraphHtml(profile.description) }}
             />
           </div>
 

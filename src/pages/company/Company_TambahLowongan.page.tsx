@@ -192,7 +192,7 @@ const Company_TambahLowongan = () => {
     setStep('review')
   }
 
-  // Susun payload sesuai kontrak backend (requirements[] berisi teks + array keahlian).
+// Susun payload sesuai kontrak backend (requirements[] berisi teks + array keahlian).
   const buildPayload = (statusToSave: 'active' | 'draft') => ({
     title: jobTitle.trim(),
     department: finalDepartment.trim(),
