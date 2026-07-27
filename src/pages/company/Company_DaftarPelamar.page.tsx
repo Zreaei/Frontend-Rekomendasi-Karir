@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { 
-  Users, Clock, UserCheck, Search, RotateCcw, Download,
+  Users, Clock, UserCheck, RotateCcw, Download,
   MoreVertical, CheckCircle2, XCircle, AlertCircle, Loader2
 } from 'lucide-react'
 import { applicationApi } from '../../services/company.service'
@@ -21,8 +21,8 @@ const STATUS_LABEL: Record<string, string> = {
 const pickName = (app: any): string =>
   app?.student?.user?.name ?? app?.student?.name ?? 'Tanpa Nama'
 
-// Skor kecocokan tidak disimpan sebagai kolom, melainkan di dalam matchSnapshot
-// (JSON yang dicatat saat mahasiswa melamar).
+// Skor kecocokan dihitung backend saat menyusun daftar; matchSnapshot dipakai
+// sebagai cadangan bila suatu saat skornya hanya tersimpan di sana.
 const pickMatch = (app: any): number => {
   if (typeof app?.matchScore === 'number') return Math.round(app.matchScore)
   let snap = app?.matchSnapshot
@@ -64,9 +64,16 @@ interface ApplicantRow {
   match: number
   date: string
   status: string          // status mentah backend
+  source: 'Lamar' | 'Undangan'
   initial: string
   bgColor: string
 }
+
+// Backend belum punya fitur undang kandidat, sehingga seluruh lamaran
+// berasal dari mahasiswa yang melamar sendiri. Field ini disiapkan agar
+// pemisahan tabel langsung bekerja begitu fitur undangan dibangun.
+const pickSource = (app: any): 'Lamar' | 'Undangan' =>
+  app?.source === 'invitation' || app?.source === 'Undangan' ? 'Undangan' : 'Lamar'
 
 const Company_DaftarPelamar = () => {
   const location = useLocation()
@@ -83,9 +90,9 @@ const Company_DaftarPelamar = () => {
 
   const [positionFilter, setPositionFilter] = useState(passedRole || 'Semua Posisi')
   const [statusFilter, setStatusFilter] = useState('Semua Status')
-  const [searchTerm, setSearchTerm] = useState('')
 
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPageLamar, setCurrentPageLamar] = useState(1)
+  const [currentPageUndangan, setCurrentPageUndangan] = useState(1)
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const itemsPerPage = 10
@@ -121,6 +128,7 @@ const Company_DaftarPelamar = () => {
           match: pickMatch(app),
           date: pickDate(app),
           status: app.status,
+          source: pickSource(app),
           initial: initialFromName(name),
           bgColor: colorFromName(name),
         }
@@ -186,30 +194,34 @@ const Company_DaftarPelamar = () => {
   }, [summary, applicants])
 
   const filteredApplicants = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase()
     return applicants.filter((applicant) => {
       const matchPosition = positionFilter === 'Semua Posisi' || applicant.role === positionFilter
       const matchStatus = statusFilter === 'Semua Status' || applicant.status === statusFilter
-      const matchSearch =
-        !q ||
-        applicant.name.toLowerCase().includes(q) ||
-        applicant.nim.toLowerCase().includes(q) ||
-        applicant.major.toLowerCase().includes(q)
-      return matchPosition && matchStatus && matchSearch
+      return matchPosition && matchStatus
     })
-  }, [applicants, positionFilter, statusFilter, searchTerm])
+  }, [applicants, positionFilter, statusFilter])
+
+  const lamarApplicants = useMemo(
+    () => filteredApplicants.filter((a) => a.source === 'Lamar'),
+    [filteredApplicants],
+  )
+
+  const undanganApplicants = useMemo(
+    () => filteredApplicants.filter((a) => a.source === 'Undangan'),
+    [filteredApplicants],
+  )
 
   const handleResetFilter = () => {
     setPositionFilter('Semua Posisi')
     setStatusFilter('Semua Status')
-    setSearchTerm('')
-    setCurrentPage(1)
+    setCurrentPageLamar(1)
+    setCurrentPageUndangan(1)
   }
 
   const handleExportCSV = () => {
     if (filteredApplicants.length === 0) return
 
-    const headers = ['Nama Kandidat', 'NIM', 'Email', 'Universitas', 'Jurusan', 'Posisi Tujuan', 'Tipe Pekerjaan', 'Match Score (%)', 'Tanggal Melamar', 'Status']
+    const headers = ['Nama Kandidat', 'NIM', 'Email', 'Universitas', 'Jurusan', 'Posisi Tujuan', 'Tipe Pekerjaan', 'Match Score (%)', 'Tanggal Melamar', 'Status', 'Sumber']
 
     const csvData = filteredApplicants.map((app) => [
       `"${app.name}"`,
@@ -222,6 +234,7 @@ const Company_DaftarPelamar = () => {
       app.match,
       `"${app.date}"`,
       `"${STATUS_LABEL[app.status] ?? app.status}"`,
+      `"${app.source}"`,
     ])
 
     const csvContent = [headers.join(','), ...csvData.map((row) => row.join(','))].join('\n')
@@ -237,15 +250,24 @@ const Company_DaftarPelamar = () => {
     URL.revokeObjectURL(url)
   }
 
-  const totalPages = Math.ceil(filteredApplicants.length / itemsPerPage) || 1
+  const totalPagesLamar = Math.ceil(lamarApplicants.length / itemsPerPage) || 1
+  const totalPagesUndangan = Math.ceil(undanganApplicants.length / itemsPerPage) || 1
 
-  const displayedApplicants = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return filteredApplicants.slice(start, start + itemsPerPage)
-  }, [filteredApplicants, currentPage])
+  const displayedLamar = useMemo(() => {
+    const start = (currentPageLamar - 1) * itemsPerPage
+    return lamarApplicants.slice(start, start + itemsPerPage)
+  }, [lamarApplicants, currentPageLamar])
 
-  const startIndex = filteredApplicants.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1
-  const endIndex = Math.min(currentPage * itemsPerPage, filteredApplicants.length)
+  const displayedUndangan = useMemo(() => {
+    const start = (currentPageUndangan - 1) * itemsPerPage
+    return undanganApplicants.slice(start, start + itemsPerPage)
+  }, [undanganApplicants, currentPageUndangan])
+
+  const startIndexLamar = lamarApplicants.length === 0 ? 0 : (currentPageLamar - 1) * itemsPerPage + 1
+  const endIndexLamar = Math.min(currentPageLamar * itemsPerPage, lamarApplicants.length)
+
+  const startIndexUndangan = undanganApplicants.length === 0 ? 0 : (currentPageUndangan - 1) * itemsPerPage + 1
+  const endIndexUndangan = Math.min(currentPageUndangan * itemsPerPage, undanganApplicants.length)
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -255,6 +277,144 @@ const Company_DaftarPelamar = () => {
       default: return 'bg-[#eef4ff] text-[#0f5ce0]'
     }
   }
+
+  const getPaginationGroup = (page: number, totalPages: number) => {
+    if (totalPages <= 0) return [1]
+    const start = page
+    const end = Math.min(page + 1, totalPages)
+    const pages: number[] = []
+    for (let i = start; i <= end; i++) pages.push(i)
+    return pages
+  }
+
+  const renderApplicantsTable = (
+    list: ApplicantRow[],
+    page: number,
+    setPage: (value: number | ((prev: number) => number)) => void,
+    totalPages: number,
+    startIndex: number,
+    endIndex: number,
+    total: number,
+    emptyText: string,
+  ) => (
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[820px]">
+          <thead>
+            <tr className="border-b border-[#f1f4f9] bg-[#f8faff] text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">
+              <th className="px-6 py-4 w-[30%]">Nama Kandidat</th>
+              <th className="px-6 py-4 w-[20%]">Posisi Tujuan</th>
+              <th className="px-6 py-4 text-center">Match Score</th>
+              <th className="px-6 py-4">Tgl Melamar</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4 text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#f1f4f9]">
+            {list.length > 0 ? (
+              list.map((applicant) => (
+                <tr key={applicant.id} className="hover:bg-[#fafbfe] transition">
+
+                  <td className="px-6 py-5 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full ${applicant.bgColor} text-white flex items-center justify-center font-bold text-sm shrink-0`}>
+                        {applicant.initial}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-[#111827] truncate">{applicant.name}</p>
+                        <p className="text-[12px] text-[#7b8191] truncate">{applicant.university}</p>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-5 whitespace-nowrap">
+                    <p className="text-sm font-semibold text-[#111827] truncate">{applicant.role}</p>
+                    <p className="text-[12px] text-[#7b8191]">{applicant.type}</p>
+                  </td>
+
+                  <td className="px-6 py-5 whitespace-nowrap text-center">
+                    <span className="text-[15px] font-bold text-[#0f5ce0]">{applicant.match}%</span>
+                  </td>
+
+                  <td className="px-6 py-5 whitespace-nowrap text-sm text-[#5b6170] font-medium">
+                    {applicant.date}
+                  </td>
+
+                  <td className="px-6 py-5 whitespace-nowrap">
+                    <span className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold ${getStatusStyle(applicant.status)}`}>
+                      {STATUS_LABEL[applicant.status] ?? applicant.status}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-5 whitespace-nowrap text-center relative">
+                    <button 
+                      onClick={() => setActiveMenuId(activeMenuId === applicant.id ? null : applicant.id)} 
+                      disabled={updatingId === applicant.id}
+                      className="text-[#7b8191] hover:text-[#0f5ce0] p-1.5 rounded-lg transition hover:bg-[#eef4ff] disabled:opacity-40"
+                    >
+                      {updatingId === applicant.id
+                        ? <Loader2 size={18} className="animate-spin" />
+                        : <MoreVertical size={18} />}
+                    </button>
+                    {activeMenuId === applicant.id && (
+                      <div ref={menuRef} className="absolute right-6 top-8 mt-1 w-44 bg-white border border-[#e4e9f4] rounded-xl shadow-lg py-1.5 z-50 text-left animate-in fade-in duration-100">
+                        <p className="text-[10px] font-bold text-[#7b8191] px-3 py-1.5 uppercase tracking-wider">Ubah Status</p>
+                        <button onClick={() => handleUpdateStatus(applicant.id, 'processing')} className="w-full px-3 py-2 text-sm text-[#f59e0b] hover:bg-[#fffbeb] font-medium flex items-center gap-2 transition"><AlertCircle size={16} />Set Diproses</button>
+                        <button onClick={() => handleUpdateStatus(applicant.id, 'accepted')} className="w-full px-3 py-2 text-sm text-[#10b981] hover:bg-[#e6f9f0] font-medium flex items-center gap-2 transition"><CheckCircle2 size={16} />Set Diterima</button>
+                        <button onClick={() => handleUpdateStatus(applicant.id, 'rejected')} className="w-full px-3 py-2 text-sm text-[#ef4444] hover:bg-[#fee2e2] font-medium flex items-center gap-2 transition"><XCircle size={16} />Set Ditolak</button>
+                      </div>
+                    )}
+                  </td>
+
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
+                  {emptyText}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm">
+        <div className="text-xs text-[#7b8191] font-medium">
+          Menampilkan <span className="text-[#111827] font-semibold">{startIndex}-{endIndex}</span> dari {total} pelamar
+        </div>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={() => setPage(prev => Math.max(prev - 1, 1))} 
+            disabled={page === 1} 
+            className="text-sm font-semibold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#7b8191] disabled:opacity-40 transition mr-2"
+          >
+            Sebelumnya
+          </button>
+          {getPaginationGroup(page, totalPages).map((pageNum) => (
+            <button 
+              key={pageNum} 
+              onClick={() => setPage(pageNum)} 
+              className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
+                page === pageNum 
+                  ? 'bg-[#0f5ce0] text-white shadow-sm' 
+                  : 'text-[#5b6170] hover:bg-gray-50 border border-transparent'
+              }`}
+            >
+              {pageNum}
+            </button>
+          ))}
+          <button 
+            onClick={() => setPage(prev => Math.min(prev + 1, totalPages))} 
+            disabled={page === totalPages || totalPages === 0} 
+            className="text-sm font-semibold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#7b8191] disabled:opacity-40 transition ml-2"
+          >
+            Selanjutnya
+          </button>
+        </div>
+      </div>
+    </>
+  )
 
   // ---------- Loading ----------
   if (loading) {
@@ -349,179 +509,83 @@ const Company_DaftarPelamar = () => {
         </div>
       </div>
 
+      <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <select 
+            value={positionFilter} 
+            onChange={(e) => { setPositionFilter(e.target.value); setCurrentPageLamar(1); setCurrentPageUndangan(1); }} 
+            className="px-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none cursor-pointer max-w-[200px] truncate"
+          >
+            <option value="Semua Posisi">Semua Posisi</option>
+            {uniqueRoles.map(role => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+          
+          <select 
+            value={statusFilter} 
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPageLamar(1); setCurrentPageUndangan(1); }} 
+            className="px-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none cursor-pointer"
+          >
+            <option value="Semua Status">Semua Status</option>
+            <option value="submitted">Terkirim</option>
+            <option value="processing">Diproses</option>
+            <option value="accepted">Diterima</option>
+            <option value="rejected">Ditolak</option>
+          </select>
+          
+          <button 
+            onClick={handleResetFilter} 
+            className="p-2 border border-[#e4e9f4] rounded-xl text-[#7b8191] hover:bg-gray-50 hover:text-[#0f5ce0] transition"
+            title="Reset Filter"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-[#f1f4f9]">
-          <div className="flex flex-wrap items-center gap-3">
-
-            {/* Pencarian nama / NIM / jurusan */}
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3b1c6]" />
-              <input
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                placeholder="Cari nama / NIM / jurusan"
-                className="pl-9 pr-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none focus:border-[#0f5ce0] w-[230px]"
-              />
-            </div>
-
-            <select 
-              value={positionFilter} 
-              onChange={(e) => { setPositionFilter(e.target.value); setCurrentPage(1); }} 
-              className="px-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none cursor-pointer max-w-[200px] truncate"
-            >
-              <option value="Semua Posisi">Semua Posisi</option>
-              {uniqueRoles.map(role => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
-            
-            <select 
-              value={statusFilter} 
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} 
-              className="px-4 py-2 bg-white border border-[#e4e9f4] rounded-xl text-sm font-medium text-[#5b6170] focus:outline-none cursor-pointer"
-            >
-              <option value="Semua Status">Semua Status</option>
-              <option value="submitted">Terkirim</option>
-              <option value="processing">Diproses</option>
-              <option value="accepted">Diterima</option>
-              <option value="rejected">Ditolak</option>
-            </select>
-            
-            <button 
-              onClick={handleResetFilter} 
-              className="p-2 border border-[#e4e9f4] rounded-xl text-[#7b8191] hover:bg-gray-50 hover:text-[#0f5ce0] transition"
-              title="Reset Filter"
-            >
-              <RotateCcw size={16} />
-            </button>
-          </div>
-          <div className="text-sm text-[#7b8191] font-medium">
-            Menampilkan <span className="text-[#111827] font-semibold">{startIndex}-{endIndex}</span> dari {filteredApplicants.length} pelamar
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center justify-center px-3 py-1 bg-[#eef4ff] text-[#0f5ce0] rounded-full text-[11px] font-bold">
+              Lamar
+            </span>
+            <h3 className="text-sm font-bold text-[#111827]">Pelamar via Lamar Langsung <span className="text-[#7b8191] font-medium">({lamarApplicants.length})</span></h3>
           </div>
         </div>
+        {renderApplicantsTable(
+          displayedLamar,
+          currentPageLamar,
+          setCurrentPageLamar,
+          totalPagesLamar,
+          startIndexLamar,
+          endIndexLamar,
+          lamarApplicants.length,
+          applicants.length === 0
+            ? 'Belum ada mahasiswa yang melamar ke lowongan perusahaan Anda.'
+            : 'Tidak ada data pelamar yang sesuai dengan filter.',
+        )}
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead>
-              <tr className="border-b border-[#f1f4f9] bg-[#f8faff] text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">
-                <th className="px-6 py-4 w-[28%]">Nama Kandidat</th>
-                <th className="px-6 py-4 w-[22%]">Posisi Tujuan</th>
-                <th className="px-6 py-4 text-center">Match Score</th>
-                <th className="px-6 py-4">Tgl Melamar</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#f1f4f9]">
-              {displayedApplicants.length > 0 ? (
-                displayedApplicants.map((applicant) => (
-                  <tr key={applicant.id} className="hover:bg-[#fafbfe] transition">
-                    
-                    {/* Nama Kandidat */}
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full ${applicant.bgColor} text-white flex items-center justify-center font-bold text-sm shrink-0`}>
-                          {applicant.initial}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-[#111827] truncate">{applicant.name}</p>
-                          <p className="text-[12px] text-[#7b8191] truncate">
-                            {applicant.university}{applicant.nim !== '-' ? ` · ${applicant.nim}` : ''}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Posisi Tujuan */}
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <p className="text-sm font-semibold text-[#111827] truncate">{applicant.role}</p>
-                      <p className="text-[12px] text-[#7b8191]">{applicant.type}</p>
-                    </td>
-
-                    {/* Match Score */}
-                    <td className="px-6 py-5 whitespace-nowrap text-center">
-                      <span className="text-[15px] font-bold text-[#0f5ce0]">{applicant.match}%</span>
-                    </td>
-
-                    {/* Tanggal Melamar */}
-                    <td className="px-6 py-5 whitespace-nowrap text-sm text-[#5b6170] font-medium">
-                      {applicant.date}
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <span className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold ${getStatusStyle(applicant.status)}`}>
-                        {STATUS_LABEL[applicant.status] ?? applicant.status}
-                      </span>
-                    </td>
-
-                    {/* Aksi */}
-                    <td className="px-6 py-5 whitespace-nowrap text-center relative">
-                      <button 
-                        onClick={() => setActiveMenuId(activeMenuId === applicant.id ? null : applicant.id)} 
-                        disabled={updatingId === applicant.id}
-                        className="text-[#7b8191] hover:text-[#0f5ce0] p-1.5 rounded-lg transition hover:bg-[#eef4ff] disabled:opacity-40"
-                      >
-                        {updatingId === applicant.id
-                          ? <Loader2 size={18} className="animate-spin" />
-                          : <MoreVertical size={18} />}
-                      </button>
-                      {activeMenuId === applicant.id && (
-                        <div ref={menuRef} className="absolute right-6 top-8 mt-1 w-44 bg-white border border-[#e4e9f4] rounded-xl shadow-lg py-1.5 z-50 text-left animate-in fade-in duration-100">
-                          <p className="text-[10px] font-bold text-[#7b8191] px-3 py-1.5 uppercase tracking-wider">Ubah Status</p>
-                          <button onClick={() => handleUpdateStatus(applicant.id, 'processing')} className="w-full px-3 py-2 text-sm text-[#f59e0b] hover:bg-[#fffbeb] font-medium flex items-center gap-2 transition"><AlertCircle size={16} />Set Diproses</button>
-                          <button onClick={() => handleUpdateStatus(applicant.id, 'accepted')} className="w-full px-3 py-2 text-sm text-[#10b981] hover:bg-[#e6f9f0] font-medium flex items-center gap-2 transition"><CheckCircle2 size={16} />Set Diterima</button>
-                          <button onClick={() => handleUpdateStatus(applicant.id, 'rejected')} className="w-full px-3 py-2 text-sm text-[#ef4444] hover:bg-[#fee2e2] font-medium flex items-center gap-2 transition"><XCircle size={16} />Set Ditolak</button>
-                        </div>
-                      )}
-                    </td>
-
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
-                    {applicants.length === 0
-                      ? 'Belum ada mahasiswa yang melamar ke lowongan perusahaan Anda.'
-                      : 'Tidak ada data pelamar yang sesuai dengan filter.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm">
-          <button 
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
-            disabled={currentPage === 1} 
-            className="text-sm font-semibold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#7b8191] disabled:opacity-40 transition"
-          >
-            Sebelumnya
-          </button>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
-              <button 
-                key={pageNum} 
-                onClick={() => setCurrentPage(pageNum)} 
-                className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                  currentPage === pageNum 
-                    ? 'bg-[#0f5ce0] text-white shadow-sm' 
-                    : 'text-[#5b6170] hover:bg-gray-50 border border-transparent'
-                }`}
-              >
-                {pageNum}
-              </button>
-            ))}
+      <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-[#f1f4f9]">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center justify-center px-3 py-1 bg-[#fffbe6] text-[#f59e0b] rounded-full text-[11px] font-bold">
+              Undangan
+            </span>
+            <h3 className="text-sm font-bold text-[#111827]">Pelamar via Undangan <span className="text-[#7b8191] font-medium">({undanganApplicants.length})</span></h3>
           </div>
-          <button 
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
-            disabled={currentPage === totalPages || totalPages === 0} 
-            className="text-sm font-semibold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#7b8191] disabled:opacity-40 transition"
-          >
-            Selanjutnya
-          </button>
         </div>
+        {renderApplicantsTable(
+          displayedUndangan,
+          currentPageUndangan,
+          setCurrentPageUndangan,
+          totalPagesUndangan,
+          startIndexUndangan,
+          endIndexUndangan,
+          undanganApplicants.length,
+          'Fitur undang kandidat belum tersedia, sehingga belum ada pelamar dari jalur undangan.',
+        )}
       </div>
     </div>
   )
