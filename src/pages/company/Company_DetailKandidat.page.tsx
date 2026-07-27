@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, GraduationCap, Briefcase, X, Check, ChevronDown, ChevronUp, ExternalLink, User, Award } from 'lucide-react'
+import { GraduationCap, Briefcase, X, Check, ChevronDown, ChevronUp, ExternalLink, User, Award } from 'lucide-react'
 import { CompanyService, rejectRecommendation, acceptRecommendationAsApplicant, type Recommendation, type CandidateAcademicDetail } from './CompanyData'
 
 const toTitleCase = (value: string): string => {
