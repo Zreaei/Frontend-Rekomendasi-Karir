@@ -5,11 +5,13 @@ import LandingPage from '../pages/LandingPage.page'
 import LoginPage from '../pages/LoginPage.page'
 import RegisterPage from '../pages/Register.page'
 import ForgotPasswordPage from '../pages/ForgotPassword.page'
-import AdminDashboard from '../pages/admin/AdminDashboard.page'
-import UniversityDashboard from '../pages/university/UniversityDashboard.page'
+import AdminLayout from '../layouts/AdminLayout'
 import CompanyLayout from '../layouts/CompanyLayout'
-import UniversityStaffDashboard from '../pages/university_staff/UniversityStaffDashboard.page'
-import CompanyStaffDashboard from '../pages/company_staff/CompanyStaffDashboard.page'
+import UniversityLayout from '../layouts/UniversityLayout'
+
+// ADMIN PAGES
+// ============================================
+import AdminDashboard from '../pages/admin/AdminDashboard.page'
 
 // STUDENT PAGES
 // ============================================
@@ -20,7 +22,7 @@ import StudentCompetencyProfile from '../pages/student/StudentCompetencyProfile.
 import StudentNotification from '../pages/student/StudentNotification.page'
 import StudentHelp from '../pages/student/StudentHelp.page'
 
-// COMPANY PAGES 
+// COMPANY PAGES
 // ============================================
 import Company_Dashboard from '../pages/company/Company_Dashboard.page'
 import Company_DaftarPelamar from '../pages/company/Company_DaftarPelamar.page'
@@ -28,14 +30,17 @@ import Company_KelolaLowongan from '../pages/company/Company_KelolaLowongan.page
 import Company_TambahLowongan from '../pages/company/Company_TambahLowongan.page'
 import Company_RekomendasiKandidat from '../pages/company/Company_RekomendasiKandidat.page'
 import Company_DetailKandidat from '../pages/company/Company_DetailKandidat.page'
-
-// TODO: Buat file Company_KandidatDiundang.page.tsx
-// import Company_KandidatDiundang from '../pages/company/Company_KandidatDiundang.page'
-
 import Company_ProfilePerusahaan from '../pages/company/Company_ProfilePerusahaan.page'
 import Company_UbahProfile from '../pages/company/Company_UbahProfile.page'
 import Company_PengaturanAkun from '../pages/company/Company_PengaturanAkun.page'
- 
+
+// UNIVERSITY PAGES
+// ============================================
+import UniversityDashboard from '../pages/university/UniversityDashboard.page'
+import UniversityManajemenMahasiswa from '../pages/university/UniversityManajemenMahasiswa.page'
+import UniversityManajemenCLO from '../pages/university/UniversityManajemenCLO.page'
+import UniversityManajemenNilai from '../pages/university/UniversityManejemenNilai.page'
+import UniversityVerifikasiSertifikat from '../pages/university/UniversityVerifikasiSertifikat.page'
 
 // PLACEHOLDER UNTUK HALAMAN YANG BELUM DIBUAT
 // ============================================
@@ -62,9 +67,27 @@ const AppRouter = () => {
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
 
-      {/* ===== PROTECTED ROUTES ===== */}
-      <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-      <Route path="/university" element={<ProtectedRoute allowedRoles={['university']}><UniversityDashboard /></ProtectedRoute>} />
+      {/* ===== ADMIN ROUTES ===== */}
+      <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
+        <Route index element={<AdminDashboard />} />
+        <Route path="manajemen-universitas" element={<PlaceholderPage title="Manajemen Universitas" />} />
+        <Route path="manajemen-perusahaan" element={<PlaceholderPage title="Manajemen Perusahaan" />} />
+        <Route path="manajemen-pengguna" element={<PlaceholderPage title="Manajemen Pengguna" />} />
+        <Route path="pengaturan" element={<PlaceholderPage title="Pengaturan" />} />
+
+        <Route path="*" element={<Navigate to="/admin" replace />} />
+      </Route>
+
+      {/* ===== UNIVERSITY ROUTES ===== */}
+      <Route path="/university" element={<ProtectedRoute allowedRoles={['university']}><UniversityLayout /></ProtectedRoute>}>
+        <Route index element={<UniversityDashboard />} />
+        <Route path="manajemen-mahasiswa" element={<UniversityManajemenMahasiswa />} />
+        <Route path="manajemen-clo" element={<UniversityManajemenCLO />} />
+        <Route path="manajemen-nilai" element={<UniversityManajemenNilai />} />
+        <Route path="verifikasi-sertifikat" element={<UniversityVerifikasiSertifikat />} />
+
+        <Route path="*" element={<Navigate to="/university" replace />} />
+      </Route>
 
       {/* ===== COMPANY ROUTES ===== */}
       <Route path="/company" element={<ProtectedRoute allowedRoles={['company']}><CompanyLayout /></ProtectedRoute>}>
@@ -82,17 +105,13 @@ const AppRouter = () => {
         <Route path="*" element={<Navigate to="/company" replace />} />
       </Route>
 
-      {/* ===== STAFF ROUTES ===== */}
-      <Route path="/university-staff" element={<ProtectedRoute allowedRoles={['university_staff']}><UniversityStaffDashboard /></ProtectedRoute>} />
-      <Route path="/company-staff" element={<ProtectedRoute allowedRoles={['company_staff']}><CompanyStaffDashboard /></ProtectedRoute>} />
-
       {/* ===== STUDENT ROUTES ===== */}
-      <Route path="/student" element={<PublicRoute><StudentDashboard /></PublicRoute>} />
-      <Route path="/student/job-matching" element={<PublicRoute><StudentJobMatching /></PublicRoute>} />
-      <Route path="/student/job-apply" element={<PublicRoute><StudentJobApply /></PublicRoute>} />
-      <Route path="/student/competency-profile" element={<PublicRoute><StudentCompetencyProfile /></PublicRoute>} />
-      <Route path="/student/notification" element={<PublicRoute><StudentNotification /></PublicRoute>} />
-      <Route path="/student/help" element={<PublicRoute><StudentHelp /></PublicRoute>} />
+      <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
+      <Route path="/student/job-matching" element={<ProtectedRoute allowedRoles={['student']}><StudentJobMatching /></ProtectedRoute>} />
+      <Route path="/student/job-apply" element={<ProtectedRoute allowedRoles={['student']}><StudentJobApply /></ProtectedRoute>} />
+      <Route path="/student/competency-profile" element={<ProtectedRoute allowedRoles={['student']}><StudentCompetencyProfile /></ProtectedRoute>} />
+      <Route path="/student/notification" element={<ProtectedRoute allowedRoles={['student']}><StudentNotification /></ProtectedRoute>} />
+      <Route path="/student/help" element={<ProtectedRoute allowedRoles={['student']}><StudentHelp /></ProtectedRoute>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/landing" replace />} />

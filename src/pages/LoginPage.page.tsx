@@ -9,7 +9,12 @@ interface LoginForm {
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const loginAsAdmin = useAuthStore((state) => state.loginAsAdmin)
+  const loginAsUniversity = useAuthStore((state) => state.loginAsUniversity)
   const loginAsCompany = useAuthStore((state) => state.loginAsCompany)
+  const loginAsUniversityStaff = useAuthStore((state) => state.loginAsUniversityStaff)
+  const loginAsCompanyStaff = useAuthStore((state) => state.loginAsCompanyStaff)
+  const loginAsStudent = useAuthStore((state) => state.loginAsStudent)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const [form, setForm] = useState<LoginForm>({
     email: '',
