@@ -7,14 +7,20 @@ interface LoginForm {
   password: string
 }
 
+// DEV ONLY: role yang bisa dipilih manual selama backend belum connect.
+// Hapus type ini dan devRole state di bawah kalau backend sudah mengirim role asli.
+type DevRole = 'admin' | 'university' | 'company' | 'student'
+
 const LoginPage = () => {
   const navigate = useNavigate()
+
+  // DEV ONLY: nanti tinggal dipakai yang sesuai kebutuhan setelah backend connect,
+  // tidak perlu semua login-fn ini kalau role sudah datang dari API.
   const loginAsAdmin = useAuthStore((state) => state.loginAsAdmin)
   const loginAsUniversity = useAuthStore((state) => state.loginAsUniversity)
   const loginAsCompany = useAuthStore((state) => state.loginAsCompany)
-  const loginAsUniversityStaff = useAuthStore((state) => state.loginAsUniversityStaff)
-  const loginAsCompanyStaff = useAuthStore((state) => state.loginAsCompanyStaff)
   const loginAsStudent = useAuthStore((state) => state.loginAsStudent)
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const [form, setForm] = useState<LoginForm>({
     email: '',
@@ -24,6 +30,9 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
+
+  // DEV ONLY: state pilihan role manual, default company biar behavior lama tetap sama
+  const [devRole, setDevRole] = useState<DevRole>('company')
 
   const updateField = (field: keyof LoginForm, value: string) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -62,8 +71,30 @@ const LoginPage = () => {
     }
 
     setIsSubmitting(true)
-    loginAsCompany('demo-company-session')
-    navigate('/company', { replace: true })
+
+    // =========================================================
+    // TODO SAAT BACKEND SUDAH CONNECT:
+    // Ganti blok "DEV ONLY" di bawah ini dengan pemanggilan API login asli,
+    // lalu ambil `role` dari response BE, contoh:
+    //
+    // const res = await api.post('/login', { email: trimmedEmail, password: trimmedPassword })
+    // const { role, token } = res.data
+    // roleMap[role].login(token)
+    // navigate(roleMap[role].path, { replace: true })
+    //
+    // Setelah itu, devRole state + dropdown role di JSX bawah bisa dihapus semua.
+    // =========================================================
+
+    // DEV ONLY: mapping role manual ke fungsi login store + path redirect
+    const roleMap: Record<DevRole, { login: () => void; path: string }> = {
+      admin: { login: () => loginAsAdmin('demo-admin-session'), path: '/admin' },
+      university: { login: () => loginAsUniversity('demo-university-session'), path: '/university' },
+      company: { login: () => loginAsCompany('demo-company-session'), path: '/company' },
+      student: { login: () => loginAsStudent('demo-student-session'), path: '/student' },
+    }
+
+    roleMap[devRole].login()
+    navigate(roleMap[devRole].path, { replace: true })
   }
 
   return (
@@ -78,8 +109,8 @@ const LoginPage = () => {
           <div className="mb-8 text-center">
             <p className="text-[22px] font-medium text-[#666666] mb-4">Selamat Datang kembali!</p>
             <div className="flex items-center justify-center gap-2 mb-4">
-              <img 
-                src="/src/assets/login/logo.png" 
+              <img
+                src="/src/assets/login/logo.png"
                 alt="CareerSync Logo"
                 className="h-8 w-8 object-contain"
               />
@@ -104,8 +135,8 @@ const LoginPage = () => {
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[16px]">
-                <img 
-                  src="/src/assets/login/email.png" 
+                <img
+                  src="/src/assets/login/email.png"
                   alt="Email Icon"
                   className="h-4 w-4 object-contain"
                 />
@@ -134,8 +165,8 @@ const LoginPage = () => {
             </div>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[16px]">
-                <img 
-                  src="/src/assets/login/sandi.png" 
+                <img
+                  src="/src/assets/login/sandi.png"
                   alt="Password Icon"
                   className="h-4 w-4 object-contain"
                 />
@@ -155,10 +186,10 @@ const LoginPage = () => {
                 type="button"
               >
                 {}
-                <img 
-                  src={showPassword ? "/src/assets/login/eye-open.png" : "/src/assets/login/eye-close.png"} 
+                <img
+                  src={showPassword ? "/src/assets/login/eye-open.png" : "/src/assets/login/eye-close.png"}
                   alt={showPassword ? "Sembunyikan Sandi" : "Tampilkan Sandi"}
-                  className="h-6 w-6 object-contain" 
+                  className="h-6 w-6 object-contain"
                 />
               </button>
             </div>
@@ -176,6 +207,24 @@ const LoginPage = () => {
             <label className="text-[12px] text-[#666666] cursor-pointer" htmlFor="remember">
               Ingat saya untuk login berikutnya
             </label>
+          </div>
+
+          {/* DEV ONLY: pilih role untuk testing FE, hapus blok ini kalau backend sudah connect */}
+          <div className="mb-4">
+            <label className="block text-[13px] font-semibold text-[#1a1a1a] mb-2" htmlFor="devRole">
+              Login sebagai (dev only)
+            </label>
+            <select
+              id="devRole"
+              className="h-11 w-full rounded-[8px] border border-[#e0e0e0] px-3 text-[14px] outline-none"
+              value={devRole}
+              onChange={(e) => setDevRole(e.target.value as DevRole)}
+            >
+              <option value="admin">Admin</option>
+              <option value="university">Universitas</option>
+              <option value="company">Perusahaan</option>
+              <option value="student">Mahasiswa</option>
+            </select>
           </div>
 
           {/* Submit Button */}
@@ -199,10 +248,9 @@ const LoginPage = () => {
             className="mb-6 block rounded-[8px] border border-[#e0e0e0] p-4 text-center transition hover:bg-[#f5f5f5]"
             to="/register"
           >
-            {/* BAGIAN YANG DIUBAH: Ditambahkan flex dan justify-center untuk menengahkan gambar */}
             <div className="mb-2 flex justify-center">
-              <img 
-                src="/src/assets/login/perusahaan.png" 
+              <img
+                src="/src/assets/login/perusahaan.png"
                 alt="Perusahaan Icon"
                 className="h-8 w-8 object-contain"
               />

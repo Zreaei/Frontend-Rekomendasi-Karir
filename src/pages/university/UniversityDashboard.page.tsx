@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, BookOpen, GraduationCap, Star, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
+import { Users, BookOpen, GraduationCap, Star, ChevronDown, ArrowRight, Download } from 'lucide-react'
 import { universityStats, pendingCourses } from './UniversityData'
 
 const UniversityDashboard = () => {
@@ -20,6 +20,36 @@ const UniversityDashboard = () => {
     }
   }
 
+  // Fungsi untuk download Laporan CSV
+  const handleExportCSV = () => {
+    if (pendingCourses.length === 0) return
+
+    const headers = ['Mata Kuliah', 'Kode', 'Total CLO', 'Mahasiswa Dinilai', 'Total Mahasiswa', 'Status Penilaian']
+    
+    const csvData = pendingCourses.map(course => [
+      `"${course.name}"`,
+      `"${course.code}"`,
+      course.cloCount,
+      course.gradedStudents,
+      course.totalStudents,
+      `"${course.status}"`
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'Laporan_Dashboard_Universitas.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300 pb-12">
       
@@ -29,7 +59,11 @@ const UniversityDashboard = () => {
           <h1 className="text-3xl font-bold text-[#111827]">Dashboard Universitas</h1>
           <p className="text-sm text-[#5b6170] mt-1">Memantau kinerja mahasiswa dan integrasi industri.</p>
         </div>
-        <button className="px-5 py-2.5 bg-[#0f5ce0] text-white text-sm font-bold rounded-xl hover:bg-[#0d4ebf] transition-all shadow-sm active:scale-95">
+        <button 
+          onClick={handleExportCSV}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#0f5ce0] text-white text-sm font-bold rounded-xl hover:bg-[#0d4ebf] transition-all shadow-sm active:scale-95"
+        >
+          <Download size={18} />
           Ekspor Laporan
         </button>
       </div>
@@ -117,8 +151,8 @@ const UniversityDashboard = () => {
                   onClick={() => toggleExpand(course.id)}
                   className="grid grid-cols-12 gap-4 px-6 py-4 items-center bg-white hover:bg-gray-50 cursor-pointer transition"
                 >
-                  <div className="col-span-1 text-[#7b8191]">
-                    {expandedId === course.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  <div className="col-span-1 text-[#7b8191] transition-transform duration-300">
+                    <ChevronDown size={18} className={`transform transition-transform duration-300 ${expandedId === course.id ? 'rotate-180' : ''}`} />
                   </div>
                   <div className="col-span-4 font-bold text-sm text-[#111827] truncate">
                     {course.name}
@@ -141,44 +175,54 @@ const UniversityDashboard = () => {
                   </div>
                 </div>
 
-                {/* Area Expand (Detail CLO) */}
-                {expandedId === course.id && (
-                  <div className="bg-[#f8faff] px-12 py-5 border-t border-[#e4e9f4]">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-bold text-[#5b6170]">Detail Penilaian CLO</h3>
-                      <button className="px-4 py-1.5 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-md hover:bg-[#0d4ebf] transition shadow-sm active:scale-95">
-                        Kelola Semua Nilai
-                      </button>
-                    </div>
+                {/* Area Expand (Detail CLO) dengan Animasi Smooth */}
+                <div 
+                  className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                    expandedId === course.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="bg-[#f8faff] px-12 py-5 border-t border-[#e4e9f4]">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-bold text-[#5b6170]">Detail Penilaian CLO</h3>
+                        <button 
+                          onClick={() => navigate('/university/manajemen-nilai')}
+                          className="px-4 py-1.5 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-md hover:bg-[#0d4ebf] transition shadow-sm active:scale-95"
+                        >
+                          Kelola Semua Nilai
+                        </button>
+                      </div>
 
-                    <div className="flex flex-col gap-3">
-                      {course.clos.length > 0 ? (
-                        course.clos.map((clo) => (
-                          <div key={clo.id} className="flex items-center justify-between bg-white border border-[#e4e9f4] p-3.5 rounded-lg shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-bold text-[#111827]">{clo.name}</span>
-                              <span className={`px-2 py-0.5 rounded-[4px] text-[9px] font-extrabold uppercase tracking-widest ${getCloStatusStyle(clo.status)}`}>
-                                {clo.status}
-                              </span>
+                      <div className="flex flex-col gap-3">
+                        {course.clos.length > 0 ? (
+                          course.clos.map((clo) => (
+                            <div key={clo.id} className="flex items-center justify-between bg-white border border-[#e4e9f4] p-3.5 rounded-lg shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-bold text-[#111827]">{clo.name}</span>
+                                <span className={`px-2 py-0.5 rounded-[4px] text-[9px] font-extrabold uppercase tracking-widest ${getCloStatusStyle(clo.status)}`}>
+                                  {clo.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-6">
+                                <span className="text-sm font-bold text-[#111827]">
+                                  {clo.graded} <span className="text-[#7b8191] font-medium">/ {clo.total}</span>
+                                </span>
+                                <button className="text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-16 text-right">
+                                  {clo.status === 'Selesai' ? 'Edit' : clo.status === 'Sebagian' ? 'Lanjutkan' : 'Mulai'}
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-6">
-                              <span className="text-sm font-bold text-[#111827]">
-                                {clo.graded} <span className="text-[#7b8191] font-medium">/ {clo.total}</span>
-                              </span>
-                              <button className="text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-16 text-right">
-                                {clo.status === 'Selesai' ? 'Edit' : clo.status === 'Sebagian' ? 'Lanjutkan' : 'Mulai'}
-                              </button>
-                            </div>
+                          ))
+                        ) : (
+                          <div className="text-sm text-[#7b8191] italic bg-white border border-[#e4e9f4] p-4 rounded-lg">
+                            Tidak ada data detail CLO untuk mata kuliah ini.
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-sm text-[#7b8191] italic bg-white border border-[#e4e9f4] p-4 rounded-lg">
-                          Tidak ada data detail CLO untuk mata kuliah ini.
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
+                </div>
+
               </div>
             ))}
           </div>
