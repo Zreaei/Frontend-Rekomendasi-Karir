@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Filter, CheckCircle2, XCircle } from 'lucide-react'
-import { matchingApi } from '../../services/company.service'
+import { matchingApi, invitationApi } from '../../services/company.service'
 
 // Bentuk data disamakan dengan yang dipakai tampilan (sebelumnya dari CompanyData),
 // supaya seluruh UI tidak perlu diubah.
@@ -15,6 +15,7 @@ interface Recommendation {
   roleMatch: string
   status: 'Pending' | 'Diterima' | 'Ditolak'
   hasApplied: boolean
+  bestJobId: string | null
 }
 
 // Status lamaran backend -> status tampilan
@@ -31,7 +32,9 @@ const Company_RekomendasiKandidat = () => {
   const [emptyMessage, setEmptyMessage] = useState('')
   const [activeFilter, setActiveFilter] = useState<'Pending' | 'Diterima' | 'Ditolak'>('Pending')
   const [sortOrder, setSortOrder] = useState<'Tertinggi' | 'Terendah'>('Tertinggi')
-  
+  const [invitingId, setInvitingId] = useState<string | null>(null)
+  const [invitedIds, setInvitedIds] = useState<string[]>([])
+
   // Menampilkan 10 kandidat per halaman
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
@@ -56,6 +59,7 @@ const Company_RekomendasiKandidat = () => {
           roleMatch: c.roleMatch ?? '-',
           status: toDisplayStatus(c.applicationStatus ?? null),
           hasApplied: !!c.applicationStatus,
+          bestJobId: c.bestJobId ?? null,
         }))
 
         setRecommendations(mapped)
@@ -100,18 +104,28 @@ const Company_RekomendasiKandidat = () => {
     return pages
   }
 
-  // Backend belum punya fitur undang kandidat (tidak ada endpoint/tabel undangan).
-  // Kandidat yang sudah melamar diarahkan ke daftar pelamar; sisanya diberi tahu
-  // bahwa fiturnya belum tersedia — daripada menyuntik data palsu seperti versi mock.
-  const handleUndangMelamar = (kandidat: Recommendation) => {
+// Mengundang kandidat ke lowongan dengan kecocokan tertinggi (bestJobId).
+// Kandidat yang sudah melamar diarahkan ke daftar pelamar.
+  const handleUndangMelamar = async (kandidat: Recommendation) => {
     if (kandidat.hasApplied) {
       navigate('/company/daftar-pelamar', { state: { filterRole: kandidat.roleMatch } })
       return
     }
-    window.alert(
-      `Fitur "Undang Melamar" belum tersedia.\n\n${kandidat.name} dapat dihubungi secara manual, ` +
-      `atau tunggu hingga fitur undangan dibangun di backend.`,
-    )
+    if (!kandidat.bestJobId) {
+      window.alert('Tidak ada lowongan aktif yang cocok untuk mengundang kandidat ini.')
+      return
+    }
+    if (!window.confirm(`Undang ${kandidat.name} untuk melamar posisi ${kandidat.roleMatch}?`)) return
+
+    setInvitingId(kandidat.id)
+    try {
+      await invitationApi.invite(kandidat.bestJobId, kandidat.id)
+      setInvitedIds((prev) => [...prev, kandidat.id])
+    } catch (err: any) {
+      window.alert(err?.response?.data?.message ?? 'Gagal mengirim undangan.')
+    } finally {
+      setInvitingId(null)
+    }
   }
 
   return (
@@ -224,9 +238,10 @@ const Company_RekomendasiKandidat = () => {
                   {activeFilter === 'Pending' && (
                     <button 
                       onClick={() => handleUndangMelamar(candidate)}
-                      className="w-full py-2.5 bg-[#0f5ce0] hover:bg-[#0d4ebf] text-white text-sm font-bold rounded-xl transition shadow-md active:scale-95"
+                      disabled={invitingId === candidate.id || invitedIds.includes(candidate.id)}
+                      className="w-full py-2.5 bg-[#0f5ce0] hover:bg-[#0d4ebf] text-white text-sm font-bold rounded-xl transition shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Undang Melamar
+                      {invitedIds.includes(candidate.id) ? 'Undangan Terkirim' : 'Undang Melamar'}
                     </button>
                   )}
                   {activeFilter === 'Diterima' && (
@@ -239,7 +254,7 @@ const Company_RekomendasiKandidat = () => {
                       <XCircle size={16} /> Ditolak
                     </button>
                   )}
-                  <button 
+                  <button
                     onClick={() => navigate(`/company/detail-kandidat/${candidate.id}`)}
                     className="w-full py-2.5 bg-white hover:bg-gray-50 border border-[#e4e9f4] text-[#5b6170] hover:text-[#111827] text-sm font-bold rounded-xl transition shadow-sm active:scale-95"
                   >

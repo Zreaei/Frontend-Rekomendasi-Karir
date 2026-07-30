@@ -73,11 +73,11 @@ const AppRouter = () => {
         <Route path="kelola-lowongan" element={<Company_KelolaLowongan />} />
         <Route path="tambah-lowongan" element={<Company_TambahLowongan />} />
         <Route path="rekomendasi-kandidat" element={<Company_RekomendasiKandidat />} />
-        <Route path="detail-kandidat/:id" element={<Company_DetailKandidat />} />
         <Route path="kandidat-diundang" element={<PlaceholderPage title="Kandidat Diundang" />} />
         <Route path="profil-perusahaan" element={<Company_ProfilePerusahaan />} />
         <Route path="ubah-profil-perusahaan" element={<Company_UbahProfile />} />
         <Route path="pengaturan-akun" element={<Company_PengaturanAkun />} />
+        <Route path="detail-kandidat/:id" element={<Company_DetailKandidat />} />
 
         <Route path="*" element={<Navigate to="/company" replace />} />
       </Route>

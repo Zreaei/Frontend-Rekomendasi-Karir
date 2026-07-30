@@ -192,6 +192,14 @@ export const applicationApi = {
 // REKOMENDASI KANDIDAT
 // ============================================================
 export const matchingApi = {
+  // GET /matching/candidates/detail/:studentId -> profil + analisis kesesuaian
+  candidateDetail: async (studentId: string, jobId?: string) => {
+    const res = await api.get(`/matching/candidates/detail/${studentId}`, {
+      params: jobId ? { jobId } : undefined,
+    })
+    return unwrap(res)
+  },
+  
   // GET /matching/candidates/:jobId -> mahasiswa terurut match score
   candidates: async (jobId: string): Promise<Candidate[]> =>
     unwrapList(await api.get(`/matching/candidates/${jobId}`), 'candidates'),
@@ -214,4 +222,25 @@ export const studentApi = {
   getById: async (studentId: string) => unwrap(await api.get(`/students/${studentId}`)),
 }
 
+// ============================================================
+// UNDANGAN KANDIDAT
+// ============================================================
+export const invitationApi = {
+  // POST /invitations -> undang kandidat ke sebuah lowongan
+  invite: async (jobId: string, studentId: string, message?: string) =>
+    unwrap(await api.post('/invitations', { jobId, studentId, message })),
 
+  // GET /invitations/company
+  listByCompany: async (params?: { jobId?: string; status?: string }) => {
+    const res = await api.get('/invitations/company', { params })
+    const data = unwrap(res)
+    return {
+      invitations: (data?.invitations ?? []) as any[],
+      summary: (data?.summary ?? {}) as Record<string, number>,
+    }
+  },
+
+  // PATCH /invitations/:id/cancel
+  cancel: async (invitationId: string) =>
+    unwrap(await api.patch(`/invitations/${invitationId}/cancel`)),
+}

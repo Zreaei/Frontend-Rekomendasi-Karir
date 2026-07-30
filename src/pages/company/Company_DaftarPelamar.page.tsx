@@ -2,20 +2,28 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { 
   Users, Clock, UserCheck, RotateCcw, Download,
-  MoreVertical, CheckCircle2, XCircle, AlertCircle, Loader2
+  MoreVertical, CheckCircle2, XCircle, AlertCircle, Loader2, Ban
 } from 'lucide-react'
-import { applicationApi } from '../../services/company.service'
+import { applicationApi, invitationApi } from '../../services/company.service'
 
 // ============================================================
 // HELPER
 // ============================================================
 
-// Status backend -> label tampilan
+// Status lamaran -> label tampilan
 const STATUS_LABEL: Record<string, string> = {
   submitted: 'Terkirim',
   processing: 'Diproses',
   accepted: 'Diterima',
   rejected: 'Ditolak',
+}
+
+// Status undangan -> label tampilan (jawaban ada di tangan mahasiswa)
+const INVITATION_LABEL: Record<string, string> = {
+  pending: 'Menunggu Jawaban',
+  accepted: 'Diterima Kandidat',
+  declined: 'Ditolak Kandidat',
+  cancelled: 'Dibatalkan',
 }
 
 const pickName = (app: any): string =>
@@ -52,14 +60,17 @@ const colorFromName = (name: string) => {
 const initialFromName = (name: string) =>
   name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 
+// Dipakai dua tabel: id berisi applicationId (tabel Lamar) atau
+// invitationId (tabel Undangan), sesuai sumbernya.
 interface ApplicantRow {
-  id: string              // applicationId
+  id: string
+  studentId: string  
   name: string
   email: string
   university: string
   major: string
   nim: string
-  role: string            // judul lowongan yang dilamar
+  role: string            // judul lowongan
   type: string            // jenis pekerjaan
   match: number
   date: string
@@ -69,12 +80,6 @@ interface ApplicantRow {
   bgColor: string
 }
 
-// Backend belum punya fitur undang kandidat, sehingga seluruh lamaran
-// berasal dari mahasiswa yang melamar sendiri. Field ini disiapkan agar
-// pemisahan tabel langsung bekerja begitu fitur undangan dibangun.
-const pickSource = (app: any): 'Lamar' | 'Undangan' =>
-  app?.source === 'invitation' || app?.source === 'Undangan' ? 'Undangan' : 'Lamar'
-
 const Company_DaftarPelamar = () => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -82,6 +87,7 @@ const Company_DaftarPelamar = () => {
   const passedRole = location.state?.filterRole
 
   const [applicants, setApplicants] = useState<ApplicantRow[]>([])
+  const [invitationRows, setInvitationRows] = useState<ApplicantRow[]>([])
   const [summary, setSummary] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -107,35 +113,65 @@ const Company_DaftarPelamar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Satu request: semua pelamar ke seluruh lowongan perusahaan ini.
+  // Dua sumber terpisah: Application (melamar sendiri) dan JobInvitation (diundang).
   const loadData = useCallback(async () => {
     setLoading(true)
     setLoadError('')
     try {
-      const { applications, summary: sum } = await applicationApi.listByCompany()
+      const [appData, invData] = await Promise.all([
+        applicationApi.listByCompany(),
+        invitationApi.listByCompany().catch((e) => {
+          console.warn('[DaftarPelamar] gagal ambil undangan:', e?.response?.status, e?.response?.data?.message)
+          return { invitations: [] as any[], summary: {} as Record<string, number> }
+        }),
+      ])
 
-      const rows: ApplicantRow[] = (applications ?? []).map((app: any) => {
-        const name = pickName(app)
-        return {
-          id: app.id,
-          name,
-          email: app?.student?.user?.email ?? '-',
-          university: pickUniversity(app),
-          major: app?.student?.major ?? '-',
-          nim: app?.student?.nim ?? '-',
-          role: app?.job?.title ?? '-',
-          type: app?.job?.type ?? '-',
-          match: pickMatch(app),
-          date: pickDate(app),
-          status: app.status,
-          source: pickSource(app),
-          initial: initialFromName(name),
-          bgColor: colorFromName(name),
-        }
-      })
+      setApplicants(
+        (appData?.applications ?? []).map((app: any) => {
+          const name = pickName(app)
+          return {
+            id: app.id,
+            studentId: app?.student?.id ?? '',
+            name,
+            email: app?.student?.user?.email ?? '-',
+            university: pickUniversity(app),
+            major: app?.student?.major ?? '-',
+            nim: app?.student?.nim ?? '-',
+            role: app?.job?.title ?? '-',
+            type: app?.job?.type ?? '-',
+            match: pickMatch(app),
+            date: pickDate(app),
+            status: app.status,
+            source: 'Lamar' as const,
+            initial: initialFromName(name),
+            bgColor: colorFromName(name),
+          }
+        }),
+      )
+      setSummary(appData?.summary ?? {})
 
-      setApplicants(rows)
-      setSummary(sum ?? {})
+      setInvitationRows(
+        (invData?.invitations ?? []).map((inv: any) => {
+          const name = pickName(inv)
+          return {
+            id: inv.id,
+            studentId: inv?.student?.id ?? '',
+            name,
+            email: inv?.student?.user?.email ?? '-',
+            university: pickUniversity(inv),
+            major: inv?.student?.major ?? '-',
+            nim: inv?.student?.nim ?? '-',
+            role: inv?.job?.title ?? '-',
+            type: inv?.job?.type ?? '-',
+            match: pickMatch(inv),
+            date: pickDate(inv),
+            status: inv.status,
+            source: 'Undangan' as const,
+            initial: initialFromName(name),
+            bgColor: colorFromName(name),
+          }
+        }),
+      )
     } catch (err: any) {
       setLoadError(
         err?.response?.data?.message ??
@@ -150,10 +186,12 @@ const Company_DaftarPelamar = () => {
     loadData()
   }, [loadData])
 
-  // Daftar posisi diturunkan dari pelamar yang ada (tidak perlu request tambahan).
+  // Daftar posisi diturunkan dari kedua tabel.
   const uniqueRoles = useMemo(
-    () => Array.from(new Set(applicants.map((a) => a.role))).filter((r) => r && r !== '-'),
-    [applicants],
+    () =>
+      Array.from(new Set([...applicants, ...invitationRows].map((a) => a.role)))
+        .filter((r) => r && r !== '-'),
+    [applicants, invitationRows],
   )
 
   // Ubah status lamaran (optimistic: UI berubah dulu, dibalikkan kalau gagal).
@@ -171,6 +209,22 @@ const Company_DaftarPelamar = () => {
     } catch (err: any) {
       setApplicants(before)
       setActionError(err?.response?.data?.message ?? 'Gagal mengubah status lamaran.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  // Batalkan undangan yang masih menunggu jawaban.
+  const handleCancelInvitation = async (id: string, name: string) => {
+    setActiveMenuId(null)
+    setActionError('')
+    if (!window.confirm(`Batalkan undangan untuk ${name}?`)) return
+    setUpdatingId(id)
+    try {
+      await invitationApi.cancel(id)
+      setInvitationRows((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'cancelled' } : a)))
+    } catch (err: any) {
+      setActionError(err?.response?.data?.message ?? 'Gagal membatalkan undangan.')
     } finally {
       setUpdatingId(null)
     }
@@ -201,15 +255,17 @@ const Company_DaftarPelamar = () => {
     })
   }, [applicants, positionFilter, statusFilter])
 
-  const lamarApplicants = useMemo(
-    () => filteredApplicants.filter((a) => a.source === 'Lamar'),
-    [filteredApplicants],
-  )
+  const lamarApplicants = filteredApplicants
 
-  const undanganApplicants = useMemo(
-    () => filteredApplicants.filter((a) => a.source === 'Undangan'),
-    [filteredApplicants],
-  )
+// Filter status tidak diterapkan ke undangan karena nilainya berbeda
+  // (pending/accepted/declined/cancelled, bukan status lamaran).
+  const undanganApplicants = useMemo(() => {
+    const rank = (status: string) => (status === 'cancelled' ? 1 : 0)
+    return invitationRows
+      .filter((a) => positionFilter === 'Semua Posisi' || a.role === positionFilter)
+      // undangan yang dibatalkan selalu di urutan paling bawah
+      .sort((a, b) => rank(a.status) - rank(b.status))
+  }, [invitationRows, positionFilter])
 
   const handleResetFilter = () => {
     setPositionFilter('Semua Posisi')
@@ -272,8 +328,11 @@ const Company_DaftarPelamar = () => {
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'accepted': return 'bg-[#e6f9f0] text-[#10b981]'
-      case 'rejected': return 'bg-[#fee2e2] text-[#ef4444]'
-      case 'processing': return 'bg-[#fffbeb] text-[#f59e0b]'
+      case 'rejected':
+      case 'declined': return 'bg-[#fee2e2] text-[#ef4444]'
+      case 'processing':
+      case 'pending': return 'bg-[#fffbeb] text-[#f59e0b]'
+      case 'cancelled': return 'bg-[#f1f4f9] text-[#7b8191]'
       default: return 'bg-[#eef4ff] text-[#0f5ce0]'
     }
   }
@@ -296,6 +355,7 @@ const Company_DaftarPelamar = () => {
     endIndex: number,
     total: number,
     emptyText: string,
+    isInvitation = false,
   ) => (
     <>
       <div className="overflow-x-auto">
@@ -305,15 +365,27 @@ const Company_DaftarPelamar = () => {
               <th className="px-6 py-4 w-[30%]">Nama Kandidat</th>
               <th className="px-6 py-4 w-[20%]">Posisi Tujuan</th>
               <th className="px-6 py-4 text-center">Match Score</th>
-              <th className="px-6 py-4">Tgl Melamar</th>
+              <th className="px-6 py-4">{isInvitation ? 'Tgl Diundang' : 'Tgl Melamar'}</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f1f4f9]">
             {list.length > 0 ? (
-              list.map((applicant) => (
-                <tr key={applicant.id} className="hover:bg-[#fafbfe] transition">
+              list.map((applicant) => {
+                const bisaDibatalkan = isInvitation && applicant.status === 'pending'
+                const adaMenu = !isInvitation || bisaDibatalkan
+                return (
+                <tr
+                  key={applicant.id}
+                  onClick={() => {
+                    if (!applicant.studentId) return
+                    setActiveMenuId(null)
+                    navigate(`/company/detail-kandidat/${applicant.studentId}`)
+                  }}
+                  title="Lihat detail kandidat"
+                  className="hover:bg-[#fafbfe] transition cursor-pointer"
+                >
 
                   <td className="px-6 py-5 whitespace-nowrap">
                     <div className="flex items-center gap-3">
@@ -342,32 +414,53 @@ const Company_DaftarPelamar = () => {
 
                   <td className="px-6 py-5 whitespace-nowrap">
                     <span className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold ${getStatusStyle(applicant.status)}`}>
-                      {STATUS_LABEL[applicant.status] ?? applicant.status}
+                      {isInvitation
+                        ? INVITATION_LABEL[applicant.status] ?? applicant.status
+                        : STATUS_LABEL[applicant.status] ?? applicant.status}
                     </span>
                   </td>
 
-                  <td className="px-6 py-5 whitespace-nowrap text-center relative">
-                    <button 
-                      onClick={() => setActiveMenuId(activeMenuId === applicant.id ? null : applicant.id)} 
-                      disabled={updatingId === applicant.id}
-                      className="text-[#7b8191] hover:text-[#0f5ce0] p-1.5 rounded-lg transition hover:bg-[#eef4ff] disabled:opacity-40"
-                    >
-                      {updatingId === applicant.id
-                        ? <Loader2 size={18} className="animate-spin" />
-                        : <MoreVertical size={18} />}
-                    </button>
-                    {activeMenuId === applicant.id && (
-                      <div ref={menuRef} className="absolute right-6 top-8 mt-1 w-44 bg-white border border-[#e4e9f4] rounded-xl shadow-lg py-1.5 z-50 text-left animate-in fade-in duration-100">
-                        <p className="text-[10px] font-bold text-[#7b8191] px-3 py-1.5 uppercase tracking-wider">Ubah Status</p>
-                        <button onClick={() => handleUpdateStatus(applicant.id, 'processing')} className="w-full px-3 py-2 text-sm text-[#f59e0b] hover:bg-[#fffbeb] font-medium flex items-center gap-2 transition"><AlertCircle size={16} />Set Diproses</button>
-                        <button onClick={() => handleUpdateStatus(applicant.id, 'accepted')} className="w-full px-3 py-2 text-sm text-[#10b981] hover:bg-[#e6f9f0] font-medium flex items-center gap-2 transition"><CheckCircle2 size={16} />Set Diterima</button>
-                        <button onClick={() => handleUpdateStatus(applicant.id, 'rejected')} className="w-full px-3 py-2 text-sm text-[#ef4444] hover:bg-[#fee2e2] font-medium flex items-center gap-2 transition"><XCircle size={16} />Set Ditolak</button>
-                      </div>
+                  <td
+                    className="px-6 py-5 whitespace-nowrap text-center relative"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {adaMenu ? (
+                      <>
+                        <button 
+                          onClick={() => setActiveMenuId(activeMenuId === applicant.id ? null : applicant.id)} 
+                          disabled={updatingId === applicant.id}
+                          className="text-[#7b8191] hover:text-[#0f5ce0] p-1.5 rounded-lg transition hover:bg-[#eef4ff] disabled:opacity-40"
+                        >
+                          {updatingId === applicant.id
+                            ? <Loader2 size={18} className="animate-spin" />
+                            : <MoreVertical size={18} />}
+                        </button>
+                        {activeMenuId === applicant.id && (
+                          <div ref={menuRef} className="absolute right-6 top-8 mt-1 w-44 bg-white border border-[#e4e9f4] rounded-xl shadow-lg py-1.5 z-50 text-left animate-in fade-in duration-100">
+                            {isInvitation ? (
+                              <>
+                                <p className="text-[10px] font-bold text-[#7b8191] px-3 py-1.5 uppercase tracking-wider">Undangan</p>
+                                <button onClick={() => handleCancelInvitation(applicant.id, applicant.name)} className="w-full px-3 py-2 text-sm text-[#ef4444] hover:bg-[#fee2e2] font-medium flex items-center gap-2 transition"><Ban size={16} />Batalkan Undangan</button>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-[10px] font-bold text-[#7b8191] px-3 py-1.5 uppercase tracking-wider">Ubah Status</p>
+                                <button onClick={() => handleUpdateStatus(applicant.id, 'processing')} className="w-full px-3 py-2 text-sm text-[#f59e0b] hover:bg-[#fffbeb] font-medium flex items-center gap-2 transition"><AlertCircle size={16} />Set Diproses</button>
+                                <button onClick={() => handleUpdateStatus(applicant.id, 'accepted')} className="w-full px-3 py-2 text-sm text-[#10b981] hover:bg-[#e6f9f0] font-medium flex items-center gap-2 transition"><CheckCircle2 size={16} />Set Diterima</button>
+                                <button onClick={() => handleUpdateStatus(applicant.id, 'rejected')} className="w-full px-3 py-2 text-sm text-[#ef4444] hover:bg-[#fee2e2] font-medium flex items-center gap-2 transition"><XCircle size={16} />Set Ditolak</button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-[#a0a6b5]">—</span>
                     )}
                   </td>
 
                 </tr>
-              ))
+                )
+              })
             ) : (
               <tr>
                 <td colSpan={6} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
@@ -381,7 +474,7 @@ const Company_DaftarPelamar = () => {
 
       <div className="flex items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm">
         <div className="text-xs text-[#7b8191] font-medium">
-          Menampilkan <span className="text-[#111827] font-semibold">{startIndex}-{endIndex}</span> dari {total} pelamar
+          Menampilkan <span className="text-[#111827] font-semibold">{startIndex}-{endIndex}</span> dari {total} {isInvitation ? 'undangan' : 'pelamar'}
         </div>
         <div className="flex items-center gap-1">
           <button 
@@ -471,7 +564,7 @@ const Company_DaftarPelamar = () => {
         </div>
       </div>
 
-      {/* Pesan error saat mengubah status */}
+      {/* Pesan error saat mengubah status / membatalkan undangan */}
       {actionError && (
         <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
           <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
@@ -573,7 +666,7 @@ const Company_DaftarPelamar = () => {
             <span className="inline-flex items-center justify-center px-3 py-1 bg-[#fffbe6] text-[#f59e0b] rounded-full text-[11px] font-bold">
               Undangan
             </span>
-            <h3 className="text-sm font-bold text-[#111827]">Pelamar via Undangan <span className="text-[#7b8191] font-medium">({undanganApplicants.length})</span></h3>
+            <h3 className="text-sm font-bold text-[#111827]">Kandidat yang Diundang <span className="text-[#7b8191] font-medium">({undanganApplicants.length})</span></h3>
           </div>
         </div>
         {renderApplicantsTable(
@@ -584,7 +677,10 @@ const Company_DaftarPelamar = () => {
           startIndexUndangan,
           endIndexUndangan,
           undanganApplicants.length,
-          'Fitur undang kandidat belum tersedia, sehingga belum ada pelamar dari jalur undangan.',
+          invitationRows.length === 0
+            ? 'Belum ada kandidat yang diundang. Kirim undangan dari halaman Rekomendasi Kandidat.'
+            : 'Tidak ada undangan yang sesuai dengan filter.',
+          true,
         )}
       </div>
     </div>

@@ -1,32 +1,91 @@
-import { useState, useMemo, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, GraduationCap, Briefcase, X, Check, ChevronDown, ChevronUp, ExternalLink, User, Award } from 'lucide-react'
-import { CompanyService, rejectRecommendation, acceptRecommendationAsApplicant, type Recommendation, type CandidateAcademicDetail } from './CompanyData'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { GraduationCap, Briefcase, ChevronDown, ChevronUp, ExternalLink, User, Award, Loader2, AlertCircle } from 'lucide-react'
+import { matchingApi, invitationApi } from '../../services/company.service'
 
 const toTitleCase = (value: string): string => {
-  return value
+  return String(value ?? '')
     .toLowerCase()
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
 }
 
+// Satu baris analisis = satu CLO (bukan satu matkul).
+interface CloItem {
+  id: number
+  matkul: string
+  subjectCode: string
+  cloCode: string
+  nilai: string
+  semester?: number | null
+  deskripsi: string
+  skor: number
+  method: 'semantic' | 'skill'
+  matchedRequirement: string | null
+}
+
+interface CandidateData {
+  studentId: string
+  name: string
+  email: string | null
+  nim: string | null
+  major: string | null
+  semester: number | null
+  gpa: number | null
+  bio: string | null
+  university: string | null
+  matchScore: number
+  roleMatch: string
+  applicationId: string | null
+  applicationStatus: string | null
+  jobId: string | null
+}
+
+interface CertItem {
+  id: string
+  title: string
+  issuer: string | null
+  status: string
+  fileUrl: string | null
+}
+
 const Company_DetailKandidat = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  const jobId = searchParams.get('jobId') ?? undefined
 
-  const [kandidat, setKandidat] = useState<Recommendation | null>(null)
-  const [detail, setDetail] = useState<CandidateAcademicDetail | null>(null)
+  const [kandidat, setKandidat] = useState<CandidateData | null>(null)
+  const [certificates, setCertificates] = useState<CertItem[]>([])
+  const [cloAnalysis, setCloAnalysis] = useState<CloItem[]>([])
+  const [skills, setSkills] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState('')
+  const [invited, setInvited] = useState(false)
+
+  const loadData = useCallback(async () => {
+    if (!id) return
+    setLoading(true)
+    try {
+      const data: any = await matchingApi.candidateDetail(id, jobId)
+      setKandidat(data?.candidate ?? null)
+      setCertificates(data?.certificates ?? [])
+      setCloAnalysis(data?.cloAnalysis ?? [])
+      setSkills((data?.candidate?.skills ?? []).map((s: any) => s?.name).filter(Boolean))
+    } catch (err: any) {
+      setKandidat(null)
+      setLoadError(err?.response?.data?.message ?? 'Gagal memuat detail kandidat.')
+    } finally {
+      setLoading(false)
+    }
+  }, [id, jobId])
 
   useEffect(() => {
-    setLoading(true)
-    CompanyService.getCandidateDetailById(Number(id)).then(result => {
-      setKandidat(result ? result.kandidat : null)
-      setDetail(result ? result.detail : null)
-      setLoading(false)
-    })
-  }, [id])
+    loadData()
+  }, [loadData])
 
   const [openIds, setOpenIds] = useState<number[]>([1, 2, 3])
 
@@ -45,23 +104,40 @@ const Company_DetailKandidat = () => {
       .toUpperCase()
   }, [kandidat])
 
-  const handleTolak = () => {
-    if (!kandidat) return
-    rejectRecommendation(kandidat.id)
-    navigate('/company/rekomendasi-kandidat')
-  }
+  const sudahMelamar = !!kandidat?.applicationId
 
-  const handleTerima = () => {
+  // Backend belum punya fitur undang kandidat (tidak ada endpoint/tabel undangan).
+  // Kandidat yang sudah melamar diarahkan ke Daftar Pelamar; proses terima/tolak
+  // lamaran dilakukan di halaman tersebut.
+  const handleUndangMelamar = async () => {
     if (!kandidat) return
-    acceptRecommendationAsApplicant(kandidat)
-    navigate('/company/daftar-pelamar')
+    if (sudahMelamar) {
+      navigate('/company/daftar-pelamar', { state: { filterRole: kandidat.roleMatch } })
+      return
+    }
+    if (!kandidat.jobId) {
+      setActionError('Tidak ada lowongan aktif yang cocok untuk mengundang kandidat ini.')
+      return
+    }
+    if (!window.confirm(`Undang ${kandidat.name} untuk melamar posisi ${toTitleCase(kandidat.roleMatch)}?`)) return
+
+    setBusy(true)
+    setActionError('')
+    try {
+      await invitationApi.invite(kandidat.jobId, kandidat.studentId)
+      setInvited(true)
+    } catch (err: any) {
+      setActionError(err?.response?.data?.message ?? 'Gagal mengirim undangan.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (loading) {
     return (
       <div className="w-full flex flex-col items-center justify-center py-24 gap-4 animate-in fade-in duration-300">
         <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-400">
-          <User size={32} />
+          <Loader2 size={32} className="animate-spin text-[#0f5ce0]" />
         </div>
         <div className="text-center">
           <h2 className="text-lg font-bold text-[#111827]">Memuat data kandidat...</h2>
@@ -70,7 +146,7 @@ const Company_DetailKandidat = () => {
     )
   }
 
-  if (!kandidat || !detail) {
+  if (!kandidat) {
     return (
       <div className="w-full flex flex-col items-center justify-center py-24 gap-4 animate-in fade-in duration-300">
         <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-400">
@@ -78,7 +154,9 @@ const Company_DetailKandidat = () => {
         </div>
         <div className="text-center">
           <h2 className="text-lg font-bold text-[#111827]">Kandidat tidak ditemukan</h2>
-          <p className="text-sm text-[#7b8191] mt-1">Kandidat ini mungkin sudah dipindahkan atau tidak lagi tersedia.</p>
+          <p className="text-sm text-[#7b8191] mt-1">
+            {loadError || 'Kandidat ini mungkin sudah dipindahkan atau tidak lagi tersedia.'}
+          </p>
         </div>
         <button
           onClick={() => navigate('/company/rekomendasi-kandidat')}
@@ -109,28 +187,36 @@ const Company_DetailKandidat = () => {
             <h1 className="text-[22px] font-bold text-[#111827] truncate">{kandidat.name}</h1>
             <div className="flex items-center gap-1.5 text-sm text-[#5b6170] mt-1">
               <GraduationCap size={15} />
-              <span className="truncate">{kandidat.university}</span>
+              <span className="truncate">{kandidat.university ?? '-'}</span>
             </div>
             <div className="flex items-center gap-1.5 text-sm text-[#5b6170] mt-0.5">
               <Briefcase size={15} />
-              <span className="truncate">Melamar untuk: {toTitleCase(kandidat.roleMatch)}</span>
+              <span className="truncate">
+                {sudahMelamar ? 'Melamar untuk: ' : 'Paling cocok untuk: '}
+                {toTitleCase(kandidat.roleMatch)}
+              </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={handleTolak}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-red-200 text-red-600 text-sm font-bold rounded-xl hover:bg-red-50 transition active:scale-95"
-          >
-            <X size={16} /> Tolak
-          </button>
-          <button
-            onClick={handleTerima}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition shadow-md active:scale-95"
-          >
-            <Check size={16} /> Terima
-          </button>
+          {sudahMelamar ? (
+            <button
+              onClick={handleUndangMelamar}
+              className="px-6 py-2.5 bg-[#eef4ff] border border-[#d0e0ff] text-[#0f5ce0] text-sm font-bold rounded-xl hover:bg-[#dbe7ff] transition active:scale-95"
+            >
+              Sudah Melamar
+            </button>
+          ) : (
+            <button
+              onClick={handleUndangMelamar}
+              disabled={busy || invited}
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#0f5ce0] hover:bg-[#0d4ebf] text-white text-sm font-bold rounded-xl transition shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {busy && <Loader2 size={16} className="animate-spin" />}
+              {invited ? 'Undangan Terkirim' : 'Undang Melamar'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -145,46 +231,60 @@ const Company_DetailKandidat = () => {
 
           <div className="p-6">
             <h3 className="text-xs font-bold text-[#7b8191] uppercase tracking-wider mb-2">Biografi</h3>
-            <p className="text-sm text-[#5b6170] leading-relaxed">{detail.bio}</p>
+            <p className="text-sm text-[#5b6170] leading-relaxed">
+              {kandidat.bio || 'Mahasiswa belum mengisi biografi.'}
+            </p>
           </div>
 
           <div className="p-6">
             <h3 className="text-xs font-bold text-[#7b8191] uppercase tracking-wider mb-3">Riwayat Pendidikan</h3>
-            <div className="text-sm font-bold text-[#111827]">{detail.periode}</div>
-            <div className="text-sm text-[#5b6170] mt-1">{detail.jenjang}</div>
-            <div className="text-xs text-[#7b8191] mt-1">IPK: {detail.ipk}</div>
+            <div className="text-sm font-bold text-[#111827]">
+              {kandidat.semester ? `Semester ${kandidat.semester}` : 'Semester belum diisi'}
+            </div>
+            <div className="text-sm text-[#5b6170] mt-1">{kandidat.major ?? '-'}</div>
+            <div className="text-xs text-[#7b8191] mt-1">
+              NIM: {kandidat.nim ?? '-'} · IPK: {kandidat.gpa ?? '-'}
+            </div>
           </div>
 
           <div className="p-6">
             <h3 className="text-xs font-bold text-[#7b8191] uppercase tracking-wider mb-3">Keahlian Teknis</h3>
             <div className="flex flex-wrap gap-2">
-              {kandidat.skills.map((skill, idx) => (
+              {skills.length > 0 ? skills.map((skill, idx) => (
                 <span key={idx} className="px-2.5 py-1 bg-[#f1f4f9] text-[#5b6170] text-[10px] font-bold rounded-md uppercase tracking-wider border border-[#e4e9f4]">
                   {skill}
                 </span>
-              ))}
+              )) : (
+                <span className="text-xs text-[#a0a6b5]">Belum ada keahlian tercatat.</span>
+              )}
             </div>
           </div>
 
           <div className="p-6">
             <h3 className="text-xs font-bold text-[#7b8191] uppercase tracking-wider mb-3">Sertifikat</h3>
             <div className="flex flex-col gap-2">
-              {detail.sertifikat.map((sert, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#f8faff] border border-[#e4e9f4] rounded-xl">
+              {certificates.length > 0 ? certificates.map((sert) => (
+                <div key={sert.id} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#f8faff] border border-[#e4e9f4] rounded-xl">
                   <div className="flex items-center gap-2 min-w-0">
                     <Award size={15} className="text-[#0f5ce0] shrink-0" />
-                    <span className="text-xs font-semibold text-[#111827] truncate">{sert.nama}</span>
+                    <span className="text-xs font-semibold text-[#111827] truncate">{sert.title}</span>
                   </div>
-                  <a
-                    href={sert.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs font-bold text-[#0f5ce0] hover:underline shrink-0"
-                  >
-                    Lihat <ExternalLink size={12} />
-                  </a>
+                  {sert.fileUrl ? (
+                    <a
+                      href={sert.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs font-bold text-[#0f5ce0] hover:underline shrink-0"
+                    >
+                      Lihat <ExternalLink size={12} />
+                    </a>
+                  ) : (
+                    <span className="text-[10px] font-bold text-[#a0a6b5] shrink-0">Tanpa berkas</span>
+                  )}
                 </div>
-              ))}
+              )) : (
+                <span className="text-xs text-[#a0a6b5]">Belum ada sertifikat terverifikasi.</span>
+              )}
             </div>
           </div>
         </div>
@@ -197,8 +297,16 @@ const Company_DetailKandidat = () => {
             </span>
           </div>
 
+          {cloAnalysis.length === 0 ? (
+            <div className="p-10 text-center">
+              <p className="text-sm font-semibold text-[#5b6170]">Belum ada data CLO</p>
+              <p className="text-xs text-[#7b8191] mt-1">
+                Analisis muncul setelah nilai mata kuliah mahasiswa diinput dan mata kuliahnya memiliki CLO.
+              </p>
+            </div>
+          ) : (
           <div className="flex flex-col divide-y divide-[#f1f4f9]">
-            {detail.cloAnalysis.map((item, idx) => {
+            {cloAnalysis.map((item, idx) => {
               const isOpen = openIds.includes(item.id)
               return (
                 <div key={item.id} className="p-6">
@@ -206,7 +314,9 @@ const Company_DetailKandidat = () => {
                     onClick={() => toggleItem(item.id)}
                     className="w-full flex items-center justify-between gap-4 text-left"
                   >
-                    <h3 className="text-sm font-bold text-[#111827]">{idx + 1}. {item.matkul}</h3>
+                    <h3 className="text-sm font-bold text-[#111827]">
+                      {idx + 1}. {item.matkul} <span className="text-[#0f5ce0]">{item.cloCode}</span>
+                    </h3>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="px-2.5 py-1 bg-[#eef4ff] text-[#0f5ce0] text-xs font-bold rounded-lg">
                         {item.skor}%
@@ -228,11 +338,13 @@ const Company_DetailKandidat = () => {
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">{item.kode}</div>
+                        <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">{item.cloCode}</div>
                         <p className="text-sm text-[#5b6170] mt-1 leading-relaxed">{item.deskripsi}</p>
                       </div>
                       <p className="text-xs text-[#7b8191] italic">
-                        Kontribusi {item.skor}% x nilai {item.nilai} = {item.skor}% kontribusi
+                        {item.method === 'semantic' && item.matchedRequirement
+                          ? `Kemiripan ${item.skor}% dengan persyaratan: "${item.matchedRequirement}".`
+                          : `Mata kuliah asal CLO ini menutup ${item.skor}% kebutuhan keahlian pada posisi ${toTitleCase(kandidat.roleMatch)}.`}
                       </p>
                     </div>
                   )}
@@ -240,6 +352,7 @@ const Company_DetailKandidat = () => {
               )
             })}
           </div>
+          )}
         </div>
 
       </div>
