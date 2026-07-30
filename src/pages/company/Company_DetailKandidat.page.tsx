@@ -106,8 +106,8 @@ const Company_DetailKandidat = () => {
 
   const sudahMelamar = !!kandidat?.applicationId
 
-  // Backend belum punya fitur undang kandidat (tidak ada endpoint/tabel undangan).
-  // Kandidat yang sudah melamar diarahkan ke Daftar Pelamar; proses terima/tolak
+  // Mengundang kandidat ke lowongan dengan kecocokan tertinggi (jobId).
+  // Kandidat yang sudah melamar diarahkan ke Daftar Pelamar; terima/tolak
   // lamaran dilakukan di halaman tersebut.
   const handleUndangMelamar = async () => {
     if (!kandidat) return
@@ -177,6 +177,14 @@ const Company_DetailKandidat = () => {
         >
          Kembali ke Rekomendasi Kandidat
       </button>
+
+      {/* Pesan gagal saat mengirim undangan */}
+      {actionError && (
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
+          <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">{actionError}</p>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-[#e4e9f4] p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4 min-w-0">

@@ -64,7 +64,7 @@ const initialFromName = (name: string) =>
 // invitationId (tabel Undangan), sesuai sumbernya.
 interface ApplicantRow {
   id: string
-  studentId: string  
+  studentId: string       // dipakai untuk membuka halaman detail kandidat
   name: string
   email: string
   university: string
@@ -230,6 +230,13 @@ const Company_DaftarPelamar = () => {
     }
   }
 
+  // Buka halaman detail kandidat dari baris mana pun.
+  const openCandidateDetail = (studentId: string) => {
+    if (!studentId) return
+    setActiveMenuId(null)
+    navigate(`/company/detail-kandidat/${studentId}`)
+  }
+
   // Pakai ringkasan dari server bila tersedia; kalau tidak, hitung dari baris.
   const stats = useMemo(() => {
     const hasSummary = summary && Object.keys(summary).length > 0
@@ -257,7 +264,7 @@ const Company_DaftarPelamar = () => {
 
   const lamarApplicants = filteredApplicants
 
-// Filter status tidak diterapkan ke undangan karena nilainya berbeda
+  // Filter status tidak diterapkan ke undangan karena nilainya berbeda
   // (pending/accepted/declined/cancelled, bukan status lamaran).
   const undanganApplicants = useMemo(() => {
     const rank = (status: string) => (status === 'cancelled' ? 1 : 0)
@@ -378,11 +385,7 @@ const Company_DaftarPelamar = () => {
                 return (
                 <tr
                   key={applicant.id}
-                  onClick={() => {
-                    if (!applicant.studentId) return
-                    setActiveMenuId(null)
-                    navigate(`/company/detail-kandidat/${applicant.studentId}`)
-                  }}
+                  onClick={() => openCandidateDetail(applicant.studentId)}
                   title="Lihat detail kandidat"
                   className="hover:bg-[#fafbfe] transition cursor-pointer"
                 >
@@ -420,6 +423,7 @@ const Company_DaftarPelamar = () => {
                     </span>
                   </td>
 
+                  {/* Kolom aksi tidak boleh memicu navigasi baris */}
                   <td
                     className="px-6 py-5 whitespace-nowrap text-center relative"
                     onClick={(e) => e.stopPropagation()}

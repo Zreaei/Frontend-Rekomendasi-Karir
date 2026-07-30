@@ -16,6 +16,7 @@ interface Recommendation {
   status: 'Pending' | 'Diterima' | 'Ditolak'
   hasApplied: boolean
   bestJobId: string | null
+  invitationStatus: string | null
 }
 
 // Status lamaran backend -> status tampilan
@@ -60,6 +61,7 @@ const Company_RekomendasiKandidat = () => {
           status: toDisplayStatus(c.applicationStatus ?? null),
           hasApplied: !!c.applicationStatus,
           bestJobId: c.bestJobId ?? null,
+          invitationStatus: c.invitationStatus ?? null,
         }))
 
         setRecommendations(mapped)
@@ -79,9 +81,13 @@ const Company_RekomendasiKandidat = () => {
     return () => { aktif = false }
   }, [])
 
-  const filteredCandidates = useMemo(() => {
-    const filtered = recommendations.filter(cand => cand.status === activeFilter)
-    return filtered.sort((a, b) => sortOrder === 'Tertinggi' ? b.matchScore - a.matchScore : a.matchScore - b.matchScore)
+const filteredCandidates = useMemo(() => {
+    // "Semua Kandidat" = yang belum diputuskan; yang sudah diterima/ditolak
+    // punya tabnya sendiri.
+    const filtered = recommendations.filter((cand) => cand.status === activeFilter)
+    return [...filtered].sort((a, b) =>
+      sortOrder === 'Tertinggi' ? b.matchScore - a.matchScore : a.matchScore - b.matchScore,
+    )
   }, [recommendations, activeFilter, sortOrder])
 
   const totalPages = Math.ceil(filteredCandidates.length / ITEMS_PER_PAGE)
@@ -104,8 +110,9 @@ const Company_RekomendasiKandidat = () => {
     return pages
   }
 
-// Mengundang kandidat ke lowongan dengan kecocokan tertinggi (bestJobId).
-// Kandidat yang sudah melamar diarahkan ke daftar pelamar.
+  // Mengundang kandidat ke lowongan dengan kecocokan tertinggi (bestJobId).
+  // Kandidat yang sudah melamar diarahkan ke Daftar Pelamar; terima/tolak
+  // lamaran dilakukan di halaman tersebut.
   const handleUndangMelamar = async (kandidat: Recommendation) => {
     if (kandidat.hasApplied) {
       navigate('/company/daftar-pelamar', { state: { filterRole: kandidat.roleMatch } })
@@ -235,23 +242,38 @@ const Company_RekomendasiKandidat = () => {
                 </div>
 
                 <div className="flex flex-col gap-2 shrink-0 w-[150px]">
-                  {activeFilter === 'Pending' && (
+                  {/* Tombol mengikuti status kandidat, bukan tab yang aktif —
+                      karena tab "Semua Kandidat" kini berisi semua status. */}
+                  {candidate.status === 'Diterima' ? (
+                    <button className="w-full py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-default">
+                      <CheckCircle2 size={16} /> Telah Diterima
+                    </button>
+                  ) : candidate.status === 'Ditolak' ? (
+                    <button className="w-full py-2.5 bg-red-50 border border-red-200 text-red-700 text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-default">
+                      <XCircle size={16} /> Ditolak
+                    </button>
+                  ) : candidate.hasApplied ? (
+                    <button
+                      onClick={() => handleUndangMelamar(candidate)}
+                      className="w-full py-2.5 bg-[#eef4ff] border border-[#d0e0ff] text-[#0f5ce0] text-sm font-bold rounded-xl hover:bg-[#dbe7ff] transition active:scale-95"
+                    >
+                      Sudah Melamar
+                    </button>
+                  ) : candidate.invitationStatus === 'pending' ? (
+                    <button
+                      disabled
+                      title="Kandidat ini sudah diundang dan menunggu jawaban"
+                      className="w-full py-2.5 bg-[#fffbe6] border border-amber-200 text-[#f59e0b] text-sm font-bold rounded-xl cursor-not-allowed"
+                    >
+                      Sudah Diundang
+                    </button>
+                  ) : (
                     <button 
                       onClick={() => handleUndangMelamar(candidate)}
                       disabled={invitingId === candidate.id || invitedIds.includes(candidate.id)}
                       className="w-full py-2.5 bg-[#0f5ce0] hover:bg-[#0d4ebf] text-white text-sm font-bold rounded-xl transition shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {invitedIds.includes(candidate.id) ? 'Undangan Terkirim' : 'Undang Melamar'}
-                    </button>
-                  )}
-                  {activeFilter === 'Diterima' && (
-                    <button className="w-full py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-default">
-                      <CheckCircle2 size={16} /> Telah Diterima
-                    </button>
-                  )}
-                  {activeFilter === 'Ditolak' && (
-                    <button className="w-full py-2.5 bg-red-50 border border-red-200 text-red-700 text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-default">
-                      <XCircle size={16} /> Ditolak
                     </button>
                   )}
                   <button
@@ -271,7 +293,10 @@ const Company_RekomendasiKandidat = () => {
               </div>
               <h3 className="text-lg font-bold text-[#111827]">Tidak ada kandidat</h3>
               <p className="text-sm text-[#7b8191] mt-1 max-w-sm">
-                {emptyMessage || `Belum ada kandidat dengan status "${activeFilter}" pada saat ini.`}
+                {emptyMessage ||
+                  (activeFilter === 'Pending'
+                    ? 'Belum ada mahasiswa yang dapat ditampilkan. Pastikan perusahaan Anda memiliki lowongan aktif.'
+                    : `Belum ada kandidat dengan status "${activeFilter}" pada saat ini.`)}
               </p>
             </div>
           )}

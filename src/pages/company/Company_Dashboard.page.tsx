@@ -58,6 +58,7 @@ const pickSkills = (app: any): string[] => {
 
 interface TopCandidate {
   applicationId: string
+  studentId: string
   name: string
   university: string
   status: string
@@ -101,6 +102,7 @@ const CompanyDashboard = () => {
         belumDiputuskan
           .map((app: any) => ({
             applicationId: app.id,
+            studentId: app?.student?.id ?? '',
             name: pickName(app),
             university: pickUniversity(app),
             status: app.status,
@@ -115,7 +117,7 @@ const CompanyDashboard = () => {
       // "Rekomendasi Kandidat" = mahasiswa hasil mesin pencocokan dengan skor >= 85
       // pada lowongan aktif (sudah unik per mahasiswa dari backend).
       const { candidates } = await matchingApi.companyCandidates()
-      setRekomendasiKandidat((candidates ?? []).filter((c: any) => (c?.matchScore ?? 0) >= 85).length)
+      setRekomendasiKandidat((candidates ?? []).filter((c: any) => (c?.matchScore ?? 0) >= 80).length)
     } catch (err: any) {
       setLoadError(err?.response?.data?.message ?? 'Gagal memuat data dashboard. Pastikan server berjalan.')
     } finally {
@@ -250,14 +252,13 @@ const CompanyDashboard = () => {
                     {/* Tombol aksi */}
                     <div className="flex flex-col gap-2 w-[140px]">
                       <button
-                        disabled
-                        title="Fitur undang kandidat belum tersedia di backend"
-                        className="bg-[#0f5ce0] text-white text-[12px] font-bold py-2.5 px-4 rounded-[8px] transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => navigate('/company/daftar-pelamar', { state: { filterRole: k.role } })}
+                        className="bg-[#0f5ce0] text-white text-[12px] font-bold py-2.5 px-4 rounded-[8px] hover:bg-[#0d4ebf] transition shadow-sm"
                       >
-                        Undang Melamar
+                        Proses Lamaran
                       </button>
                       <button 
-                        onClick={() => navigate('/company/daftar-pelamar')}
+                        onClick={() => k.studentId && navigate(`/company/detail-kandidat/${k.studentId}`)}
                         className="bg-white text-[#5b6170] border border-[#e4e9f4] text-[12px] font-bold py-2.5 px-4 rounded-[8px] hover:bg-[#f8faff] transition"
                       >
                         Lihat Detail
