@@ -1,11 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, BookOpen, GraduationCap, Star, ChevronDown, ArrowRight, Download } from 'lucide-react'
-import { universityStats, pendingCourses } from './UniversityData'
+import { UniversityService, pendingCourses, type DashboardStats } from './UniversityData'
 
 const UniversityDashboard = () => {
   const navigate = useNavigate()
-  const [expandedId, setExpandedId] = useState<string | null>('1') // Default buka baris pertama
+  const [expandedId, setExpandedId] = useState<string | null>('1')
+  const [stats, setStats] = useState<DashboardStats>({ students: 0, courses: 0, totalCLO: 0, gradesInputted: 0 })
+
+  useEffect(() => {
+    UniversityService.getDashboardStats().then(setStats)
+  }, [])
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id)
@@ -20,12 +25,11 @@ const UniversityDashboard = () => {
     }
   }
 
-  // Fungsi untuk download Laporan CSV
   const handleExportCSV = () => {
     if (pendingCourses.length === 0) return
 
     const headers = ['Mata Kuliah', 'Kode', 'Total CLO', 'Mahasiswa Dinilai', 'Total Mahasiswa', 'Status Penilaian']
-    
+
     const csvData = pendingCourses.map(course => [
       `"${course.name}"`,
       `"${course.code}"`,
@@ -57,7 +61,7 @@ const UniversityDashboard = () => {
           <h1 className="text-3xl font-bold text-[#111827]">Dashboard Universitas</h1>
           <p className="text-sm text-[#5b6170] mt-1">Memantau kinerja mahasiswa dan integrasi industri.</p>
         </div>
-        <button 
+        <button
           onClick={handleExportCSV}
           className="flex items-center gap-2 px-5 py-2.5 bg-[#0f5ce0] text-white text-sm font-bold rounded-xl hover:bg-[#0d4ebf] transition-all shadow-sm active:scale-95"
         >
@@ -67,14 +71,14 @@ const UniversityDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        
+
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 shadow-sm flex flex-col gap-4">
           <div className="w-10 h-10 rounded-[10px] bg-[#f4f3ff] text-[#6366f1] flex items-center justify-center shrink-0">
             <Users size={20} />
           </div>
           <div>
             <p className="text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">Mahasiswa Terdaftar</p>
-            <p className="text-3xl font-bold text-[#111827] mt-1">{universityStats.students}</p>
+            <p className="text-3xl font-bold text-[#111827] mt-1">{stats.students}</p>
           </div>
         </div>
 
@@ -84,7 +88,7 @@ const UniversityDashboard = () => {
           </div>
           <div>
             <p className="text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">Mata Kuliah</p>
-            <p className="text-3xl font-bold text-[#111827] mt-1">{universityStats.courses}</p>
+            <p className="text-3xl font-bold text-[#111827] mt-1">{stats.courses}</p>
           </div>
         </div>
 
@@ -94,7 +98,7 @@ const UniversityDashboard = () => {
           </div>
           <div>
             <p className="text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">Total CLO</p>
-            <p className="text-3xl font-bold text-[#111827] mt-1">{universityStats.totalCLO}</p>
+            <p className="text-3xl font-bold text-[#111827] mt-1">{stats.totalCLO}</p>
           </div>
         </div>
 
@@ -104,21 +108,20 @@ const UniversityDashboard = () => {
           </div>
           <div>
             <p className="text-[11px] font-bold text-[#7b8191] uppercase tracking-wider">Nilai Terinput</p>
-            <p className="text-3xl font-bold text-[#111827] mt-1">{universityStats.gradesInputted}</p>
+            <p className="text-3xl font-bold text-[#111827] mt-1">{stats.gradesInputted}</p>
           </div>
         </div>
 
       </div>
 
-      {/* Tabel Penilaian Mata Kuliah */}
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm overflow-hidden">
-        
+
         <div className="px-6 py-5 flex items-start justify-between border-b border-[#e4e9f4]">
           <div>
             <h2 className="text-lg font-bold text-[#111827]">Mata Kuliah Perlu Penilaian</h2>
             <p className="text-sm text-[#7b8191] mt-0.5">Hanya menampilkan mata kuliah yang penilaiannya belum lengkap. Klik baris untuk detail.</p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/university/manajemen-nilai')}
             className="flex items-center gap-1.5 text-sm font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition"
           >
@@ -126,7 +129,6 @@ const UniversityDashboard = () => {
           </button>
         </div>
 
-        {/* Tabel */}
         <div className="w-full">
           <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-[#f8faff] border-b border-[#e4e9f4] text-[10px] font-bold text-[#7b8191] uppercase tracking-wider">
             <div className="col-span-1"></div>
@@ -140,7 +142,7 @@ const UniversityDashboard = () => {
           <div className="divide-y divide-[#e4e9f4]">
             {pendingCourses.map((course) => (
               <div key={course.id} className="flex flex-col">
-                <div 
+                <div
                   onClick={() => toggleExpand(course.id)}
                   className="grid grid-cols-12 gap-4 px-6 py-4 items-center bg-white hover:bg-gray-50 cursor-pointer transition"
                 >
@@ -168,7 +170,7 @@ const UniversityDashboard = () => {
                   </div>
                 </div>
 
-                <div 
+                <div
                   className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
                     expandedId === course.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
                   }`}
@@ -177,7 +179,7 @@ const UniversityDashboard = () => {
                     <div className="bg-[#f8faff] px-12 py-5 border-t border-[#e4e9f4]">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-bold text-[#5b6170]">Detail Penilaian CLO</h3>
-                        <button 
+                        <button
                           onClick={() => navigate('/university/manajemen-nilai')}
                           className="px-4 py-1.5 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-md hover:bg-[#0d4ebf] transition shadow-sm active:scale-95"
                         >

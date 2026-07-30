@@ -39,6 +39,7 @@ import Company_PengaturanAkun from '../pages/company/Company_PengaturanAkun.page
 import UniversityDashboard from '../pages/university/UniversityDashboard.page'
 import UniversityManajemenMahasiswa from '../pages/university/UniversityManajemenMahasiswa.page'
 import EditMahasiswa from '../pages/university/EditMahasiswa.page'
+import DetailMahasiswa from '../pages/university/DetailMahasiswa.page'
 import UniversityManajemenCLO from '../pages/university/UniversityManajemenCLO.page'
 import UniversityManajemenNilai from '../pages/university/UniversityManejemenNilai.page'
 import UniversityVerifikasiSertifikat from '../pages/university/UniversityVerifikasiSertifikat.page'
@@ -84,6 +85,7 @@ const AppRouter = () => {
         <Route index element={<UniversityDashboard />} />
         <Route path="manajemen-mahasiswa" element={<UniversityManajemenMahasiswa />} />
         <Route path="edit-mahasiswa" element={<EditMahasiswa />} />
+        <Route path="detail-mahasiswa/:id" element={<DetailMahasiswa />} />
         <Route path="manajemen-clo" element={<UniversityManajemenCLO />} />
         <Route path="manajemen-nilai" element={<UniversityManajemenNilai />} />
         <Route path="verifikasi-sertifikat" element={<UniversityVerifikasiSertifikat />} />

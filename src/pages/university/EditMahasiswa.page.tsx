@@ -110,8 +110,10 @@ const EditMahasiswa = () => {
       email: formData.email,
       status: formData.isActive ? 'Active' : 'Inactive',
       initial: initials,
-      gpa: formData.gpa, 
-      bgColor: studentData?.bgColor || 'bg-[#0f5ce0] text-white' 
+      gpa: formData.gpa,
+      bgColor: studentData?.bgColor || 'bg-[#0f5ce0] text-white',
+      avatarUrl: studentData?.avatarUrl,
+      totalSks: studentData?.totalSks ?? 0,
     }
 
     await UniversityService.saveStudent(newStudentData)
@@ -142,6 +144,7 @@ const EditMahasiswa = () => {
         </div>
       )}
 
+      {/* Breadcrumb & Header */}
       <div>
         <div className="flex items-center gap-2 text-sm text-[#7b8191] font-medium mb-2">
           <button onClick={() => navigate('/university/manajemen-mahasiswa')} className="hover:text-[#0f5ce0] transition">
@@ -158,7 +161,10 @@ const EditMahasiswa = () => {
         </p>
       </div>
 
+      {/* Form Card */}
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm p-6 sm:p-8 flex flex-col gap-8">
+        
+        {/* ROW 1: Nama & NIM */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-[#111827]">
@@ -195,6 +201,7 @@ const EditMahasiswa = () => {
           </div>
         </div>
 
+        {/* ROW 2: Dropdown Angkatan, Fakultas, Prodi */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-[#f1f4f9] pt-6">
           
           <div className="flex flex-col gap-2">
@@ -270,6 +277,7 @@ const EditMahasiswa = () => {
 
         </div>
 
+        {/* ROW 3: Email Institusi & IPK */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-[#f1f4f9] pt-6">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-[#111827]">
@@ -306,6 +314,7 @@ const EditMahasiswa = () => {
           </div>
         </div>
 
+        {/* Toggle Status */}
         <div className="flex items-center justify-between p-5 bg-[#f8faff] border border-[#e4e9f4] rounded-xl mt-2">
           <div>
             <p className="text-sm font-bold text-[#111827]">Status Mahasiswa</p>
@@ -324,6 +333,7 @@ const EditMahasiswa = () => {
           </div>
         </div>
 
+        {/* Buttons */}
         <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#f1f4f9]">
           <button 
             onClick={() => navigate('/university/manajemen-mahasiswa')}
@@ -341,6 +351,7 @@ const EditMahasiswa = () => {
 
       </div>
 
+      {/* Banner Info */}
       <div className="bg-[#eef4ff] rounded-[16px] border border-[#d0e0ff] p-5 flex items-start gap-4">
         <div className="text-[#0f5ce0] shrink-0 mt-0.5">
           <Info size={20} />

@@ -1,13 +1,19 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Users, UserCheck, GraduationCap, Plus, Download, Eye, Edit2, Trash2, Search, CheckCircle2, AlertTriangle, X, ChevronDown } from 'lucide-react'
-import { UniversityService, studentStatsData, type Student } from './UniversityData'
+import { UniversityService, type Student } from './UniversityData'
 
   const UniversityManajemenMahasiswa = () => {
   const navigate = useNavigate()
   const location = useLocation()
   
   const [students, setStudents] = useState<Student[]>([])
+  const studentStats = useMemo(() => ({
+  total: students.length,
+  active: students.filter(s => s.status === 'Active').length,
+  graduated: students.filter(s => s.status === 'Graduated').length,
+  }), [students])
+
   const [masterMap, setMasterMap] = useState<Record<string, string[]>>({})
   const [notification, setNotification] = useState<string | null>(null)
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null)
@@ -148,7 +154,7 @@ import { UniversityService, studentStatsData, type Student } from './UniversityD
           </div>
           <div>
             <p className="text-sm font-bold text-[#7b8191]">Total Mahasiswa</p>
-            <p className="text-[32px] font-bold text-[#111827] mt-1">{studentStatsData.total}</p>
+            <p className="text-[32px] font-bold text-[#111827] mt-1">{studentStats.total}</p>
           </div>
         </div>
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-6 shadow-sm flex flex-col gap-4">
@@ -157,7 +163,7 @@ import { UniversityService, studentStatsData, type Student } from './UniversityD
           </div>
           <div>
             <p className="text-sm font-bold text-[#7b8191]">Mahasiswa Aktif</p>
-            <p className="text-[32px] font-bold text-[#111827] mt-1">{studentStatsData.active}</p>
+            <p className="text-[32px] font-bold text-[#111827] mt-1">{studentStats.active}</p>
           </div>
         </div>
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-6 shadow-sm flex flex-col gap-4">
@@ -166,7 +172,7 @@ import { UniversityService, studentStatsData, type Student } from './UniversityD
           </div>
           <div>
             <p className="text-sm font-bold text-[#7b8191]">Mahasiswa Lulus</p>
-            <p className="text-[32px] font-bold text-[#111827] mt-1">{studentStatsData.graduated}</p>
+            <p className="text-[32px] font-bold text-[#111827] mt-1">{studentStats.graduated}</p>
           </div>
         </div>
       </div>
@@ -268,7 +274,7 @@ import { UniversityService, studentStatsData, type Student } from './UniversityD
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-3 text-[#7b8191]">
-                        <button className="hover:text-[#0f5ce0] transition p-1"><Eye size={18} /></button>
+                        <button onClick={() => navigate(`/university/detail-mahasiswa/${student.id}`)} className="hover:text-[#0f5ce0] transition p-1"><Eye size={18} /></button>
                         <button onClick={() => navigate('/university/edit-mahasiswa', { state: { studentData: student } })} className="hover:text-[#0f5ce0] transition p-1"><Edit2 size={18} /></button>
                         <button onClick={() => setStudentToDelete(student.id)} className="hover:text-red-500 transition p-1"><Trash2 size={18} /></button>
                       </div>
