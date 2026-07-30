@@ -52,9 +52,7 @@ const UniversityDashboard = () => {
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300 pb-12">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#111827]">Dashboard Universitas</h1>
           <p className="text-sm text-[#5b6170] mt-1">Memantau kinerja mahasiswa dan integrasi industri.</p>
@@ -68,7 +66,6 @@ const UniversityDashboard = () => {
         </button>
       </div>
 
-      {/* Grid Statistik */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 shadow-sm flex flex-col gap-4">
@@ -116,7 +113,6 @@ const UniversityDashboard = () => {
       {/* Tabel Penilaian Mata Kuliah */}
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm overflow-hidden">
         
-        {/* Card Header */}
         <div className="px-6 py-5 flex items-start justify-between border-b border-[#e4e9f4]">
           <div>
             <h2 className="text-lg font-bold text-[#111827]">Mata Kuliah Perlu Penilaian</h2>
@@ -132,7 +128,6 @@ const UniversityDashboard = () => {
 
         {/* Tabel */}
         <div className="w-full">
-          {/* Header Tabel */}
           <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-[#f8faff] border-b border-[#e4e9f4] text-[10px] font-bold text-[#7b8191] uppercase tracking-wider">
             <div className="col-span-1"></div>
             <div className="col-span-4">Mata Kuliah</div>
@@ -142,11 +137,9 @@ const UniversityDashboard = () => {
             <div className="col-span-2 text-center">Status</div>
           </div>
 
-          {/* Isi Tabel */}
           <div className="divide-y divide-[#e4e9f4]">
             {pendingCourses.map((course) => (
               <div key={course.id} className="flex flex-col">
-                {/* Baris Utama Mata Kuliah */}
                 <div 
                   onClick={() => toggleExpand(course.id)}
                   className="grid grid-cols-12 gap-4 px-6 py-4 items-center bg-white hover:bg-gray-50 cursor-pointer transition"
@@ -175,7 +168,6 @@ const UniversityDashboard = () => {
                   </div>
                 </div>
 
-                {/* Area Expand (Detail CLO) dengan Animasi Smooth */}
                 <div 
                   className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
                     expandedId === course.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'

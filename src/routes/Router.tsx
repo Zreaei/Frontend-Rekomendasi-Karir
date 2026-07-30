@@ -38,6 +38,7 @@ import Company_PengaturanAkun from '../pages/company/Company_PengaturanAkun.page
 // ============================================
 import UniversityDashboard from '../pages/university/UniversityDashboard.page'
 import UniversityManajemenMahasiswa from '../pages/university/UniversityManajemenMahasiswa.page'
+import EditMahasiswa from '../pages/university/EditMahasiswa.page'
 import UniversityManajemenCLO from '../pages/university/UniversityManajemenCLO.page'
 import UniversityManajemenNilai from '../pages/university/UniversityManejemenNilai.page'
 import UniversityVerifikasiSertifikat from '../pages/university/UniversityVerifikasiSertifikat.page'
@@ -82,6 +83,7 @@ const AppRouter = () => {
       <Route path="/university" element={<ProtectedRoute allowedRoles={['university']}><UniversityLayout /></ProtectedRoute>}>
         <Route index element={<UniversityDashboard />} />
         <Route path="manajemen-mahasiswa" element={<UniversityManajemenMahasiswa />} />
+        <Route path="edit-mahasiswa" element={<EditMahasiswa />} />
         <Route path="manajemen-clo" element={<UniversityManajemenCLO />} />
         <Route path="manajemen-nilai" element={<UniversityManajemenNilai />} />
         <Route path="verifikasi-sertifikat" element={<UniversityVerifikasiSertifikat />} />
@@ -114,7 +116,7 @@ const AppRouter = () => {
       <Route path="/student/help" element={<ProtectedRoute allowedRoles={['student']}><StudentHelp /></ProtectedRoute>} />
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/landing" replace />} />
+      <Route path="*" element={<Navigate to="/student" replace />} />
     </Routes>
   )
 }
