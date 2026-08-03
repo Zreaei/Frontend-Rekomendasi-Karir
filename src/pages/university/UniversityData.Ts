@@ -1,5 +1,5 @@
 // ==========================================
-// 1. TIPE & KATALOG MATA KULIAH (dipakai Dashboard & Manajemen CLO)
+// 1. TIPE & KATALOG MATA KULIAH (dipakai Dashboard)
 // ==========================================
 export interface CLO {
   id: string
@@ -88,7 +88,7 @@ export interface DashboardStats {
 }
 
 // ==========================================
-// 3. "DATABASE" SEMENTARA (nanti diganti fetch API asli, cukup di sini)
+// 3. "DATABASE" SEMENTARA (Akan diganti API Asli nantinya)
 // ==========================================
 const facultyMajorDatabase: Record<string, string[]> = {
   'Fakultas Teknik': ['Teknik Sipil', 'Teknik Mesin'],
@@ -104,38 +104,120 @@ let studentsDatabase: Student[] = [
 ]
 
 let nilaiDatabase: NilaiMahasiswa[] = [
-  { id: 'n1', studentId: '1', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan berbagai struktur data (array, stack, queue, tree, graph) dan algoritma pencarian serta pengurutan yang efisien untuk menyelesaikan permasalahan komputasi kompleks.', skills: ['Data Structures', 'Algorithms'], score: 92 },
-  { id: 'n2', studentId: '1', code: 'CLO 2', course: 'Sistem Basis Data', description: 'Mampu merancang, mengimplementasikan, dan mengoptimalkan sistem basis data terdistribusi yang skalabel, aman, dan berkinerja tinggi untuk kebutuhan industri modern.', skills: ['Database', 'SQL'], score: 88 },
-  { id: 'n3', studentId: '1', code: 'CLO 3', course: 'Cloud Computing', description: 'Mampu membangun arsitektur sistem berbasis cloud yang handal, toleran terhadap kegagalan, dan efisien biaya menggunakan penyedia layanan cloud ternama.', skills: ['Cloud Computing', 'AWS'], score: 95 },
-  { id: 'n4', studentId: '1', code: 'CLO 4', course: 'Desain Pengalaman Pengguna (UI/UX)', description: 'Mampu merancang antarmuka pengguna yang intuitif dan responsif menggunakan prinsip desain UX modern dan tools prototyping terkini.', skills: ['UI/UX Design', 'Figma'], score: 90 },
-  { id: 'n5', studentId: '1', code: 'CLO 5', course: 'Pemrograman Berbasis Objek', description: 'Memahami dan menerapkan arsitektur microservices untuk membangun sistem yang skalabel, modular, dan terdistribusi.', skills: ['Docker', 'Kubernetes'], score: 85 },
-  { id: 'n6', studentId: '1', code: 'CLO 6', course: 'Dasar-Dasar Pengujian Perangkat Lunak', description: 'Mampu melakukan pengujian perangkat lunak secara otomatis dan memastikan kualitas kode sesuai standar industri dan best practices.', skills: ['QA', 'Testing'], score: 88 },
-
-  { id: 'n7', studentId: '2', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan berbagai struktur data dan algoritma pencarian serta pengurutan yang efisien.', skills: ['Data Structures', 'Algorithms'], score: 90 },
-  { id: 'n8', studentId: '2', code: 'CLO 2', course: 'Analisis Sistem Informasi', description: 'Mampu menganalisis kebutuhan bisnis dan merancang sistem informasi yang sesuai.', skills: ['System Analysis', 'UML'], score: 91 },
-
-  { id: 'n9', studentId: '3', code: 'CLO 1', course: 'Manajemen Pemasaran', description: 'Mampu menyusun strategi pemasaran berbasis data untuk produk dan jasa.', skills: ['Marketing Strategy'], score: 87 },
-
-  { id: 'n10', studentId: '4', code: 'CLO 1', course: 'Struktur Beton Bertulang', description: 'Mampu merancang struktur beton bertulang sesuai standar keselamatan konstruksi.', skills: ['Structural Design'], score: 89 },
+  { id: 'n1', studentId: '1', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan berbagai struktur data...', skills: ['Data Structures', 'Algorithms'], score: 92 },
+  { id: 'n2', studentId: '1', code: 'CLO 2', course: 'Sistem Basis Data', description: 'Mampu merancang sistem basis data...', skills: ['Database', 'SQL'], score: 88 },
+  { id: 'n7', studentId: '2', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan...', skills: ['Data Structures', 'Algorithms'], score: 90 },
 ]
 
 let sertifikatDatabase: SertifikatMahasiswa[] = [
-  { id: 'c1', studentId: '1', title: 'Google Cloud Certified', issuer: 'Cloud Digital Leader', date: 'Dec 2023', status: 'VERIFIED', url: 'https://www.credly.com/badges/google-cloud-certified' },
-  { id: 'c2', studentId: '1', title: 'Advanced Machine Learning', issuer: 'Coursera', date: 'Sep 2023', status: 'VERIFIED', url: 'https://www.coursera.org/account/accomplishments' },
-  { id: 'c3', studentId: '1', title: 'AWS Cloud Practitioner', issuer: 'Amazon Web Services', date: 'Jun 2023', status: 'VERIFIED', url: 'https://www.credly.com/badges/aws-cloud-practitioner' },
-  { id: 'c4', studentId: '1', title: 'Professional Data Analyst', issuer: 'IBM Data Science', date: 'Feb 2024', status: 'PENDING_REVIEW' },
-
-  { id: 'c5', studentId: '2', title: 'Certified Scrum Master', issuer: 'Scrum Alliance', date: 'Jan 2024', status: 'VERIFIED', url: 'https://www.scrumalliance.org/community/profile/verify' },
+  { id: 'c1', studentId: '1', title: 'Google Cloud Certified', issuer: 'Cloud Digital Leader', date: 'Dec 2023', status: 'VERIFIED' },
+  { id: 'c5', studentId: '2', title: 'Certified Scrum Master', issuer: 'Scrum Alliance', date: 'Jan 2024', status: 'VERIFIED' },
 ]
 
 // ==========================================
-// 4. SERVICE — SATU-SATUNYA PINTU YANG BOLEH DIPAKAI HALAMAN LAIN
-//    Nanti kalau backend sudah jadi, isi tiap fungsi ini yang diganti
-//    (dari baca array in-memory jadi fetch ke API), halaman lain tidak perlu diubah.
+// 4. MANAJEMEN DATA MATA KULIAH (MASTER)
+// ==========================================
+export interface Subject {
+  id: string;
+  code: string;
+  name: string;
+  sks: number;
+  semester: number;
+  cloCount: number;
+}
+
+export const subjectStatsData = {
+  totalSubjects: 46,
+  totalCLO: 157,
+  noCLO: 2
+};
+
+// Data Dummy Mata Kuliah (cloCount disinkronkan dengan database CLO di bawah)
+export const initialSubjects: Subject[] = [
+  { id: '1', code: 'ADP', name: 'Algoritma dan Pemrograman', sks: 4, semester: 1, cloCount: 3 },
+  { id: '2', code: 'ADPB', name: 'Arsitektur dan Pengembangan Backend', sks: 3, semester: 2, cloCount: 2 },
+  { id: '3', code: 'ADPSI', name: 'Analisis dan Perancangan Sistem Informasi', sks: 3, semester: 1, cloCount: 2 },
+  { id: '4', code: 'AE', name: 'Arsitektur Enterprise', sks: 3, semester: 1, cloCount: 0 },
+  { id: '5', code: 'ATI', name: 'Adopsi Teknologi Informasi', sks: 3, semester: 2, cloCount: 0 },
+  { id: '6', code: 'BI', name: 'Bahasa Indonesia', sks: 2, semester: 1, cloCount: 0 },
+];
+
+// ==========================================
+// 5. MANAJEMEN DATA DETAIL CLO MATA KULIAH
+// ==========================================
+export interface SubjectCLO {
+  id: string;
+  subjectId: string;
+  code: string;
+  description: string;
+  skills: string[];
+}
+
+// DATABASE CLO DINAMIS (Berisi CLO untuk berbagai Mata Kuliah)
+export let subjectCloDatabase: SubjectCLO[] = [
+  // --- CLO UNTUK ADP (id: 1) ---
+  {
+    id: 'clo1', subjectId: '1', code: 'CLO 1',
+    description: 'Memahami dasar-dasar pemrograman komputer meliputi sejarah, cara kerja, perkembangan, serta pentingnya belajar bahasa pemrograman, dan mampu menguraikan konsep flowchart serta pseudocode.',
+    skills: ['Logic Building', 'Flowcharting', 'Pseudocode', 'Basic Programming', 'Debugging']
+  },
+  {
+    id: 'clo2', subjectId: '1', code: 'CLO 2',
+    description: 'Mampu merancang algoritma dengan memberikan contoh penggunaan algoritma sederhana serta mampu membuat solusi program untuk menyelesaikan permasalahan atau kasus nyata yang sederhana.',
+    skills: ['Algorithm Design', 'Problem Solving', 'Computational Thinking']
+  },
+  {
+    id: 'clo3', subjectId: '1', code: 'CLO 3',
+    description: 'Mampu mengimplementasikan algoritma sederhana untuk menciptakan solusi program yang menyelesaikan permasalahan atau kasus nyata.',
+    skills: ['Software Implementation', 'Complexity Analysis', 'Applied Algorithms']
+  },
+  
+  // --- CLO UNTUK ADPB (id: 2) ---
+  {
+    id: 'clo4', subjectId: '2', code: 'CLO 1',
+    description: 'Mampu memahami dan merancang arsitektur backend modern menggunakan pola desain RESTful API dan Microservices untuk skalabilitas aplikasi.',
+    skills: ['Backend Architecture', 'RESTful API', 'Microservices', 'System Design']
+  },
+  {
+    id: 'clo5', subjectId: '2', code: 'CLO 2',
+    description: 'Mampu mengelola integrasi database relasional dan non-relasional serta mengamankan endpoint menggunakan autentikasi JWT.',
+    skills: ['Database Management', 'Security', 'JWT', 'Integration']
+  },
+
+  // --- CLO UNTUK ADPSI (id: 3) ---
+  {
+    id: 'clo6', subjectId: '3', code: 'CLO 1',
+    description: 'Mampu menganalisis kebutuhan sistem informasi dalam sebuah organisasi menggunakan metode observasi dan wawancara.',
+    skills: ['Requirement Analysis', 'Observation', 'Data Gathering']
+  },
+  {
+    id: 'clo7', subjectId: '3', code: 'CLO 2',
+    description: 'Mampu memodelkan proses bisnis dan merancang sistem menggunakan Unified Modeling Language (UML).',
+    skills: ['Business Process Modeling', 'UML', 'System Design']
+  }
+];
+
+// ==========================================
+// 6. SERVICE — PINTU UTAMA AKSES DATA
 // ==========================================
 export const UniversityService = {
   getStudents: async (): Promise<Student[]> => {
     return [...studentsDatabase]
+  },
+
+  getSubjects: async (): Promise<Subject[]> => {
+    return [...initialSubjects];
+  },
+  
+  deleteSubject: async (id: string): Promise<void> => {
+    const index = initialSubjects.findIndex(s => s.id === id);
+    if (index > -1) {
+      initialSubjects.splice(index, 1);
+    }
+  },
+
+  saveSubject: async (newSubject: Subject): Promise<void> => {
+    initialSubjects.unshift(newSubject); 
   },
 
   getStudentStats: async (): Promise<{ total: number; active: number; graduated: number }> => {
@@ -154,11 +236,7 @@ export const UniversityService = {
     const certifications = sertifikatDatabase.filter(c => c.studentId === studentId)
 
     return {
-      ...student,
-      cloDetails,
-      certifications,
-      totalClo: cloDetails.length,
-      certificationsCount: certifications.length,
+      ...student, cloDetails, certifications, totalClo: cloDetails.length, certificationsCount: certifications.length,
     }
   },
 
@@ -184,39 +262,40 @@ export const UniversityService = {
     sertifikatDatabase = sertifikatDatabase.filter(c => c.studentId !== id)
   },
 
-  getNilaiByStudent: async (studentId: string): Promise<NilaiMahasiswa[]> => {
-    return nilaiDatabase.filter(n => n.studentId === studentId)
-  },
-
-  saveNilai: async (record: NilaiMahasiswa): Promise<void> => {
-    const index = nilaiDatabase.findIndex(n => n.id === record.id)
-    if (index > -1) {
-      nilaiDatabase[index] = record
-    } else {
-      nilaiDatabase.push(record)
-    }
-  },
-
-  getSertifikatByStudent: async (studentId: string): Promise<SertifikatMahasiswa[]> => {
-    return sertifikatDatabase.filter(c => c.studentId === studentId)
-  },
-
-  saveSertifikat: async (record: SertifikatMahasiswa): Promise<void> => {
-    const index = sertifikatDatabase.findIndex(c => c.id === record.id)
-    if (index > -1) {
-      sertifikatDatabase[index] = record
-    } else {
-      sertifikatDatabase.push(record)
-    }
-  },
-
   getDashboardStats: async (): Promise<DashboardStats> => {
     const uniqueCloCodes = new Set(nilaiDatabase.map(n => n.code))
     return {
-      students: studentsDatabase.length,
-      courses: pendingCourses.length,
-      totalCLO: uniqueCloCodes.size,
-      gradesInputted: nilaiDatabase.length,
+      students: studentsDatabase.length, courses: pendingCourses.length, totalCLO: uniqueCloCodes.size, gradesInputted: nilaiDatabase.length,
+    }
+  },
+
+  // --- FUNGSI MANAJEMEN DETAIL CLO ---
+  getCLOsBySubject: async (subjectId: string): Promise<SubjectCLO[]> => {
+    return subjectCloDatabase.filter(c => c.subjectId === subjectId);
+  },
+
+  saveCLO: async (record: SubjectCLO): Promise<void> => {
+    const index = subjectCloDatabase.findIndex(c => c.id === record.id);
+    if (index > -1) {
+      subjectCloDatabase[index] = record;
+    } else {
+      subjectCloDatabase.push(record);
+    }
+    
+    const subjectIndex = initialSubjects.findIndex(s => s.id === record.subjectId);
+    if (subjectIndex > -1) {
+      initialSubjects[subjectIndex].cloCount = subjectCloDatabase.filter(c => c.subjectId === record.subjectId).length;
+    }
+  },
+
+  deleteCLO: async (id: string): Promise<void> => {
+    const clo = subjectCloDatabase.find(c => c.id === id);
+    if (clo) {
+      subjectCloDatabase = subjectCloDatabase.filter(c => c.id !== id);
+      const subjectIndex = initialSubjects.findIndex(s => s.id === clo.subjectId);
+      if (subjectIndex > -1) {
+        initialSubjects[subjectIndex].cloCount = subjectCloDatabase.filter(c => c.subjectId === clo.subjectId).length;
+      }
     }
   },
 }
