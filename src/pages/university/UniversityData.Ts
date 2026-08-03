@@ -88,7 +88,7 @@ export interface DashboardStats {
 }
 
 // ==========================================
-// 3. "DATABASE" SEMENTARA (Akan diganti API Asli nantinya)
+// 3. "DATABASE" SEMENTARA
 // ==========================================
 const facultyMajorDatabase: Record<string, string[]> = {
   'Fakultas Teknik': ['Teknik Sipil', 'Teknik Mesin'],
@@ -104,14 +104,14 @@ let studentsDatabase: Student[] = [
 ]
 
 let nilaiDatabase: NilaiMahasiswa[] = [
-  { id: 'n1', studentId: '1', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan berbagai struktur data...', skills: ['Data Structures', 'Algorithms'], score: 92 },
-  { id: 'n2', studentId: '1', code: 'CLO 2', course: 'Sistem Basis Data', description: 'Mampu merancang sistem basis data...', skills: ['Database', 'SQL'], score: 88 },
-  { id: 'n7', studentId: '2', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan...', skills: ['Data Structures', 'Algorithms'], score: 90 },
+  { id: 'n1', studentId: '1', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan...', skills: ['Data Structures'], score: 92 },
+  { id: 'n2', studentId: '1', code: 'CLO 2', course: 'Algoritma dan Pemrograman', description: 'Mampu merancang...', skills: ['Database'], score: 88 },
+  { id: 'n3', studentId: '1', code: 'CLO 3', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan...', skills: ['Algorithms'], score: 95 },
+  { id: 'n4', studentId: '2', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan...', skills: ['Data Structures'], score: 90 },
 ]
 
 let sertifikatDatabase: SertifikatMahasiswa[] = [
   { id: 'c1', studentId: '1', title: 'Google Cloud Certified', issuer: 'Cloud Digital Leader', date: 'Dec 2023', status: 'VERIFIED' },
-  { id: 'c5', studentId: '2', title: 'Certified Scrum Master', issuer: 'Scrum Alliance', date: 'Jan 2024', status: 'VERIFIED' },
 ]
 
 // ==========================================
@@ -132,7 +132,6 @@ export const subjectStatsData = {
   noCLO: 2
 };
 
-// Data Dummy Mata Kuliah (cloCount disinkronkan dengan database CLO di bawah)
 export const initialSubjects: Subject[] = [
   { id: '1', code: 'ADP', name: 'Algoritma dan Pemrograman', sks: 4, semester: 1, cloCount: 3 },
   { id: '2', code: 'ADPB', name: 'Arsitektur dan Pengembangan Backend', sks: 3, semester: 2, cloCount: 2 },
@@ -151,49 +150,39 @@ export interface SubjectCLO {
   code: string;
   description: string;
   skills: string[];
+  weight?: number;
 }
 
-// DATABASE CLO DINAMIS (Berisi CLO untuk berbagai Mata Kuliah)
 export let subjectCloDatabase: SubjectCLO[] = [
-  // --- CLO UNTUK ADP (id: 1) ---
   {
     id: 'clo1', subjectId: '1', code: 'CLO 1',
-    description: 'Memahami dasar-dasar pemrograman komputer meliputi sejarah, cara kerja, perkembangan, serta pentingnya belajar bahasa pemrograman, dan mampu menguraikan konsep flowchart serta pseudocode.',
-    skills: ['Logic Building', 'Flowcharting', 'Pseudocode', 'Basic Programming', 'Debugging']
+    description: 'Memahami dasar-dasar pemrograman komputer...',
+    skills: ['Logic Building'],
+    weight: 30
   },
   {
     id: 'clo2', subjectId: '1', code: 'CLO 2',
-    description: 'Mampu merancang algoritma dengan memberikan contoh penggunaan algoritma sederhana serta mampu membuat solusi program untuk menyelesaikan permasalahan atau kasus nyata yang sederhana.',
-    skills: ['Algorithm Design', 'Problem Solving', 'Computational Thinking']
+    description: 'Mampu merancang algoritma...',
+    skills: ['Algorithm Design'],
+    weight: 30
   },
   {
     id: 'clo3', subjectId: '1', code: 'CLO 3',
-    description: 'Mampu mengimplementasikan algoritma sederhana untuk menciptakan solusi program yang menyelesaikan permasalahan atau kasus nyata.',
-    skills: ['Software Implementation', 'Complexity Analysis', 'Applied Algorithms']
+    description: 'Mampu mengimplementasikan algoritma...',
+    skills: ['Software Implementation'],
+    weight: 40
   },
-  
-  // --- CLO UNTUK ADPB (id: 2) ---
   {
     id: 'clo4', subjectId: '2', code: 'CLO 1',
-    description: 'Mampu memahami dan merancang arsitektur backend modern menggunakan pola desain RESTful API dan Microservices untuk skalabilitas aplikasi.',
-    skills: ['Backend Architecture', 'RESTful API', 'Microservices', 'System Design']
+    description: 'Mampu memahami arsitektur backend...',
+    skills: ['Backend Architecture'],
+    weight: 50
   },
   {
     id: 'clo5', subjectId: '2', code: 'CLO 2',
-    description: 'Mampu mengelola integrasi database relasional dan non-relasional serta mengamankan endpoint menggunakan autentikasi JWT.',
-    skills: ['Database Management', 'Security', 'JWT', 'Integration']
-  },
-
-  // --- CLO UNTUK ADPSI (id: 3) ---
-  {
-    id: 'clo6', subjectId: '3', code: 'CLO 1',
-    description: 'Mampu menganalisis kebutuhan sistem informasi dalam sebuah organisasi menggunakan metode observasi dan wawancara.',
-    skills: ['Requirement Analysis', 'Observation', 'Data Gathering']
-  },
-  {
-    id: 'clo7', subjectId: '3', code: 'CLO 2',
-    description: 'Mampu memodelkan proses bisnis dan merancang sistem menggunakan Unified Modeling Language (UML).',
-    skills: ['Business Process Modeling', 'UML', 'System Design']
+    description: 'Mampu mengelola integrasi database...',
+    skills: ['Database Management'],
+    weight: 50
   }
 ];
 
@@ -269,7 +258,6 @@ export const UniversityService = {
     }
   },
 
-  // --- FUNGSI MANAJEMEN DETAIL CLO ---
   getCLOsBySubject: async (subjectId: string): Promise<SubjectCLO[]> => {
     return subjectCloDatabase.filter(c => c.subjectId === subjectId);
   },
@@ -298,4 +286,19 @@ export const UniversityService = {
       }
     }
   },
+
+  getAllNilai: async (): Promise<NilaiMahasiswa[]> => {
+    return [...nilaiDatabase];
+  },
+  
+  saveNilaiBatch: async (records: NilaiMahasiswa[]): Promise<void> => {
+    records.forEach(record => {
+      const index = nilaiDatabase.findIndex(n => n.studentId === record.studentId && n.code === record.code && n.course === record.course);
+      if (index > -1) {
+        nilaiDatabase[index] = record;
+      } else {
+        nilaiDatabase.push(record);
+      }
+    });
+  }
 }
