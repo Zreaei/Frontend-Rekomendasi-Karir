@@ -69,8 +69,10 @@ export interface SertifikatMahasiswa {
   title: string
   issuer: string
   date: string
-  status: 'VERIFIED' | 'PENDING_REVIEW'
+  status: 'Verified' | 'Pending' | 'Rejected'
   url?: string
+  skills?: string[]
+  adminNote?: string
 }
 
 export interface StudentDetail extends Student {
@@ -110,8 +112,20 @@ let nilaiDatabase: NilaiMahasiswa[] = [
   { id: 'n4', studentId: '2', code: 'CLO 1', course: 'Algoritma dan Pemrograman', description: 'Mampu mengimplementasikan...', skills: ['Data Structures'], score: 90 },
 ]
 
+// DUMMY SERTIFIKAT DINAMIS UNTUK 4 MAHASISWA
 let sertifikatDatabase: SertifikatMahasiswa[] = [
-  { id: 'c1', studentId: '1', title: 'Google Cloud Certified', issuer: 'Cloud Digital Leader', date: 'Dec 2023', status: 'VERIFIED' },
+  { id: 'c1', studentId: '1', title: 'Google Data Analytics Professional', issuer: 'Coursera / Google', date: '12 Okt 2023', status: 'Pending', url: 'https://coursera.org/verify/GDA123', skills: ['Data Analysis', 'Python', 'Spreadsheet'] },
+  { id: 'c2', studentId: '1', title: 'Machine Learning Specialization', issuer: 'Stanford University', date: '05 Sep 2023', status: 'Verified', url: 'https://coursera.org/verify/MLS456', skills: ['Machine Learning', 'Python'] },
+  { id: 'c3', studentId: '1', title: 'Python Basics', issuer: 'HackerRank', date: '20 Agu 2023', status: 'Verified', url: 'https://hackerrank.com/certificates/PB789', skills: ['Python', 'Problem Solving'] },
+  { id: 'c4', studentId: '2', title: 'AWS Certified Cloud Practitioner', issuer: 'Amazon Web Services', date: '11 Okt 2023', status: 'Verified', url: 'https://aws.amazon.com/verification', skills: ['Cloud Computing', 'AWS'] },
+  { id: 'c5', studentId: '2', title: 'Scrum Master Certified', issuer: 'Scrum Alliance', date: '28 Sep 2023', status: 'Pending', skills: ['Agile', 'Scrum'] },
+  { id: 'c6', studentId: '2', title: 'Frontend Developer (React)', issuer: 'HackerRank', date: '15 Agu 2023', status: 'Rejected', skills: ['React', 'JavaScript'] },
+  { id: 'c7', studentId: '2', title: 'UI/UX Design Course', issuer: 'Dicoding', date: '01 Jul 2023', status: 'Verified', url: 'https://dicoding.com/certificates/UX123', skills: ['UI/UX', 'Figma'] },
+  { id: 'c8', studentId: '3', title: 'Digital Marketing Specialization', issuer: 'University of Illinois', date: '10 Okt 2023', status: 'Rejected', skills: ['SEO', 'Marketing'] },
+  { id: 'c9', studentId: '3', title: 'Financial Modeling Course', issuer: 'Corporate Finance Institute', date: '18 Sep 2023', status: 'Pending', skills: ['Finance', 'Excel'] },
+  { id: 'c10', studentId: '4', title: 'Microsoft Certified: Azure AI Fundamentals', issuer: 'Microsoft', date: '09 Okt 2023', status: 'Pending', skills: ['AI', 'Azure'] },
+  { id: 'c11', studentId: '4', title: 'AutoCAD Professional Certification', issuer: 'Autodesk', date: '22 Sep 2023', status: 'Verified', skills: ['AutoCAD', 'Design'] },
+  { id: 'c12', studentId: '4', title: 'Project Management Professional', issuer: 'PMI', date: '14 Agu 2023', status: 'Pending', skills: ['Project Management'] },
 ]
 
 // ==========================================
@@ -300,5 +314,16 @@ export const UniversityService = {
         nilaiDatabase.push(record);
       }
     });
+  },
+
+  getAllSertifikat: async (): Promise<SertifikatMahasiswa[]> => {
+    return [...sertifikatDatabase];
+  },
+
+  updateSertifikat: async (id: string, updates: Partial<SertifikatMahasiswa>): Promise<void> => {
+    const index = sertifikatDatabase.findIndex(c => c.id === id);
+    if (index > -1) {
+      sertifikatDatabase[index] = { ...sertifikatDatabase[index], ...updates };
+    }
   }
 }

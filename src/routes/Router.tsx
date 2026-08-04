@@ -45,6 +45,7 @@ import UniversityDetailCLO from '../pages/university/UniversityDetailCLO.page'
 import UniversityManajemenNilai from '../pages/university/UniversityManejemenNilai.page'
 import UniversityKelolaNilai from '../pages/university/UniversityKelolaNilai.page'
 import UniversityVerifikasiSertifikat from '../pages/university/UniversityVerifikasiSertifikat.page'
+import DetailSertifikat from '../pages/university/DetailSertifikat.page'
 
 // PLACEHOLDER UNTUK HALAMAN YANG BELUM DIBUAT
 // ============================================
@@ -92,8 +93,8 @@ const AppRouter = () => {
         <Route path="detail-clo" element={<UniversityDetailCLO />} />      
         <Route path="manajemen-nilai" element={<UniversityManajemenNilai />} />
         <Route path="kelola-nilai" element={<UniversityKelolaNilai />} />
-
         <Route path="verifikasi-sertifikat" element={<UniversityVerifikasiSertifikat />} />
+        <Route path="detail-sertifikat/:id" element={<DetailSertifikat />} />
 
         <Route path="*" element={<Navigate to="/university" replace />} />
       </Route>
