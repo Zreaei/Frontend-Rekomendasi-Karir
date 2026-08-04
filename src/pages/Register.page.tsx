@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Header from '../components/ui/Header'
 
 interface RegistrationData {
   fullName: string
@@ -95,362 +96,365 @@ export default function RegisterPage() {
   const finalIndustryDisplay = formData.industry === 'Lainnya' ? formData.customIndustry : formData.industry
 
   return (
-    <main className="min-h-screen bg-[#f2f6fb] py-10 px-4 sm:px-6 flex flex-col items-center">
-      <div className="w-full max-w-[700px] mb-6">
-        <Stepper currentStep={step} />
-      </div>
+    <>
+      <Header />
+      <main className="min-h-screen bg-[#f2f6fb] py-10 px-4 sm:px-6 flex flex-col items-center">
+        <div className="w-full max-w-[700px] mb-6">
+          <Stepper currentStep={step} />
+        </div>
 
-      {/* Step 1 */}
-      {step === 1 && (
-        <div className="w-full max-w-[960px] grid md:grid-cols-[280px_1fr] gap-5 items-stretch">
-          <div className="flex flex-col gap-5">
-            {/* Card 1 */}
-            <div className="bg-white rounded-[24px] border border-[#e4e9f4] shadow-sm p-6">
-              <span className="inline-flex w-fit rounded-full bg-[#eef4ff] px-3 py-1.5 text-[16px] font-semibold text-[#0f5ce0]">
-                Gabung Bersama Kami
-              </span>
-              <p className="mt-4 text-[12px] leading-relaxed text-[#5b6170]">
-                Terhubunglah dengan lulusan unggulan dan profesional berpengalaman. Proses verifikasi kami
-                menjamin lingkungan rekrutmen yang aman dan berkualitas tinggi.
-              </p>
-              <div className="mt-5 space-y-4">
-                <SidebarFeature
-                  icon={
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                  }
-                  title="Platform Terverifikasi"
-                  desc="Penanganan dokumen perusahaan dan data bisnis Anda secara aman."
-                />
-                <SidebarFeature
-                  icon={
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  }
-                  title="Wawasan Talenta"
-                  desc="Akses profil mahasiswa dan data kinerja akademik yang terperinci."
-                />
+        {/* Step 1 */}
+        {step === 1 && (
+          <div className="w-full max-w-[960px] grid md:grid-cols-[280px_1fr] gap-5 items-stretch">
+            <div className="flex flex-col gap-5">
+              {/* Card 1 */}
+              <div className="bg-white rounded-[24px] border border-[#e4e9f4] shadow-sm p-6">
+                <span className="inline-flex w-fit rounded-full bg-[#eef4ff] px-3 py-1.5 text-[16px] font-semibold text-[#0f5ce0]">
+                  Gabung Bersama Kami
+                </span>
+                <p className="mt-4 text-[12px] leading-relaxed text-[#5b6170]">
+                  Terhubunglah dengan lulusan unggulan dan profesional berpengalaman. Proses verifikasi kami
+                  menjamin lingkungan rekrutmen yang aman dan berkualitas tinggi.
+                </p>
+                <div className="mt-5 space-y-4">
+                  <SidebarFeature
+                    icon={
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    }
+                    title="Platform Terverifikasi"
+                    desc="Penanganan dokumen perusahaan dan data bisnis Anda secara aman."
+                  />
+                  <SidebarFeature
+                    icon={
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    }
+                    title="Wawasan Talenta"
+                    desc="Akses profil mahasiswa dan data kinerja akademik yang terperinci."
+                  />
+                </div>
+              </div>
+
+              {/* Card 2 - Komitmen Privasi*/}
+              <div className="bg-white rounded-[22px] border border-[#e4e9f4] shadow-sm p-6">
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-[#0f5ce0] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <div>
+                    <p className="text-[15px] font-bold text-[#111827] mb-1">Komitmen Privasi</p>
+                    <p className="text-[13px] text-[#5b6170] leading-relaxed">
+                      Simaster mematuhi standar perlindungan data internasional. Dokumen Anda hanya digunakan untuk tujuan verifikasi oleh tim Superadmin kami.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Card 2 - Komitmen Privasi*/}
-            <div className="bg-white rounded-[22px] border border-[#e4e9f4] shadow-sm p-6">
-              <div className="flex items-start gap-2">
-                <svg className="w-4 h-4 text-[#0f5ce0] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <div>
-                  <p className="text-[15px] font-bold text-[#111827] mb-1">Komitmen Privasi</p>
-                  <p className="text-[13px] text-[#5b6170] leading-relaxed">
-                    Simaster mematuhi standar perlindungan data internasional. Dokumen Anda hanya digunakan untuk tujuan verifikasi oleh tim Superadmin kami.
-                  </p>
+            <div className="bg-white rounded-[24px] border border-[#e4e9f4] shadow-sm p-7 md:p-8 relative flex flex-col">
+              <form onSubmit={handleStep1Submit} className="flex flex-col flex-1">
+                <h2 className="text-[24px] font-bold text-[#111827] leading-tight">Buat akun Anda</h2>
+                <p className="mt-1.5 text-[13px] text-[#5b6170]">Mulailah perjalanan Anda sebagai mitra perusahaan di Simaster.</p>
+
+                {error && <div className="mt-4"><ErrorBox ref={errorRef} message={error} /></div>}
+
+                <div className="mt-6 space-y-4">
+                  <FormField id="fullName" label="Nama Lengkap" placeholder="Sigit Kurnia Hartawan" value={formData.fullName} onChange={(v: string) => updateField('fullName', v)} required />
+                  <FormField id="email" label="Email Kantor" placeholder="Nama Perusahaan Anda @gmail.com" type="email" value={formData.email} onChange={(v: string) => updateField('email', v)} required />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField id="password" label="Kata sandi" placeholder="Minimal 8 karakter" type="password" value={formData.password} onChange={(v: string) => updateField('password', v)} required />
+                    <FormField id="confirmPassword" label="Konfirmasi Kata Sandi" placeholder="Ulangi kata sandi Anda" type="password" value={formData.confirmPassword} onChange={(v: string) => updateField('confirmPassword', v)} required />
+                  </div>
                 </div>
-              </div>
+
+                <div className="mt-auto pt-6 flex justify-end">
+                  <button type="submit" className="px-6 py-2.5 rounded-[10px] bg-[#0f5ce0] text-[14px] font-semibold text-white hover:bg-[#0c48b0] transition shadow-md shadow-blue-200 flex items-center gap-2">
+                    Rincian Perusahaan
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
+        )}
 
-          <div className="bg-white rounded-[24px] border border-[#e4e9f4] shadow-sm p-7 md:p-8 relative flex flex-col">
-            <form onSubmit={handleStep1Submit} className="flex flex-col flex-1">
-              <h2 className="text-[24px] font-bold text-[#111827] leading-tight">Buat akun Anda</h2>
-              <p className="mt-1.5 text-[13px] text-[#5b6170]">Mulailah perjalanan Anda sebagai mitra perusahaan di Simaster.</p>
+        {/* Step 2 */}
+        {step === 2 && (
+          <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-sm border border-[#e4e9f4] p-8 md:p-10 relative">
+            <form onSubmit={handleStep2Submit}>
+              <Step2Header
+                title="Rincian Perusahaan"
+                subtitle="Ceritakan lebih lanjut mengenai perusahaan Anda agar kami dapat menyesuaikan pengalaman perekrut."
+                step="Langkah 2 dari 4"
+              />
+              {error && <ErrorBox ref={errorRef} message={error} />}
+              <div className="space-y-5 mt-8">
+                <FormField id="companyName" label="Nama Perusahaan" placeholder="Masukkan nama perusahaan Anda yang terdaftar" value={formData.companyName} onChange={(v: string) => updateField('companyName', v)} required />
 
-              {error && <div className="mt-4"><ErrorBox ref={errorRef} message={error} /></div>}
-
-              <div className="mt-6 space-y-4">
-                <FormField id="fullName" label="Nama Lengkap" placeholder="Sigit Kurnia Hartawan" value={formData.fullName} onChange={(v: string) => updateField('fullName', v)} required />
-                <FormField id="email" label="Email Kantor" placeholder="Nama Perusahaan Anda @gmail.com" type="email" value={formData.email} onChange={(v: string) => updateField('email', v)} required />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField id="password" label="Kata sandi" placeholder="Minimal 8 karakter" type="password" value={formData.password} onChange={(v: string) => updateField('password', v)} required />
-                  <FormField id="confirmPassword" label="Konfirmasi Kata Sandi" placeholder="Ulangi kata sandi Anda" type="password" value={formData.confirmPassword} onChange={(v: string) => updateField('confirmPassword', v)} required />
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <SelectField
+                    id="industry"
+                    label="Kategori Industri"
+                    options={['Teknologi Informasi', 'Keuangan', 'Manufaktur', 'Pendidikan', 'Kesehatan', 'Retail', 'Lainnya']}
+                    value={formData.industry}
+                    onChange={(v: string) => updateField('industry', v)}
+                    required
+                  />
+                  <SelectField
+                    id="size"
+                    label="Ukuran Perusahaan"
+                    options={['1–50 Karyawan', '51–200 Karyawan', '201–500 Karyawan', '500+ Karyawan']}
+                    value={formData.companySize}
+                    onChange={(v: string) => updateField('companySize', v)}
+                    required
+                  />
                 </div>
-              </div>
 
-              <div className="mt-auto pt-6 flex justify-end">
-                <button type="submit" className="px-6 py-2.5 rounded-[10px] bg-[#0f5ce0] text-[14px] font-semibold text-white hover:bg-[#0c48b0] transition shadow-md shadow-blue-200 flex items-center gap-2">
-                  Rincian Perusahaan
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
+                {formData.industry === 'Lainnya' && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <FormField
+                      id="customIndustry"
+                      label="Ketik Kategori Industri Anda"
+                      placeholder="Contoh: Agrikultur, Energi Berkelanjutan..."
+                      value={formData.customIndustry}
+                      onChange={(v: string) => updateField('customIndustry', v)}
+                      required
+                    />
+                  </div>
+                )}
+
+                <FormField id="website" label="Website URL" placeholder="https://www.contoh.com" value={formData.website} onChange={(v: string) => updateField('website', v)} required />
+                <FormField id="address" label="Alamat Kantor Pusat" placeholder="Jalan, Kota, Negara Bagian, Negara" value={formData.address} onChange={(v: string) => updateField('address', v)} required />
+
+                <label className="grid gap-1.5 text-[14px] font-semibold text-[#111827]">
+                  <div className="flex justify-between">
+                    <span>Deskripsi Perusahaan / Profil<span className="text-red-500 ml-0.5">*</span></span>
+                    <span className="font-normal text-[#7b8191]">{formData.description.length} / 500</span>
+                  </div>
+                  <textarea
+                    className="w-full rounded-[10px] border border-[#d7dde9] bg-[#fafbff] p-4 text-[14px] font-normal text-[#1f2937] outline-none focus:border-[#0f5ce0] focus:ring-2 focus:ring-[#0f5ce0]/15 min-h-[110px] resize-none transition"
+                    placeholder="Jelaskan secara singkat misi dan nilai-nilai inti perusahaan Anda..."
+                    value={formData.description}
+                    onChange={(e) => updateField('description', e.target.value)}
+                    maxLength={500}
+                  />
+                </label>
+              </div>
+              <div className="mt-10 pt-6 border-t border-[#f1f4f9] flex justify-between items-center gap-4">
+                <BackButton onClick={prevStep} label="Kembali ke Akun" />
+                <button type="submit" className="bg-[#0f5ce0] text-white px-7 py-2.5 rounded-[10px] text-[14px] font-semibold hover:bg-[#0c48b0] transition shadow-md shadow-blue-200">
+                  Unggah Dokumen
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Step 2 */}
-      {step === 2 && (
-        <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-sm border border-[#e4e9f4] p-8 md:p-10 relative">
-          <form onSubmit={handleStep2Submit}>
-            <Step2Header
-              title="Rincian Perusahaan"
-              subtitle="Ceritakan lebih lanjut mengenai perusahaan Anda agar kami dapat menyesuaikan pengalaman perekrut."
-              step="Langkah 2 dari 4"
-            />
-            {error && <ErrorBox ref={errorRef} message={error} />}
-            <div className="space-y-5 mt-8">
-              <FormField id="companyName" label="Nama Perusahaan" placeholder="Masukkan nama perusahaan Anda yang terdaftar" value={formData.companyName} onChange={(v: string) => updateField('companyName', v)} required />
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                <SelectField
-                  id="industry"
-                  label="Kategori Industri"
-                  options={['Teknologi Informasi', 'Keuangan', 'Manufaktur', 'Pendidikan', 'Kesehatan', 'Retail', 'Lainnya']}
-                  value={formData.industry}
-                  onChange={(v: string) => updateField('industry', v)}
-                  required
-                />
-                <SelectField
-                  id="size"
-                  label="Ukuran Perusahaan"
-                  options={['1–50 Karyawan', '51–200 Karyawan', '201–500 Karyawan', '500+ Karyawan']}
-                  value={formData.companySize}
-                  onChange={(v: string) => updateField('companySize', v)}
-                  required
-                />
-              </div>
-
-              {formData.industry === 'Lainnya' && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <FormField
-                    id="customIndustry"
-                    label="Ketik Kategori Industri Anda"
-                    placeholder="Contoh: Agrikultur, Energi Berkelanjutan..."
-                    value={formData.customIndustry}
-                    onChange={(v: string) => updateField('customIndustry', v)}
-                    required
+        {/* Step 3 */}
+        {step === 3 && (
+          <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-sm border border-[#e4e9f4] p-8 md:p-10 relative">
+            <form onSubmit={handleStep3Submit}>
+              <SectionHeader
+                title="Verifikasi & Dokumen"
+                subtitle="Harap lampirkan dokumen hukum resmi Anda untuk menyelesaikan pendaftaran organisasi Anda di Simaster."
+                step="Langkah 3 dari 4"
+                center
+              />
+              {error && <ErrorBox ref={errorRef} message={error} />}
+              <div className="grid gap-8 md:grid-cols-2 mt-8">
+                <div className="space-y-5">
+                  <NibField
+                    value={formData.nib}
+                    onChange={(v: string) => updateField('nib', v)}
+                    onError={(msg: string) => setError(msg)}
                   />
-                </div>
-              )}
+                  <p className="text-[12px] text-[#7b8191] -mt-3">NIB harus terdiri dari tepat 13 digit angka.</p>
 
-              <FormField id="website" label="Website URL" placeholder="https://www.contoh.com" value={formData.website} onChange={(v: string) => updateField('website', v)} required />
-              <FormField id="address" label="Alamat Kantor Pusat" placeholder="Jalan, Kota, Negara Bagian, Negara" value={formData.address} onChange={(v: string) => updateField('address', v)} required />
-
-              <label className="grid gap-1.5 text-[14px] font-semibold text-[#111827]">
-                <div className="flex justify-between">
-                  <span>Deskripsi Perusahaan / Profil<span className="text-red-500 ml-0.5">*</span></span>
-                  <span className="font-normal text-[#7b8191]">{formData.description.length} / 500</span>
-                </div>
-                <textarea
-                  className="w-full rounded-[10px] border border-[#d7dde9] bg-[#fafbff] p-4 text-[14px] font-normal text-[#1f2937] outline-none focus:border-[#0f5ce0] focus:ring-2 focus:ring-[#0f5ce0]/15 min-h-[110px] resize-none transition"
-                  placeholder="Jelaskan secara singkat misi dan nilai-nilai inti perusahaan Anda..."
-                  value={formData.description}
-                  onChange={(e) => updateField('description', e.target.value)}
-                  maxLength={500}
-                />
-              </label>
-            </div>
-            <div className="mt-10 pt-6 border-t border-[#f1f4f9] flex justify-between items-center gap-4">
-              <BackButton onClick={prevStep} label="Kembali ke Akun" />
-              <button type="submit" className="bg-[#0f5ce0] text-white px-7 py-2.5 rounded-[10px] text-[14px] font-semibold hover:bg-[#0c48b0] transition shadow-md shadow-blue-200">
-                Unggah Dokumen
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Step 3 */}
-      {step === 3 && (
-        <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-sm border border-[#e4e9f4] p-8 md:p-10 relative">
-          <form onSubmit={handleStep3Submit}>
-            <SectionHeader
-              title="Verifikasi & Dokumen"
-              subtitle="Harap lampirkan dokumen hukum resmi Anda untuk menyelesaikan pendaftaran organisasi Anda di Simaster."
-              step="Langkah 3 dari 4"
-              center
-            />
-            {error && <ErrorBox ref={errorRef} message={error} />}
-            <div className="grid gap-8 md:grid-cols-2 mt-8">
-              <div className="space-y-5">
-                <NibField
-                  value={formData.nib}
-                  onChange={(v: string) => updateField('nib', v)}
-                  onError={(msg: string) => setError(msg)}
-                />
-                <p className="text-[12px] text-[#7b8191] -mt-3">NIB harus terdiri dari tepat 13 digit angka.</p>
-
-                <div className="bg-[#f5f8ff] rounded-[14px] p-4 flex gap-3 border border-[#e5ecff]">
-                  <div className="mt-0.5 w-6 h-6 rounded-full bg-[#0f5ce0] text-white flex items-center justify-center text-xs font-bold shrink-0">i</div>
-                  <div>
-                    <h4 className="text-[13px] font-bold text-[#111827]">Superadmin Review</h4>
-                    <p className="text-[12px] text-[#5b6170] mt-1 leading-relaxed">Permohonan Anda akan ditinjau oleh Superadmin. Proses ini biasanya memakan waktu 1–2 hari kerja.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <FileUploadField
-                  label="Izin Usaha (PDF NIB)"
-                  hint="Hanya format PDF (Maks. 10 MB)"
-                  accept=".pdf"
-                  required
-                  file={formData.izinUsahaFile}
-                  onChange={(f) => updateField('izinUsahaFile', f)}
-                  icon={<svg className="w-8 h-8 text-[#a3b1c6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>}
-                />
-                <FileUploadField
-                  label="Surat Resmi Perusahaan (opsional)"
-                  hint="JPG, PNG, atau PDF (Maks. 5 MB)"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  file={formData.suratResmiFile}
-                  onChange={(f) => updateField('suratResmiFile', f)}
-                  icon={<svg className="w-8 h-8 text-[#a3b1c6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
-                />
-              </div>
-            </div>
-            <div className="mt-10 pt-6 border-t border-[#f1f4f9] flex justify-between items-center gap-4">
-              <BackButton onClick={prevStep} label="Kembali ke Detail" />
-              <button type="submit" className="bg-[#0f5ce0] text-white px-7 py-2.5 rounded-[10px] text-[14px] font-semibold hover:bg-[#0c48b0] transition shadow-md shadow-blue-200">
-                Kirim untuk Verifikasi
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Step 4 */}
-      {step === 4 && (
-        <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-sm border border-[#e4e9f4] p-8 md:p-10 relative">
-          <form onSubmit={handleFinalSubmit}>
-            <SectionHeader
-              title="Tinjauan Akhir"
-              subtitle="Harap verifikasi semua informasi sebelum mengirimkan pendaftaran Anda."
-              step="Langkah 4 dari 4"
-            />
-            {error && <ErrorBox ref={errorRef} message={error} />}
-
-            <div className="bg-[#f5f8ff] rounded-[14px] p-4 flex gap-3 mb-6 border border-[#e5ecff] mt-6">
-              <div className="mt-0.5 w-6 h-6 rounded-full bg-[#0f5ce0] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                <img src="/src/assets/register/icon-schedule.svg" alt="" className="w-4 h-4" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerText = 'i' }} />
-              </div>
-              <div>
-                <h4 className="text-[13px] font-bold text-[#111827]">Jadwal Pengajuan</h4>
-                <p className="text-[12px] text-[#5b6170] mt-1 leading-relaxed">Setelah dikirimkan, tim Superadmin kami akan meninjau permohonan Anda dalam 1–2 hari kerja. Anda akan menerima notifikasi melalui email setelah akun diverifikasi.</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <SummaryCard
-                title="Informasi Akun"
-                iconSrc="/src/assets/register/akun.png"
-                onEdit={() => setStep(1)}
-              >
-                <div className="grid grid-cols-2 gap-4">
-                  <SummaryItem label="Nama Lengkap" value={formData.fullName} />
-                  <div>
-                    <span className="block text-[11px] text-[#7b8191] mb-0.5">Email Kantor</span>
-                    <a href={`mailto:${formData.email}`} className="text-[13px] font-medium text-[#0f5ce0] hover:underline">
-                      {formData.email}
-                    </a>
-                  </div>
-                </div>
-              </SummaryCard>
-
-              <SummaryCard
-                title="Detail Perusahaan"
-                iconSrc="/src/assets/register/perusahaan.png"
-                onEdit={() => setStep(2)}
-              >
-                <div className="grid grid-cols-2 gap-4 mb-3">
-                  <SummaryItem label="Nama Perusahaan" value={formData.companyName} />
-                  <SummaryItem label="Industri" value={finalIndustryDisplay} />
-                  <SummaryItem label="Ukuran Perusahaan" value={formData.companySize} />
-                  <div>
-                    <span className="block text-[11px] text-[#7b8191] mb-0.5">Website</span>
-                    <a
-                      href={formData.website.startsWith('http') ? formData.website : `https://${formData.website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[13px] font-medium text-[#0f5ce0] hover:underline"
-                    >
-                      {formData.website}
-                    </a>
-                  </div>
-                  <div className="col-span-2"><SummaryItem label="Kantor Pusat" value={formData.address} /></div>
-                </div>
-                <SummaryItem label="Deskripsi Perusahaan" value={formData.description} />
-              </SummaryCard>
-
-              <SummaryCard
-                title="Dokumen yang Diunggah"
-                iconSrc="/src/assets/register/dokumen.png"
-                onEdit={() => setStep(3)}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 border border-[#e4e9f4] p-3 rounded-[10px] bg-[#fafbff]">
-                    <div className="w-8 h-8 bg-[#f5f8ff] rounded-[8px] flex items-center justify-center font-bold text-[#0f5ce0] text-sm">
-                      <img src="/src/assets/register/nib.png" alt="" className="w-4 h-4" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                      <span className="text-sm font-bold text-[#0f5ce0]"></span>
-                    </div>
+                  <div className="bg-[#f5f8ff] rounded-[14px] p-4 flex gap-3 border border-[#e5ecff]">
+                    <div className="mt-0.5 w-6 h-6 rounded-full bg-[#0f5ce0] text-white flex items-center justify-center text-xs font-bold shrink-0">i</div>
                     <div>
-                      <span className="block text-[11px] text-[#7b8191]">Nomor NIB</span>
-                      <span className="text-[13px] font-medium">{formData.nib || '-'}</span>
+                      <h4 className="text-[13px] font-bold text-[#111827]">Superadmin Review</h4>
+                      <p className="text-[12px] text-[#5b6170] mt-1 leading-relaxed">Permohonan Anda akan ditinjau oleh Superadmin. Proses ini biasanya memakan waktu 1–2 hari kerja.</p>
                     </div>
                   </div>
+                </div>
 
-                  <FilePreviewItem
-                    label="Izin Usaha"
+                <div className="space-y-5">
+                  <FileUploadField
+                    label="Izin Usaha (PDF NIB)"
+                    hint="Hanya format PDF (Maks. 10 MB)"
+                    accept=".pdf"
+                    required
                     file={formData.izinUsahaFile}
-                    iconSrc="/src/assets/register/usaha.png"
-                    accentColor="#fff1f0"
-                    iconColor="text-red-400"
-                    fallbackIcon={
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-                      </svg>
-                    }
+                    onChange={(f) => updateField('izinUsahaFile', f)}
+                    icon={<svg className="w-8 h-8 text-[#a3b1c6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>}
                   />
+                  <FileUploadField
+                    label="Surat Resmi Perusahaan (opsional)"
+                    hint="JPG, PNG, atau PDF (Maks. 5 MB)"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    file={formData.suratResmiFile}
+                    onChange={(f) => updateField('suratResmiFile', f)}
+                    icon={<svg className="w-8 h-8 text-[#a3b1c6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                  />
+                </div>
+              </div>
+              <div className="mt-10 pt-6 border-t border-[#f1f4f9] flex justify-between items-center gap-4">
+                <BackButton onClick={prevStep} label="Kembali ke Detail" />
+                <button type="submit" className="bg-[#0f5ce0] text-white px-7 py-2.5 rounded-[10px] text-[14px] font-semibold hover:bg-[#0c48b0] transition shadow-md shadow-blue-200">
+                  Kirim untuk Verifikasi
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
-                  {formData.suratResmiFile && (
+        {/* Step 4 */}
+        {step === 4 && (
+          <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-sm border border-[#e4e9f4] p-8 md:p-10 relative">
+            <form onSubmit={handleFinalSubmit}>
+              <SectionHeader
+                title="Tinjauan Akhir"
+                subtitle="Harap verifikasi semua informasi sebelum mengirimkan pendaftaran Anda."
+                step="Langkah 4 dari 4"
+              />
+              {error && <ErrorBox ref={errorRef} message={error} />}
+
+              <div className="bg-[#f5f8ff] rounded-[14px] p-4 flex gap-3 mb-6 border border-[#e5ecff] mt-6">
+                <div className="mt-0.5 w-6 h-6 rounded-full bg-[#0f5ce0] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                  <img src="/src/assets/register/icon-schedule.svg" alt="" className="w-4 h-4" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerText = 'i' }} />
+                </div>
+                <div>
+                  <h4 className="text-[13px] font-bold text-[#111827]">Jadwal Pengajuan</h4>
+                  <p className="text-[12px] text-[#5b6170] mt-1 leading-relaxed">Setelah dikirimkan, tim Superadmin kami akan meninjau permohonan Anda dalam 1–2 hari kerja. Anda akan menerima notifikasi melalui email setelah akun diverifikasi.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <SummaryCard
+                  title="Informasi Akun"
+                  iconSrc="/src/assets/register/akun.png"
+                  onEdit={() => setStep(1)}
+                >
+                  <div className="grid grid-cols-2 gap-4">
+                    <SummaryItem label="Nama Lengkap" value={formData.fullName} />
+                    <div>
+                      <span className="block text-[11px] text-[#7b8191] mb-0.5">Email Kantor</span>
+                      <a href={`mailto:${formData.email}`} className="text-[13px] font-medium text-[#0f5ce0] hover:underline">
+                        {formData.email}
+                      </a>
+                    </div>
+                  </div>
+                </SummaryCard>
+
+                <SummaryCard
+                  title="Detail Perusahaan"
+                  iconSrc="/src/assets/register/perusahaan.png"
+                  onEdit={() => setStep(2)}
+                >
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    <SummaryItem label="Nama Perusahaan" value={formData.companyName} />
+                    <SummaryItem label="Industri" value={finalIndustryDisplay} />
+                    <SummaryItem label="Ukuran Perusahaan" value={formData.companySize} />
+                    <div>
+                      <span className="block text-[11px] text-[#7b8191] mb-0.5">Website</span>
+                      <a
+                        href={formData.website.startsWith('http') ? formData.website : `https://${formData.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[13px] font-medium text-[#0f5ce0] hover:underline"
+                      >
+                        {formData.website}
+                      </a>
+                    </div>
+                    <div className="col-span-2"><SummaryItem label="Kantor Pusat" value={formData.address} /></div>
+                  </div>
+                  <SummaryItem label="Deskripsi Perusahaan" value={formData.description} />
+                </SummaryCard>
+
+                <SummaryCard
+                  title="Dokumen yang Diunggah"
+                  iconSrc="/src/assets/register/dokumen.png"
+                  onEdit={() => setStep(3)}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 border border-[#e4e9f4] p-3 rounded-[10px] bg-[#fafbff]">
+                      <div className="w-8 h-8 bg-[#f5f8ff] rounded-[8px] flex items-center justify-center font-bold text-[#0f5ce0] text-sm">
+                        <img src="/src/assets/register/nib.png" alt="" className="w-4 h-4" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        <span className="text-sm font-bold text-[#0f5ce0]"></span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] text-[#7b8191]">Nomor NIB</span>
+                        <span className="text-[13px] font-medium">{formData.nib || '-'}</span>
+                      </div>
+                    </div>
+
                     <FilePreviewItem
-                      label="Surat Resmi"
-                      file={formData.suratResmiFile}
-                      iconSrc="/src/assets/register/otoritas.png"
-                      accentColor="#f0f9ff"
-                      iconColor="text-blue-400"
+                      label="Izin Usaha"
+                      file={formData.izinUsahaFile}
+                      iconSrc="/src/assets/register/usaha.png"
+                      accentColor="#fff1f0"
+                      iconColor="text-red-400"
                       fallbackIcon={
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
                         </svg>
                       }
                     />
-                  )}
-                </div>
-              </SummaryCard>
-            </div>
 
-            <div className="mt-5 bg-[#f7faff] border border-[#e5ecff] p-4 rounded-[14px]">
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  className="mt-1 w-4 h-4 rounded border-gray-300 text-[#0f5ce0] focus:ring-[#0f5ce0] cursor-pointer"
-                  checked={formData.finalConsent}
-                  onChange={(e) => updateField('finalConsent', e.target.checked)}
-                />
-                <span className={`text-[13px] leading-relaxed transition ${formData.finalConsent ? 'text-[#111827]' : 'text-[#5b6170]'}`}>
-                  Saya menyatakan bahwa seluruh informasi yang diberikan adalah akurat dan benar. Saya memahami bahwa pemberian informasi yang tidak benar dapat mengakibatkan penolakan atau penghentian akun perusahaan kami di Simaster.
-                </span>
-              </label>
-            </div>
+                    {formData.suratResmiFile && (
+                      <FilePreviewItem
+                        label="Surat Resmi"
+                        file={formData.suratResmiFile}
+                        iconSrc="/src/assets/register/otoritas.png"
+                        accentColor="#f0f9ff"
+                        iconColor="text-blue-400"
+                        fallbackIcon={
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        }
+                      />
+                    )}
+                  </div>
+                </SummaryCard>
+              </div>
 
-            <div className="mt-8 pt-6 border-t border-[#f1f4f9] flex justify-between items-center gap-4">
-              <BackButton onClick={prevStep} label="Kembali ke Dokumen" />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-[#0f5ce0] text-white px-8 py-2.5 rounded-[10px] text-[14px] font-semibold hover:bg-[#0c48b0] transition shadow-md shadow-blue-200 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Memproses...' : 'Ajukan untuk Persetujuan'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </main>
+              <div className="mt-5 bg-[#f7faff] border border-[#e5ecff] p-4 rounded-[14px]">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    className="mt-1 w-4 h-4 rounded border-gray-300 text-[#0f5ce0] focus:ring-[#0f5ce0] cursor-pointer"
+                    checked={formData.finalConsent}
+                    onChange={(e) => updateField('finalConsent', e.target.checked)}
+                  />
+                  <span className={`text-[13px] leading-relaxed transition ${formData.finalConsent ? 'text-[#111827]' : 'text-[#5b6170]'}`}>
+                    Saya menyatakan bahwa seluruh informasi yang diberikan adalah akurat dan benar. Saya memahami bahwa pemberian informasi yang tidak benar dapat mengakibatkan penolakan atau penghentian akun perusahaan kami di Simaster.
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-[#f1f4f9] flex justify-between items-center gap-4">
+                <BackButton onClick={prevStep} label="Kembali ke Dokumen" />
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-[#0f5ce0] text-white px-8 py-2.5 rounded-[10px] text-[14px] font-semibold hover:bg-[#0c48b0] transition shadow-md shadow-blue-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Memproses...' : 'Ajukan untuk Persetujuan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </main>
+    </>
   )
 }
 
