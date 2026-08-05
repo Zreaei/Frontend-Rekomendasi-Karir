@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Trash2, ChevronDown, BookCopy, LayoutGrid, AlertTriangle, ArrowRight, CheckCircle2, X, RotateCcw, ArrowLeft, Info } from 'lucide-react'
-import { UniversityService, subjectStatsData, type Subject } from './UniversityData'
+import { UniversityService, type Subject } from './UniversityData'
 
 const UniversityManajemenCLO = () => {
   const navigate = useNavigate()
   const [subjects, setSubjects] = useState<Subject[]>([])
+  const [subjectStats, setSubjectStats] = useState({ totalSubjects: 0, totalCLO: 0, noCLO: 0 })
   const [isAddingMode, setIsAddingMode] = useState(false)
   const [newSubject, setNewSubject] = useState({ code: '', name: '', sks: 3, semester: 1 })
   const [formError, setFormError] = useState<string | null>(null)
@@ -14,6 +15,8 @@ const UniversityManajemenCLO = () => {
   const loadData = async () => {
     const data = await UniversityService.getSubjects()
     setSubjects(data)
+    const stats = await UniversityService.getSubjectStats()
+    setSubjectStats(stats)
   }
 
   useEffect(() => {
@@ -264,7 +267,7 @@ const UniversityManajemenCLO = () => {
           </div>
           <div className="mt-4">
             <p className="text-[13px] font-bold text-[#7b8191]">Total Mata Kuliah</p>
-            <p className="text-[32px] font-black text-[#111827] leading-none mt-1.5">{subjectStatsData.totalSubjects}</p>
+            <p className="text-[32px] font-black text-[#111827] leading-none mt-1.5">{subjectStats.totalSubjects}</p>
           </div>
         </div>
 
@@ -276,7 +279,7 @@ const UniversityManajemenCLO = () => {
           </div>
           <div className="mt-4">
             <p className="text-[13px] font-bold text-[#7b8191]">Total CLO</p>
-            <p className="text-[32px] font-black text-[#111827] leading-none mt-1.5">{subjectStatsData.totalCLO}</p>
+            <p className="text-[32px] font-black text-[#111827] leading-none mt-1.5">{subjectStats.totalCLO}</p>
           </div>
         </div>
 
@@ -291,7 +294,7 @@ const UniversityManajemenCLO = () => {
           </div>
           <div className="mt-4">
             <p className="text-[13px] font-bold text-red-500">MK Belum Ada CLO</p>
-            <p className="text-[32px] font-black text-red-600 leading-none mt-1.5">{subjectStatsData.noCLO}</p>
+            <p className="text-[32px] font-black text-red-600 leading-none mt-1.5">{subjectStats.noCLO}</p>
           </div>
         </div>
       </div>
@@ -413,7 +416,7 @@ const UniversityManajemenCLO = () => {
                         
                         {/* Tombol Kelola CLO */}
                         <button 
-                          onClick={() => navigate('/university/detail-clo', { state: { subjectData: subject } })}
+                          onClick={() => navigate(`/university/detail-clo/${subject.id}`, { state: { subjectData: subject } })}
                           className="flex items-center gap-1.5 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition"
                         >
                           Kelola CLO <ArrowRight size={14} strokeWidth={2.5} />

@@ -65,7 +65,7 @@ const DetailMahasiswa = () => {
   }
 
   const handleEditProfile = () => {
-    navigate('/university/edit-mahasiswa', { state: { studentData } })
+    navigate(`/university/edit-mahasiswa/${studentData.id}`, { state: { studentData } })
   }
 
   const handleOpenCertificate = (url?: string) => {
@@ -98,6 +98,16 @@ const DetailMahasiswa = () => {
             {studentData.status === 'Active' && (
               <div className="absolute -top-2 -right-2 bg-[#10b981] text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-white uppercase tracking-wider">
                 AKTIF
+              </div>
+            )}
+            {studentData.status === 'Graduated' && (
+              <div className="absolute -top-2 -right-2 bg-[#6366f1] text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-white uppercase tracking-wider">
+                LULUS
+              </div>
+            )}
+            {studentData.status === 'Inactive' && (
+              <div className="absolute -top-2 -right-2 bg-[#7b8191] text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-white uppercase tracking-wider">
+                NONAKTIF
               </div>
             )}
           </div>
@@ -270,12 +280,14 @@ const DetailMahasiswa = () => {
 
                 <div className="flex items-center justify-between mt-auto pt-5">
                   <span className={`px-2.5 py-1 text-[9px] font-extrabold rounded-md uppercase tracking-wider ${
-                    cert.status === 'VERIFIED' ? 'bg-[#e6f9f0] text-[#10b981]' : 'bg-[#fffbeb] text-[#f59e0b]'
+                    cert.status === 'Verified' ? 'bg-[#e6f9f0] text-[#10b981]' :
+                    cert.status === 'Rejected' ? 'bg-[#fef2f2] text-red-500' :
+                    'bg-[#fffbeb] text-[#f59e0b]'
                   }`}>
-                    {cert.status === 'VERIFIED' ? 'VERIFIED' : 'PENDING REVIEW'}
+                    {cert.status === 'Verified' ? 'VERIFIED' : cert.status === 'Rejected' ? 'REJECTED' : 'PENDING REVIEW'}
                   </span>
 
-                  {cert.status === 'VERIFIED' ? (
+                  {cert.status === 'Verified' ? (
                     <button
                       onClick={() => handleOpenCertificate(cert.url)}
                       disabled={!cert.url}

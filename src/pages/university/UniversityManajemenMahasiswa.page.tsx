@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Users, UserCheck, GraduationCap, Plus, Download, Eye, Edit2, Trash2, Search, CheckCircle2, AlertTriangle, X, ChevronDown } from 'lucide-react'
+import { Users, UserCheck, GraduationCap, Plus, Download, Eye, Edit2, Trash2, Search, CheckCircle2, AlertTriangle, X, ChevronDown, Ban } from 'lucide-react'
 import { UniversityService, type Student } from './UniversityData'
 
   const UniversityManajemenMahasiswa = () => {
@@ -92,6 +92,29 @@ import { UniversityService, type Student } from './UniversityData'
       window.scrollTo({ top: 0, behavior: 'smooth' })
       setNotification("Data mahasiswa berhasil dihapus dari sistem.")
       setTimeout(() => setNotification(null), 4000)
+    }
+  }
+
+  const getStatusBadge = (status: Student['status']) => {
+    switch (status) {
+      case 'Graduated':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#f4f3ff] text-[#6366f1] font-bold text-[11px] rounded uppercase">
+            <GraduationCap size={12} /> Lulus
+          </span>
+        )
+      case 'Inactive':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#f1f4f9] text-[#7b8191] font-bold text-[11px] rounded uppercase">
+            <Ban size={12} /> Nonaktif
+          </span>
+        )
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#e6f9f0] text-[#10b981] font-bold text-[11px] rounded uppercase">
+            <UserCheck size={12} /> Aktif
+          </span>
+        )
     }
   }
 
@@ -240,6 +263,7 @@ import { UniversityService, type Student } from './UniversityData'
                 <th className="px-6 py-4 whitespace-nowrap">Program Studi</th>
                 <th className="px-6 py-4 whitespace-nowrap">Angkatan</th>
                 <th className="px-6 py-4 whitespace-nowrap">IPK</th>
+                <th className="px-6 py-4 whitespace-nowrap">Status</th>
                 <th className="px-6 py-4 whitespace-nowrap text-center">Aksi</th>
               </tr>
             </thead>
@@ -272,10 +296,13 @@ import { UniversityService, type Student } from './UniversityData'
                         {student.gpa}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(student.status)}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-3 text-[#7b8191]">
                         <button onClick={() => navigate(`/university/detail-mahasiswa/${student.id}`)} className="hover:text-[#0f5ce0] transition p-1"><Eye size={18} /></button>
-                        <button onClick={() => navigate('/university/edit-mahasiswa', { state: { studentData: student } })} className="hover:text-[#0f5ce0] transition p-1"><Edit2 size={18} /></button>
+                        <button onClick={() => navigate(`/university/edit-mahasiswa/${student.id}`, { state: { studentData: student } })} className="hover:text-[#0f5ce0] transition p-1"><Edit2 size={18} /></button>
                         <button onClick={() => setStudentToDelete(student.id)} className="hover:text-red-500 transition p-1"><Trash2 size={18} /></button>
                       </div>
                     </td>
@@ -283,7 +310,7 @@ import { UniversityService, type Student } from './UniversityData'
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
+                  <td colSpan={7} className="text-center py-10 text-sm text-[#a0a6b5] font-medium">
                     Tidak ada data mahasiswa yang sesuai dengan pencarian atau filter.
                   </td>
                 </tr>

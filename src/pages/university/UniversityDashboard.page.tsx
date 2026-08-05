@@ -1,16 +1,28 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, BookOpen, GraduationCap, Star, ChevronDown, ArrowRight, Download } from 'lucide-react'
-import { UniversityService, pendingCourses, type DashboardStats } from './UniversityData'
+import { UniversityService, type DashboardStats, type Course } from './UniversityData'
 
 const UniversityDashboard = () => {
   const navigate = useNavigate()
-  const [expandedId, setExpandedId] = useState<string | null>('1')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [stats, setStats] = useState<DashboardStats>({ students: 0, courses: 0, totalCLO: 0, gradesInputted: 0 })
+  const [pendingCourses, setPendingCourses] = useState<Course[]>([])
+
+  const loadDashboard = () => {
+    UniversityService.getDashboardStats().then(setStats)
+    UniversityService.getCourseGradingProgress().then(data => {
+      setPendingCourses(data.filter(c => c.status !== 'Selesai'))
+    })
+  }
 
   useEffect(() => {
-    UniversityService.getDashboardStats().then(setStats)
+    loadDashboard()
   }, [])
+
+  const handleGoToKelolaNilai = (subjectId: string) => {
+    navigate(`/university/kelola-nilai/${subjectId}`)
+  }
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id)
@@ -164,7 +176,7 @@ const UniversityDashboard = () => {
                     {course.gradedStudents} <span className="text-[#7b8191] font-medium">/ {course.totalStudents}</span>
                   </div>
                   <div className="col-span-2 text-center flex justify-center">
-                    <span className="px-3 py-1 bg-[#eef4ff] text-[#0f5ce0] text-[10px] font-bold rounded-full">
+                    <span className={`px-3 py-1 text-[10px] font-bold rounded-full ${getCloStatusStyle(course.status)}`}>
                       {course.status}
                     </span>
                   </div>
@@ -180,7 +192,7 @@ const UniversityDashboard = () => {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-bold text-[#5b6170]">Detail Penilaian CLO</h3>
                         <button
-                          onClick={() => navigate('/university/manajemen-nilai')}
+                          onClick={() => handleGoToKelolaNilai(course.id)}
                           className="px-4 py-1.5 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-md hover:bg-[#0d4ebf] transition shadow-sm active:scale-95"
                         >
                           Kelola Semua Nilai
@@ -201,7 +213,10 @@ const UniversityDashboard = () => {
                                 <span className="text-sm font-bold text-[#111827]">
                                   {clo.graded} <span className="text-[#7b8191] font-medium">/ {clo.total}</span>
                                 </span>
-                                <button className="text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-16 text-right">
+                                <button
+                                  onClick={() => handleGoToKelolaNilai(course.id)}
+                                  className="text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-16 text-right"
+                                >
                                   {clo.status === 'Selesai' ? 'Edit' : clo.status === 'Sebagian' ? 'Lanjutkan' : 'Mulai'}
                                 </button>
                               </div>

@@ -88,11 +88,12 @@ const AppRouter = () => {
         <Route index element={<UniversityDashboard />} />
         <Route path="manajemen-mahasiswa" element={<UniversityManajemenMahasiswa />} />
         <Route path="edit-mahasiswa" element={<EditMahasiswa />} />
+        <Route path="edit-mahasiswa/:id" element={<EditMahasiswa />} />
         <Route path="detail-mahasiswa/:id" element={<DetailMahasiswa />} />
         <Route path="manajemen-clo" element={<UniversityManajemenCLO />} />
-        <Route path="detail-clo" element={<UniversityDetailCLO />} />      
+        <Route path="detail-clo/:id" element={<UniversityDetailCLO />} />      
         <Route path="manajemen-nilai" element={<UniversityManajemenNilai />} />
-        <Route path="kelola-nilai" element={<UniversityKelolaNilai />} />
+        <Route path="kelola-nilai/:id" element={<UniversityKelolaNilai />} />
         <Route path="verifikasi-sertifikat" element={<UniversityVerifikasiSertifikat />} />
         <Route path="detail-sertifikat/:id" element={<DetailSertifikat />} />
 

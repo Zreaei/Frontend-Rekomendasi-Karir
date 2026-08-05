@@ -16,7 +16,6 @@ const UniversityVerifikasiSertifikat = () => {
   const [certificates, setCertificates] = useState<MergedCertificate[]>([])
   const [activeTab, setActiveTab] = useState<'Semua Status' | 'Pending' | 'Verified' | 'Rejected'>('Semua Status')
   const [searchQuery, setSearchQuery] = useState('')
-  const [imgError, setImgError] = useState(false)
 
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
@@ -139,20 +138,8 @@ const UniversityVerifikasiSertifikat = () => {
       {/* card statistik */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-2">
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-6 shadow-sm flex flex-col items-center justify-center gap-3 text-center">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-            {/* fallback otomatis jika Container (3).png gagal dimuat */}
-            {!imgError ? (
-              <img 
-                src="/Container (3).png" 
-                alt="Antrian" 
-                className="w-7 h-7 object-contain opacity-80" 
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-[#f4f7ff] text-[#0f5ce0] flex items-center justify-center border border-[#eef2ff]">
-                <ClipboardList size={20} strokeWidth={2.5} />
-              </div>
-            )}
+          <div className="w-10 h-10 rounded-xl bg-[#eef4ff] text-[#0f5ce0] flex items-center justify-center border border-[#d0e0ff]">
+            <ClipboardList size={20} strokeWidth={2.5} />
           </div>
           <div>
             <p className="text-[12px] font-bold text-[#7b8191]">Antrian Verifikasi</p>

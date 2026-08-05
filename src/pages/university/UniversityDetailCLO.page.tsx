@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Search, Plus, Edit2, Trash2, BookOpen, CheckCircle2, X, AlertTriangle, FileText, LayoutGrid } from 'lucide-react'
 import { UniversityService, type Subject, type SubjectCLO } from './UniversityData'
 
 const UniversityDetailCLO = () => {
+  const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const navigate = useNavigate()
-  
-  const subjectData: Subject | undefined = location.state?.subjectData
+
+  const [subjectData, setSubjectData] = useState<Subject | undefined>(location.state?.subjectData)
+  const [isLoading, setIsLoading] = useState(true)
 
   const [clos, setClos] = useState<SubjectCLO[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -17,22 +19,29 @@ const UniversityDetailCLO = () => {
   const [isFormMode, setIsFormMode] = useState(false)
   const [currentSkillInput, setCurrentSkillInput] = useState('')
   const [formData, setFormData] = useState<SubjectCLO>({
-    id: '', subjectId: subjectData?.id || '', code: '', description: '', skills: []
+    id: '', subjectId: id || '', code: '', description: '', skills: []
   })
 
   useEffect(() => {
-    if (!subjectData) {
+    if (!id) {
       navigate('/university/manajemen-clo')
-    } else {
-      loadData()
+      return
     }
-  }, [subjectData, navigate])
+    setIsLoading(true)
+    UniversityService.getSubjectById(id).then(subject => {
+      setSubjectData(subject)
+      setIsLoading(false)
+      if (!subject) {
+        navigate('/university/manajemen-clo')
+        return
+      }
+      loadData(subject.id)
+    })
+  }, [id])
 
-  const loadData = async () => {
-    if (subjectData) {
-      const data = await UniversityService.getCLOsBySubject(subjectData.id)
-      setClos(data)
-    }
+  const loadData = async (subjectId: string) => {
+    const data = await UniversityService.getCLOsBySubject(subjectId)
+    setClos(data)
   }
 
   const filteredClos = clos.filter(clo => 
@@ -53,20 +62,20 @@ const UniversityDetailCLO = () => {
   }
 
   const confirmDelete = async () => {
-    if (itemToDelete) {
+    if (itemToDelete && subjectData) {
       await UniversityService.deleteCLO(itemToDelete)
-      await loadData()
+      await loadData(subjectData.id)
       setItemToDelete(null)
       showNotification("Data CLO berhasil dihapus.")
     }
   }
 
   const handleSave = async () => {
-    if (!formData.code || !formData.description) return
+    if (!formData.code || !formData.description || !subjectData) return
     
     const newClo: SubjectCLO = { ...formData, id: formData.id || Date.now().toString() }
     await UniversityService.saveCLO(newClo)
-    await loadData()
+    await loadData(subjectData.id)
     setIsFormMode(false)
     showNotification("Data CLO berhasil disimpan.")
   }
@@ -93,6 +102,14 @@ const UniversityDetailCLO = () => {
       ...prev,
       skills: prev.skills.filter((_, index) => index !== indexToRemove)
     }))
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-[#7b8191]">Memuat data mata kuliah...</p>
+      </div>
+    )
   }
 
   if (!subjectData) return null

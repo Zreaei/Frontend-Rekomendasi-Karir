@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronRight, Info, AlertCircle, X, ChevronDown } from 'lucide-react'
 import { UniversityService, type Student } from './UniversityData'
 
 const EditMahasiswa = () => {
   const navigate = useNavigate()
-  const location = useLocation()
-  
-  const studentData: Student | undefined = location.state?.studentData
+  const { id } = useParams<{ id: string }>()
+
+  const [studentData, setStudentData] = useState<Student | undefined>(undefined)
+  const [isLoading, setIsLoading] = useState(!!id)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -17,7 +18,7 @@ const EditMahasiswa = () => {
     major: '',
     email: '',
     gpa: '', 
-    isActive: true
+    status: 'Active' as Student['status']
   })
 
   const [masterMap, setMasterMap] = useState<Record<string, string[]>>({})
@@ -28,6 +29,23 @@ const EditMahasiswa = () => {
       setMasterMap(data)
     })
   }, [])
+
+  useEffect(() => {
+    if (!id) {
+      setStudentData(undefined)
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
+    UniversityService.getStudentDetail(id).then(data => {
+      setStudentData(data)
+      setIsLoading(false)
+      if (!data) {
+        setErrorNotification("Data mahasiswa tidak ditemukan atau sudah dihapus.")
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    })
+  }, [id])
 
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear()
@@ -57,7 +75,7 @@ const EditMahasiswa = () => {
         major: studentData.major,
         email: studentData.email,
         gpa: studentData.gpa,
-        isActive: studentData.status === 'Active'
+        status: studentData.status
       })
     }
   }, [studentData])
@@ -79,8 +97,8 @@ const EditMahasiswa = () => {
     if (errorNotification) setErrorNotification(null)
   }
 
-  const toggleStatus = () => {
-    setFormData(prev => ({ ...prev, isActive: !prev.isActive }))
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({ ...prev, status: e.target.value as Student['status'] }))
   }
 
   const handleSave = async () => {
@@ -108,7 +126,7 @@ const EditMahasiswa = () => {
       faculty: formData.faculty,
       major: formData.major,
       email: formData.email,
-      status: formData.isActive ? 'Active' : 'Inactive',
+      status: formData.status,
       initial: initials,
       gpa: formData.gpa,
       bgColor: studentData?.bgColor || 'bg-[#0f5ce0] text-white',
@@ -123,7 +141,24 @@ const EditMahasiswa = () => {
     })
   }
 
-  const isEditMode = !!studentData
+  const isEditMode = !!id
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-[#7b8191]">Memuat data mahasiswa...</p>
+      </div>
+    )
+  }
+
+  if (isEditMode && !studentData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-[#7b8191]">Data mahasiswa tidak ditemukan.</p>
+        <button onClick={() => navigate('/university/manajemen-mahasiswa')} className="px-4 py-2 bg-[#0f5ce0] text-white rounded-xl text-sm font-bold">Kembali</button>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300 pb-12 relative">
@@ -314,22 +349,31 @@ const EditMahasiswa = () => {
           </div>
         </div>
 
-        {/* Toggle Status */}
-        <div className="flex items-center justify-between p-5 bg-[#f8faff] border border-[#e4e9f4] rounded-xl mt-2">
+        {/* Status Mahasiswa */}
+        <div className="flex items-center justify-between p-5 bg-[#f8faff] border border-[#e4e9f4] rounded-xl mt-2 gap-4">
           <div>
             <p className="text-sm font-bold text-[#111827]">Status Mahasiswa</p>
-            <p className="text-xs text-[#7b8191] mt-0.5">Nonaktifkan untuk membatasi akses portal ke depannya.</p>
+            <p className="text-xs text-[#7b8191] mt-0.5">
+              {formData.status === 'Graduated'
+                ? 'Mahasiswa berstatus Lulus. Ubah status di sini jika terjadi kesalahan input.'
+                : 'Nonaktifkan untuk membatasi akses portal, atau ubah ke Lulus jika mahasiswa telah menyelesaikan studi.'}
+            </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className={`text-xs font-bold tracking-wider ${formData.isActive ? 'text-[#0f5ce0]' : 'text-[#7b8191]'}`}>
-              {formData.isActive ? 'ACTIVE' : 'INACTIVE'}
-            </span>
-            <div 
-              onClick={toggleStatus}
-              className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${formData.isActive ? 'bg-[#0f5ce0]' : 'bg-gray-300'}`}
+          <div className="relative shrink-0">
+            <select
+              value={formData.status}
+              onChange={handleStatusChange}
+              className={`px-4 py-2.5 pr-10 border rounded-xl text-sm font-bold focus:outline-none transition appearance-none cursor-pointer ${
+                formData.status === 'Active' ? 'border-[#0f5ce0] text-[#0f5ce0] bg-white' :
+                formData.status === 'Graduated' ? 'border-[#6366f1] text-[#6366f1] bg-white' :
+                'border-[#e4e9f4] text-[#7b8191] bg-white'
+              }`}
             >
-              <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${formData.isActive ? 'translate-x-5' : 'translate-x-0'}`} />
-            </div>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Graduated">Graduated (Lulus)</option>
+            </select>
+            <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7b8191] pointer-events-none" />
           </div>
         </div>
 

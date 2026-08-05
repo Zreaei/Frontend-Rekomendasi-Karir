@@ -239,7 +239,7 @@ const UniversityManajemenNilai = () => {
                 <th className="px-6 py-5 whitespace-nowrap text-center">SKS</th>
                 <th className="px-6 py-5 whitespace-nowrap text-center">Jumlah CLO</th>
                 <th className="px-6 py-5 whitespace-nowrap text-center">Semester</th>
-                <th className="px-6 py-5 whitespace-nowrap">Status</th>
+                <th className="px-6 py-5 whitespace-nowrap text-center">Status</th>
                 <th className="px-6 py-5 whitespace-nowrap text-center">Aksi</th>
               </tr>
             </thead>
@@ -262,14 +262,14 @@ const UniversityManajemenNilai = () => {
                     <td className="px-6 py-5 whitespace-nowrap text-center">
                       <span className="text-[13px] font-bold text-[#5b6170]">{subject.semester}</span>
                     </td>
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-md uppercase tracking-wider ${getStatusStyle(subject.gradingStatus)}`}>
+                    <td className="px-6 py-5 whitespace-nowrap text-center">
+                      <span className={`inline-flex items-center justify-center w-[130px] px-2.5 py-1 text-[10px] font-extrabold rounded-md uppercase tracking-wider ${getStatusStyle(subject.gradingStatus)}`}>
                         {subject.gradingStatus}
                       </span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap text-center">
                       <button 
-                        onClick={() => navigate('/university/kelola-nilai', { state: { subjectData: subject } })}
+                        onClick={() => navigate(`/university/kelola-nilai/${subject.id}`, { state: { subjectData: subject } })}
                         className="px-5 py-2 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d4ebf] transition-all shadow-sm active:scale-95"
                       >
                         Kelola Nilai

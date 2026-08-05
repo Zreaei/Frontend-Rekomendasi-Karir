@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, BookOpen, Users, Edit2, Download, Search, ChevronDown, ChevronUp, CheckCircle2, X, Code, Layers, GraduationCap, AlertTriangle } from 'lucide-react'
 import { UniversityService, type Subject, type SubjectCLO, type Student, type NilaiMahasiswa } from './UniversityData'
 
 const UniversityKelolaNilai = () => {
+  const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const navigate = useNavigate()
   
-  const subjectData: Subject | undefined = location.state?.subjectData
+  const [subjectData, setSubjectData] = useState<Subject | undefined>(location.state?.subjectData)
+  const [isLoading, setIsLoading] = useState(true)
 
   const [clos, setClos] = useState<SubjectCLO[]>([])
   const [students, setStudents] = useState<Student[]>([])
@@ -22,32 +24,39 @@ const UniversityKelolaNilai = () => {
   const ITEMS_PER_PAGE = 10
 
   useEffect(() => {
-    if (!subjectData) {
+    if (!id) {
       navigate('/university/manajemen-nilai')
-    } else {
-      loadData()
+      return
     }
-  }, [subjectData, navigate])
+    setIsLoading(true)
+    UniversityService.getSubjectById(id).then(subject => {
+      setSubjectData(subject)
+      setIsLoading(false)
+      if (!subject) {
+        navigate('/university/manajemen-nilai')
+        return
+      }
+      loadData(subject)
+    })
+  }, [id])
 
-  const loadData = async () => {
-    if (subjectData) {
-      const cloData = await UniversityService.getCLOsBySubject(subjectData.id)
-      const studentData = await UniversityService.getStudents()
-      const gradeData = await UniversityService.getAllNilai()
-      
-      setClos(cloData)
-      setStudents(studentData) 
-      const initialDrafts: Record<string, Record<string, string>> = {}
-      studentData.forEach(student => {
-        initialDrafts[student.id] = {}
-        cloData.forEach(clo => {
-          const existingGrade = gradeData.find(g => g.course === subjectData.name && g.studentId === student.id && g.code === clo.code)
-          initialDrafts[student.id][clo.code] = existingGrade && existingGrade.score > 0 ? existingGrade.score.toString() : ''
-        })
+  const loadData = async (subject: Subject) => {
+    const cloData = await UniversityService.getCLOsBySubject(subject.id)
+    const studentData = await UniversityService.getStudents()
+    const gradeData = await UniversityService.getAllNilai()
+    
+    setClos(cloData)
+    setStudents(studentData) 
+    const initialDrafts: Record<string, Record<string, string>> = {}
+    studentData.forEach(student => {
+      initialDrafts[student.id] = {}
+      cloData.forEach(clo => {
+        const existingGrade = gradeData.find(g => g.course === subject.name && g.studentId === student.id && g.code === clo.code)
+        initialDrafts[student.id][clo.code] = existingGrade && existingGrade.score > 0 ? existingGrade.score.toString() : ''
       })
-      setDraftGrades(initialDrafts)
-      setInitialGrades(JSON.parse(JSON.stringify(initialDrafts)))
-    }
+    })
+    setDraftGrades(initialDrafts)
+    setInitialGrades(JSON.parse(JSON.stringify(initialDrafts)))
   }
 
   const handleEditBobotClick = () => {
@@ -106,6 +115,13 @@ const UniversityKelolaNilai = () => {
     return students.filter(s => checkStatus(s.id) === 'Selesai').length
   }, [students, clos, draftGrades])
 
+  const hasUnsavedChanges = (studentId: string) => {
+    const currentDraft = draftGrades[studentId]
+    const original = initialGrades[studentId]
+    if (!currentDraft || !original) return false
+    return clos.some(clo => (currentDraft[clo.code] || '') !== (original[clo.code] || ''))
+  }
+
   const handleSaveStudentGrades = async (studentId: string) => {
     const currentDraft = draftGrades[studentId]
     const original = initialGrades[studentId]
@@ -156,6 +172,28 @@ const UniversityKelolaNilai = () => {
     }
   }
 
+  const anyUnsavedChanges = useMemo(() => {
+    return students.some(s => hasUnsavedChanges(s.id))
+  }, [students, clos, draftGrades, initialGrades])
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (anyUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [anyUnsavedChanges])
+
+  const handleBackToList = () => {
+    if (anyUnsavedChanges && !window.confirm('Ada perubahan nilai yang belum disimpan dan akan hilang. Tetap kembali?')) {
+      return
+    }
+    navigate('/university/manajemen-nilai')
+  }
+
   const filteredStudents = useMemo(() => {
     return students.filter(s => 
       s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) || 
@@ -192,6 +230,14 @@ const UniversityKelolaNilai = () => {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-[#7b8191]">Memuat data mata kuliah...</p>
+      </div>
+    )
+  }
+
   if (!subjectData) return null
 
   return (
@@ -226,7 +272,7 @@ const UniversityKelolaNilai = () => {
       )}
 
       {/* Header Info & Back */}
-      <button onClick={() => navigate('/university/manajemen-nilai')} className="flex items-center gap-2 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-fit mb-1">
+      <button onClick={handleBackToList} className="flex items-center gap-2 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-fit mb-1">
         <ArrowLeft size={16} strokeWidth={2.5} /> Kembali ke Daftar Mata Kuliah
       </button>
 
@@ -339,7 +385,7 @@ const UniversityKelolaNilai = () => {
               <tr className="bg-[#f8faff] border-y border-[#e4e9f4] text-[10px] font-extrabold text-[#7b8191] uppercase tracking-widest">
                 <th className="px-6 py-4 whitespace-nowrap">Nama & NIM Siswa</th>
                 <th className="px-6 py-4 whitespace-nowrap">Nilai Akhir</th>
-                <th className="px-6 py-4 whitespace-nowrap">Status</th>
+                <th className="px-6 py-4 whitespace-nowrap text-center">Status</th>
                 <th className="px-6 py-4 whitespace-nowrap text-right">Aksi</th>
               </tr>
             </thead>
@@ -368,21 +414,28 @@ const UniversityKelolaNilai = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-[16px] font-black text-[#111827]">{finalScore}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
                           {status === 'Selesai' ? (
-                            <span className="px-3 py-1.5 bg-[#e6f9f0] text-[#10b981] text-[10px] font-extrabold rounded uppercase tracking-wider">Selesai</span>
+                            <span className="inline-flex items-center justify-center w-[120px] px-3 py-1.5 bg-[#e6f9f0] text-[#10b981] text-[10px] font-extrabold rounded uppercase tracking-wider">Selesai</span>
                           ) : (
-                            <span className="px-3 py-1.5 bg-[#f1f4f9] text-[#7b8191] text-[10px] font-extrabold rounded uppercase tracking-wider">Tidak Lengkap</span>
+                            <span className="inline-flex items-center justify-center w-[120px] px-3 py-1.5 bg-[#f1f4f9] text-[#7b8191] text-[10px] font-extrabold rounded uppercase tracking-wider">Tidak Lengkap</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           {isExpanded ? (
-                            <button 
-                              onClick={() => handleSaveStudentGrades(student.id)}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d4ebf] transition shadow-sm active:scale-95"
-                            >
-                              Simpan Perubahan
-                            </button>
+                            <div className="flex items-center justify-end gap-3">
+                              {hasUnsavedChanges(student.id) && (
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#f59e0b]">
+                                  <AlertTriangle size={13} /> Belum Tersimpan
+                                </span>
+                              )}
+                              <button 
+                                onClick={() => handleSaveStudentGrades(student.id)}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d4ebf] transition shadow-sm active:scale-95"
+                              >
+                                Simpan Perubahan
+                              </button>
+                            </div>
                           ) : (
                             <button 
                               onClick={() => setExpandedStudentId(student.id)}
@@ -401,10 +454,25 @@ const UniversityKelolaNilai = () => {
                             <div className="flex flex-col gap-4">
                               <div className="flex justify-between items-center mb-2">
                                 <h3 className="text-[14px] font-bold text-[#111827]">Matrix Performa Individu</h3>
-                                <button onClick={() => setExpandedStudentId(null)} className="text-[#7b8191] hover:text-[#111827] transition flex items-center gap-1 text-[12px] font-bold">
+                                <button
+                                  onClick={() => {
+                                    if (hasUnsavedChanges(student.id) && !window.confirm('Perubahan nilai belum disimpan dan akan hilang. Tutup tanpa menyimpan?')) {
+                                      return
+                                    }
+                                    setExpandedStudentId(null)
+                                  }}
+                                  className="text-[#7b8191] hover:text-[#111827] transition flex items-center gap-1 text-[12px] font-bold"
+                                >
                                   Tutup Matrix <ChevronUp size={16} />
                                 </button>
                               </div>
+
+                              {hasUnsavedChanges(student.id) && (
+                                <div className="flex items-center gap-2.5 bg-[#fffbeb] border border-[#fde68a] text-[#92400e] rounded-xl px-4 py-3 text-[12px] font-bold">
+                                  <AlertTriangle size={16} className="text-[#f59e0b] shrink-0" />
+                                  Ada perubahan nilai yang belum disimpan. Klik "Simpan Perubahan" sebelum meninggalkan halaman ini.
+                                </div>
+                              )}
 
                               <div className="flex flex-col gap-3">
                                 {clos.map(clo => (

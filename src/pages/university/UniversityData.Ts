@@ -20,19 +20,38 @@ export interface Course {
   clos: CLO[]
 }
 
-export const pendingCourses: Course[] = [
-  {
-    id: '1', name: 'Bahasa Indonesia', code: 'BI', cloCount: 3, gradedStudents: 6, totalStudents: 10, status: 'Sebagian',
-    clos: [
-      { id: 'clo1', name: 'CLO 1: Pemahaman Dasar Tata Bahasa', status: 'Selesai', graded: 10, total: 10 },
-      { id: 'clo2', name: 'CLO 2: Kemampuan Menulis Akademik', status: 'Sebagian', graded: 6, total: 10 },
-      { id: 'clo3', name: 'CLO 3: Analisis Teks Sastra', status: 'Belum', graded: 0, total: 10 },
-    ]
-  },
-  { id: '2', name: 'Bahasa Inggris', code: 'BI2', cloCount: 4, gradedStudents: 6, totalStudents: 10, status: 'Sebagian', clos: [] },
-  { id: '3', name: 'Etika Profesi', code: 'EP', cloCount: 2, gradedStudents: 6, totalStudents: 10, status: 'Sebagian', clos: [] },
-  { id: '4', name: 'Internalisasi Budaya dan Pembentukan Karakter', code: 'IBDPK', cloCount: 3, gradedStudents: 6, totalStudents: 10, status: 'Sebagian', clos: [] }
-]
+const computeCourseGradingProgress = (): Course[] => {
+  const totalStudents = studentsDatabase.length
+
+  return initialSubjects.map(subject => {
+    const subjectClos = subjectCloDatabase.filter(c => c.subjectId === subject.id)
+
+    const clos: CLO[] = subjectClos.map(clo => {
+      const graded = studentsDatabase.filter(s =>
+        nilaiDatabase.some(n => n.studentId === s.id && n.course === subject.name && n.code === clo.code && n.score > 0)
+      ).length
+
+      let status: CLO['status'] = 'Belum'
+      if (totalStudents > 0 && graded === totalStudents) status = 'Selesai'
+      else if (graded > 0) status = 'Sebagian'
+
+      return { id: clo.id, name: `${clo.code}: ${clo.description}`, status, graded, total: totalStudents }
+    })
+
+    const gradedStudents = subjectClos.length === 0 || totalStudents === 0 ? 0 : studentsDatabase.filter(s =>
+      subjectClos.every(clo => nilaiDatabase.some(n => n.studentId === s.id && n.course === subject.name && n.code === clo.code && n.score > 0))
+    ).length
+
+    let status: Course['status'] = 'Belum'
+    if (subjectClos.length > 0 && totalStudents > 0 && gradedStudents === totalStudents) status = 'Selesai'
+    else if (gradedStudents > 0 || clos.some(c => c.graded > 0)) status = 'Sebagian'
+
+    return {
+      id: subject.id, name: subject.name, code: subject.code,
+      cloCount: subjectClos.length, gradedStudents, totalStudents, status, clos
+    }
+  })
+}
 
 // ==========================================
 // 2. TIPE DATA MAHASISWA, NILAI (CLO), DAN SERTIFIKAT
@@ -140,12 +159,6 @@ export interface Subject {
   cloCount: number;
 }
 
-export const subjectStatsData = {
-  totalSubjects: 46,
-  totalCLO: 157,
-  noCLO: 2
-};
-
 export const initialSubjects: Subject[] = [
   { id: '1', code: 'ADP', name: 'Algoritma dan Pemrograman', sks: 4, semester: 1, cloCount: 3 },
   { id: '2', code: 'ADPB', name: 'Arsitektur dan Pengembangan Backend', sks: 3, semester: 2, cloCount: 2 },
@@ -211,6 +224,22 @@ export const UniversityService = {
   getSubjects: async (): Promise<Subject[]> => {
     return [...initialSubjects];
   },
+
+  getSubjectById: async (id: string): Promise<Subject | undefined> => {
+    return initialSubjects.find(s => s.id === id);
+  },
+
+  getSubjectStats: async (): Promise<{ totalSubjects: number; totalCLO: number; noCLO: number }> => {
+    return {
+      totalSubjects: initialSubjects.length,
+      totalCLO: subjectCloDatabase.length,
+      noCLO: initialSubjects.filter(s => s.cloCount === 0).length
+    }
+  },
+
+  getCourseGradingProgress: async (): Promise<Course[]> => {
+    return computeCourseGradingProgress()
+  },
   
   deleteSubject: async (id: string): Promise<void> => {
     const index = initialSubjects.findIndex(s => s.id === id);
@@ -266,9 +295,11 @@ export const UniversityService = {
   },
 
   getDashboardStats: async (): Promise<DashboardStats> => {
-    const uniqueCloCodes = new Set(nilaiDatabase.map(n => n.code))
     return {
-      students: studentsDatabase.length, courses: pendingCourses.length, totalCLO: uniqueCloCodes.size, gradesInputted: nilaiDatabase.length,
+      students: studentsDatabase.length,
+      courses: initialSubjects.length,
+      totalCLO: subjectCloDatabase.length,
+      gradesInputted: nilaiDatabase.filter(n => n.score > 0).length,
     }
   },
 
