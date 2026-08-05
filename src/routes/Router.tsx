@@ -10,6 +10,7 @@ import UniversityDashboard from '../pages/university/UniversityDashboard.page'
 import CompanyLayout from '../layouts/CompanyLayout'
 import UniversityStaffDashboard from '../pages/university_staff/UniversityStaffDashboard.page'
 import CompanyStaffDashboard from '../pages/company_staff/CompanyStaffDashboard.page'
+import VerifyRecoveryEmailPage from '../pages/VerifyRecoveryEmail.page'
 
 // STUDENT PAGES
 // ============================================
@@ -94,6 +95,11 @@ const AppRouter = () => {
       <Route path="/student/notification" element={<PublicRoute><StudentNotification /></PublicRoute>} />
       <Route path="/student/help" element={<PublicRoute><StudentHelp /></PublicRoute>} />
 
+      {/* Forgot password */}
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      <Route path="/reset-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      <Route path="/verify-recovery-email" element={<PublicRoute><VerifyRecoveryEmailPage /></PublicRoute>} />
+      
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/landing" replace />} />
     </Routes>

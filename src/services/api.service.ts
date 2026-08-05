@@ -80,6 +80,20 @@ export const authApi = {
     const res = await api.patch("/auth/password", { currentPassword, newPassword });
     return res.data;
   },
+  // POST /auth/forgot-password -> kirim tautan pemulihan ke email
+  // (respons selalu generik, baik email terdaftar maupun tidak)
+  forgotPassword: async (email: string) => {
+    const res = await api.post("/auth/forgot-password", { email });
+    return res.data;
+  },
+  resetPassword: async (token: string, newPassword: string) => {
+    const res = await api.post("/auth/reset-password", { token, newPassword });
+    return res.data;
+  },
+  verifyRecoveryEmail: async (token: string) => {
+    const res = await api.post("/auth/recovery-email/verify", { token });
+    return res.data;
+  },
 };
 
 // ============================================================
@@ -94,3 +108,4 @@ export const ROLE_HOME: Record<string, string> = {
   university_staff: "/university-staff",
   admin: "/admin",
 };
+

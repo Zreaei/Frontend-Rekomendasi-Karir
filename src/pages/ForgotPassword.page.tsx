@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, Eye, EyeOff, Mail, Lock, RotateCcw } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Eye, EyeOff, Mail, Lock, RotateCcw, MailCheck } from 'lucide-react'
+import { authApi } from '../services/api.service'
 
 interface PasswordForm {
   email: string
@@ -8,17 +9,26 @@ interface PasswordForm {
   passwordConfirm: string
 }
 
+// Halaman ini melayani dua alamat:
+//  /forgot-password              -> minta tautan pemulihan (langkah 1)
+//  /reset-password?token=xxxx    -> atur kata sandi baru (langkah 2)
+// Langkah 2 hanya bisa dicapai lewat tautan dari email, karena tokennya
+// membuktikan bahwa pemohon memang pemilik kotak masuk tersebut.
+type Mode = 'request' | 'sent' | 'reset'
+
 const ForgotPasswordPage = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token') ?? ''
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  
-  const [step, setStep] = useState<1 | 2>(1)
+
+  const [mode, setMode] = useState<Mode>(token ? 'reset' : 'request')
   const [form, setForm] = useState<PasswordForm>({
     email: '',
     passwordNew: '',
     passwordConfirm: '',
   })
-  
+
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -30,7 +40,7 @@ const ForgotPasswordPage = () => {
     setError('')
   }
 
-  const handleRequestReset = (event: FormEvent<HTMLFormElement>) => {
+  const handleRequestReset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmedEmail = form.email.trim()
 
@@ -45,14 +55,23 @@ const ForgotPasswordPage = () => {
     }
 
     setIsSubmitting(true)
-    setTimeout(() => {
-      setIsSubmitting(false)
-      setStep(2)
+    try {
+      await authApi.forgotPassword(trimmedEmail)
+      // Backend selalu membalas sama, terdaftar maupun tidak, agar alamat
+      // email yang punya akun tidak bisa ditebak dari respons.
+      setMode('sent')
       setError('')
-    }, 1000)
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ??
+          'Gagal terhubung ke server. Pastikan backend berjalan.',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleUpdatePassword = (event: FormEvent<HTMLFormElement>) => {
+  const handleUpdatePassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmedPass = form.passwordNew.trim()
     const trimmedConfirm = form.passwordConfirm.trim()
@@ -73,14 +92,21 @@ const ForgotPasswordPage = () => {
     }
 
     setIsSubmitting(true)
-    setTimeout(() => {
-      setIsSubmitting(false)
+    try {
+      await authApi.resetPassword(token, trimmedPass)
       setSuccess('Kata sandi Anda berhasil diperbarui!')
       setError('')
       setTimeout(() => {
         navigate('/login', { replace: true })
       }, 1500)
-    }, 1200)
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ??
+          'Tautan tidak valid atau sudah kedaluwarsa. Silakan minta tautan baru.',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -89,11 +115,11 @@ const ForgotPasswordPage = () => {
         
         <div className="flex justify-center mb-6">
           <div className="w-14 h-14 rounded-full bg-[#eef4ff] flex items-center justify-center text-[#0f5ce0]">
-            <RotateCcw size={24} className="stroke-[2.5]" />
+            {mode === 'sent' ? <MailCheck size={24} className="stroke-[2.5]" /> : <RotateCcw size={24} className="stroke-[2.5]" />}
           </div>
         </div>
 
-        {step === 1 && (
+        {mode === 'request' && (
           <form onSubmit={handleRequestReset} noValidate>
             <div className="text-center mb-8">
               <h1 className="text-[22px] font-bold text-[#111827] mb-2">Lupa Kata Sandi?</h1>
@@ -121,13 +147,12 @@ const ForgotPasswordPage = () => {
                   id="email"
                   name="email"
                   onChange={(event) => updateField('email', event.target.value)}
-                  placeholder="nama@Gmail.com"
+                  placeholder="nama@email.com"
                   type="email"
                   value={form.email}
                 />
               </div>
             </div>
-
             <button
               className="mb-6 h-11 w-full rounded-[10px] bg-[#0f5ce0] text-[14px] font-semibold text-white transition hover:bg-[#0d4ebf] flex items-center justify-center gap-2 disabled:opacity-70"
               disabled={isSubmitting}
@@ -144,7 +169,37 @@ const ForgotPasswordPage = () => {
           </form>
         )}
 
-        {step === 2 && (
+        {mode === 'sent' && (
+          <div>
+            <div className="text-center mb-8">
+              <h1 className="text-[22px] font-bold text-[#111827] mb-2">Periksa Kotak Masuk Anda</h1>
+              <p className="text-[13px] text-[#7b8191] leading-relaxed px-2">
+                Jika email tersebut terdaftar, kami telah mengirimkan tautan pemulihan kata sandi.
+                Tautan berlaku selama <span className="font-semibold text-[#111827]">1 jam</span>.
+              </p>
+            </div>
+
+            <p className="mb-6 rounded-[8px] bg-[#eef4ff] px-3 py-3 text-[12px] font-medium text-[#0f5ce0] text-center leading-relaxed">
+              Belum menerima email? Periksa folder spam, atau kirim ulang beberapa saat lagi.
+            </p>
+
+            <button
+              className="mb-6 h-11 w-full rounded-[10px] border border-[#e4e9f4] bg-white text-[14px] font-semibold text-[#5b6170] transition hover:bg-gray-50 hover:text-[#111827]"
+              onClick={() => { setMode('request'); setError('') }}
+              type="button"
+            >
+              Kirim Ulang Tautan
+            </button>
+
+            <div className="text-center">
+              <Link className="text-[13px] font-semibold text-[#0f5ce0] hover:underline flex items-center justify-center gap-1.5" to="/login">
+                Kembali ke Login
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {mode === 'reset' && (
           <form onSubmit={handleUpdatePassword} noValidate>
             <div className="text-center mb-8">
               <h1 className="text-[22px] font-bold text-[#111827] mb-2">Atur Kata Sandi Baru</h1>
