@@ -11,7 +11,12 @@ import UniversityLayout from '../layouts/UniversityLayout'
 
 // ADMIN PAGES
 // ============================================
-import AdminDashboard from '../pages/admin/AdminDashboard.page'
+import AdminDashboard from '../pages/admin/Dashboard.page'
+import AdminKelolaPerusahaan from '../pages/admin/KelolaPerusahaan.page'
+import AdminKelolaUniversitas from '../pages/admin/KelolaUniversitas.page'
+import AdminLogAktifitas from '../pages/admin/LogAktifitasPengguna.page'
+import AdminManajemenPengguna from '../pages/admin/ManajemenPengguna.page'
+import AdminMasterData from '../pages/admin/MasterData.page'
 
 // STUDENT PAGES
 // ============================================
@@ -41,25 +46,11 @@ import UniversityManajemenMahasiswa from '../pages/university/UniversityManajeme
 import EditMahasiswa from '../pages/university/EditMahasiswa.page'
 import DetailMahasiswa from '../pages/university/DetailMahasiswa.page'
 import UniversityManajemenCLO from '../pages/university/UniversityManajemenCLO.page'
-import UniversityDetailCLO from '../pages/university/UniversityDetailCLO.page'      
+import UniversityDetailCLO from '../pages/university/UniversityDetailCLO.page'       
 import UniversityManajemenNilai from '../pages/university/UniversityManejemenNilai.page'
 import UniversityKelolaNilai from '../pages/university/UniversityKelolaNilai.page'
 import UniversityVerifikasiSertifikat from '../pages/university/UniversityVerifikasiSertifikat.page'
 import DetailSertifikat from '../pages/university/DetailSertifikat.page'
-
-// PLACEHOLDER UNTUK HALAMAN YANG BELUM DIBUAT
-// ============================================
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="flex items-center justify-center h-64">
-    <div className="text-center">
-      <h2 className="text-2xl font-bold text-[#111827]">{title}</h2>
-      <p className="text-[#5b6170] mt-2">Halaman ini sedang dalam pengembangan tunggu yaa ^_^ </p>
-      <p className="text-xs text-[#a3b1c6] mt-4">
-        TODO: Buat file komponen dan ganti placeholder di Router.tsx
-      </p>
-    </div>
-  </div>
-)
 
 const AppRouter = () => {
   return (
@@ -75,10 +66,11 @@ const AppRouter = () => {
       {/* ===== ADMIN ROUTES ===== */}
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
-        <Route path="manajemen-universitas" element={<PlaceholderPage title="Manajemen Universitas" />} />
-        <Route path="manajemen-perusahaan" element={<PlaceholderPage title="Manajemen Perusahaan" />} />
-        <Route path="manajemen-pengguna" element={<PlaceholderPage title="Manajemen Pengguna" />} />
-        <Route path="pengaturan" element={<PlaceholderPage title="Pengaturan" />} />
+        <Route path="kelola-perusahaan" element={<AdminKelolaPerusahaan />} />
+        <Route path="kelola-universitas" element={<AdminKelolaUniversitas />} />
+        <Route path="log-aktivitas" element={<AdminLogAktifitas />} />
+        <Route path="manajemen-pengguna" element={<AdminManajemenPengguna />} />
+        <Route path="master-data" element={<AdminMasterData />} />
 
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
@@ -108,7 +100,6 @@ const AppRouter = () => {
         <Route path="tambah-lowongan" element={<Company_TambahLowongan />} />
         <Route path="rekomendasi-kandidat" element={<Company_RekomendasiKandidat />} />
         <Route path="detail-kandidat/:id" element={<Company_DetailKandidat />} />
-        <Route path="kandidat-diundang" element={<PlaceholderPage title="Kandidat Diundang" />} />
         <Route path="profil-perusahaan" element={<Company_ProfilePerusahaan />} />
         <Route path="ubah-profil-perusahaan" element={<Company_UbahProfile />} />
         <Route path="pengaturan-akun" element={<Company_PengaturanAkun />} />
