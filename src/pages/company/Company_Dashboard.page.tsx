@@ -174,7 +174,7 @@ const CompanyDashboard = () => {
 
       <div>
         <h1 className="text-2xl font-bold text-[#111827]">Ringkasan Perusahaan</h1>
-        <p className="text-sm text-[#5b6170] mt-1">Real-time metrics for your hiring ecosystem.</p>
+        <p className="text-sm text-[#5b6170] mt-1">Pantau ekosistem rekrutmen Anda secara Real-time.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

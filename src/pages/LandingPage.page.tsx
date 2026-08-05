@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
+import Header from '../components/ui/Header'
 
 const LandingPage = () => {
   const solutionRef = useRef<HTMLDivElement>(null)
@@ -10,7 +11,7 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-
+      <Header />
       {/* Animated Background */}
       <div className="fixed inset-0 -z-10 bg-[#eef3fc] overflow-hidden pointer-events-none">
 

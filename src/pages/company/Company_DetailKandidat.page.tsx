@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { GraduationCap, Briefcase, ChevronDown, ChevronUp, ExternalLink, User, Award, Loader2, AlertCircle } from 'lucide-react'
+import { GraduationCap, Briefcase, ChevronDown, ChevronUp, ExternalLink, User, Award, Loader2, AlertCircle,  X, Check, } from 'lucide-react'
 import { matchingApi, invitationApi } from '../../services/company.service'
 
 const toTitleCase = (value: string): string => {
