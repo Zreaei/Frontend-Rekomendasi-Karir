@@ -2,7 +2,6 @@ import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
 import { authApi, ROLE_HOME } from '../services/api.service'
-import Header from '../components/ui/Header'
 
 interface LoginForm {
   email: string

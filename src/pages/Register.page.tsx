@@ -1,7 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api.service'
-import Header from '../components/ui/Header'
 
 interface RegistrationData {
   fullName: string

@@ -2,7 +2,7 @@ import { type FormEvent, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, RotateCcw, MailCheck } from 'lucide-react'
 import { authApi } from '../services/api.service'
-import Header from '../components/ui/Header'
+
 
 interface PasswordForm {
   email: string
