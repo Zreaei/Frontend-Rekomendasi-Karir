@@ -22,6 +22,7 @@ import StudentCertificationDenied from '../pages/student/StudentCertificationDen
 import StudentNotification from '../pages/student/StudentNotification.page'
 import StudentHelp from '../pages/student/StudentHelp.page'
 import StudentInvitation from '../pages/student/StudentInvitation.page'
+import StudentJobBookmark from '../pages/student/StudentJobBookmark.page'
 
 const AppRouter = () => {
   return (
@@ -185,6 +186,14 @@ const AppRouter = () => {
         element={
           <PublicRoute>
             <StudentCertificationDenied />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/student/saved-jobs'
+        element={
+          <PublicRoute>
+            <StudentJobBookmark />
           </PublicRoute>
         }
       />

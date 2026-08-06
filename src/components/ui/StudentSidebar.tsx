@@ -1,13 +1,14 @@
 import { NavLink } from 'react-router-dom'
 import {
+  Award,
+  Bookmark,
   Briefcase,
-  FileInput,
-  GraduationCap,
+  CircleUserRound,
+  FileText,
+  LineSquiggle,
   LayoutDashboard,
-  MailOpen,
+  Mail,
   LogOut,
-  ScrollText,
-  User,
 } from 'lucide-react'
 
 interface StudentSidebarProps {
@@ -15,64 +16,72 @@ interface StudentSidebarProps {
 
 const StudentSidebar = (_props: StudentSidebarProps) => {
   const navBase =
-    'group grid h-10 min-h-10 w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-3 rounded-md px-2 text-[13px] font-medium text-[#2a2f39] transition-colors hover:bg-[#eef4ff] hover:text-[#0d6efd]'
-  const navActive = 'bg-[#dfe9ff] text-[#0d6efd]'
+    'group flex h-14 w-full items-center gap-3 border-l-[3px] border-transparent px-5 text-[13px] leading-none font-semibold text-[#4a5160] transition-colors hover:bg-[#f5f7fd] hover:text-[#1a5ec8]'
+  const navActive = 'border-l-[#0f5ec7] bg-[#e5ecff] !text-[#004395]'
+  const iconClass = 'h-5 w-5 shrink-0 stroke-[2.1px]'
 
   return (
-    <aside className="flex h-full shrink-0 w-55 flex-col border-r border-[#d7dbe3] bg-white">
-      <div className="flex items-center gap-3 border-b border-[#d7dbe3] px-4 py-4">
-        <div className="grid h-10 w-10 place-items-center rounded-lg bg-[#0d6efd] text-white" aria-hidden="true">
-          <GraduationCap size={20} strokeWidth={2} />
-        </div>
-        <div>
-          <p className="text-[16px] font-semibold leading-none text-[#0f1728]">Careering</p>
-          <p className="mt-1 text-[12px] text-[#6d7480]">Mahasiswa</p>
+    <aside className="flex h-full w-70.5 shrink-0 flex-col border-r border-[#d8dde8] bg-white">
+      <div className="px-6 pt-8 pb-7">
+        <div className="flex items-start gap-3">
+          <LineSquiggle className="h-13 w-13 text-[#0f5ec7]" strokeWidth={2.1} aria-hidden="true" />
+          <div>
+            <p className="text-3xl leading-none font-bold text-[#162a4b]">Talentry</p>
+            <p className="mt-2 text-[12px] leading-none font-medium text-[#505866]">Mahasiswa</p>
+          </div>
         </div>
       </div>
 
-      <nav className="grid gap-1 px-2 py-3" aria-label="Student navigation">
+      <nav className="flex flex-col" aria-label="Student navigation">
         <NavLink to="/student" end className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <LayoutDashboard size={18} strokeWidth={2} aria-hidden="true" />
+          <LayoutDashboard className={iconClass} aria-hidden="true" />
           <span>Dashboard</span>
         </NavLink>
         <NavLink to="/student/job-matching" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <Briefcase size={18} strokeWidth={2} aria-hidden="true" />
+          <Briefcase className={iconClass} aria-hidden="true" />
           <span>Rekomendasi Pekerjaan</span>
         </NavLink>
         <NavLink to="/student/job-apply" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <FileInput size={18} strokeWidth={2} aria-hidden="true" />
+          <FileText className={iconClass} aria-hidden="true" />
           <span>Lamaran Pekerjaan</span>
         </NavLink>
         <NavLink to="/student/invitation" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <MailOpen size={18} strokeWidth={2} aria-hidden="true" />
+          <Mail className={iconClass} aria-hidden="true" />
           <span>Undangan</span>
         </NavLink>
         <NavLink to="/student/certification" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <ScrollText size={18} strokeWidth={2} aria-hidden="true" />
+          <Award className={iconClass} aria-hidden="true" />
           <span>Sertifikasi</span>
         </NavLink>
+        <NavLink to="/student/saved-jobs" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
+          <Bookmark className={iconClass} aria-hidden="true" />
+          <span>Pekerjaan Tersimpan</span>
+        </NavLink>
         <NavLink to="/student/competency-profile" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <User size={18} strokeWidth={2} aria-hidden="true" />
+          <CircleUserRound className={iconClass} aria-hidden="true" />
           <span>Profil Kompetensi</span>
         </NavLink>
       </nav>
 
-      <div className="mt-auto border-t border-[#d7dbe3] p-3">
-        <div className="flex items-center gap-3 rounded-xl bg-[#f7f9fc] px-3 py-3">
-          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-[#d9e5ff] text-[12px] font-semibold text-[#0d6efd]">
-            SH
+      <div className="mt-auto border-t border-[#d8dde8] px-4 pt-5 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-[#90cb58] bg-[radial-gradient(circle_at_35%_30%,#ffd66f_2px,#83b65a_48%,#4f7f3f_100%)]">
+            <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M6.5 19c.8-2.9 2.8-4.3 5.5-4.3s4.7 1.4 5.5 4.3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold text-[#0f1728]">Sigit Kurnia Hartawan</p>
-            <p className="text-[12px] text-[#6d7480]">Teknik Informatika</p>
+            <p className="truncate text-[13px] leading-none font-semibold text-[#18263f]">Sigit Kurnia Hartawan</p>
+            <p className="mt-1 text-[13px] leading-none font-medium text-[#4f5664]">Teknik Informatika</p>
           </div>
         </div>
 
         <button
-          className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[#0d6efd] text-[13px] font-semibold text-white transition-colors hover:bg-[#0b5ed7]"
+          className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#145bc6] text-[13px] leading-none font-semibold text-white transition-colors hover:bg-[#0f4fab]"
           type="button"
         >
-          <LogOut size={15} strokeWidth={2} aria-hidden="true" />
+          <LogOut className="h-4 w-4" strokeWidth={2.2} aria-hidden="true" />
           Logout
         </button>
       </div>

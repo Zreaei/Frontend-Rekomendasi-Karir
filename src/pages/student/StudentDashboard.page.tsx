@@ -2,7 +2,6 @@ import StudentLayout from '../../layouts/StudentLayout'
 import SectionHeader from '../../components/common/SectionHeader'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
-import Tag from '../../components/common/Tag'
 import {
   BadgeCheck,
   Briefcase,

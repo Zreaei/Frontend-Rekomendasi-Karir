@@ -2,7 +2,6 @@ import StudentLayout from '../../layouts/StudentLayout'
 import SectionHeader from '../../components/common/SectionHeader'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
-import StatusPill from '../../components/common/StatusPill'
 import { Link } from 'react-router-dom'
 import { BadgeCheck, Clock3, Upload, XCircle } from 'lucide-react'
 

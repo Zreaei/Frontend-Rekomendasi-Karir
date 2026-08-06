@@ -2,10 +2,9 @@ import StudentLayout from '../../layouts/StudentLayout'
 import SectionHeader from '../../components/common/SectionHeader'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
-import Tag from '../../components/common/Tag'
 import { Link } from 'react-router-dom'
 import {
-  Filter,
+  Bookmark,
   Monitor,
   Smartphone,
   Shield,
@@ -28,7 +27,7 @@ const StudentJobMatching = () => {
   const jobs = [
     {
       id: 'junior-frontend-engineer',
-      title: 'Frontend Developer',
+      title: 'Junior Frontend Engineer',
       company: 'TechStream Systems',
       location: 'New York (Remote)',
       type: 'Full-time',
@@ -49,8 +48,18 @@ const StudentJobMatching = () => {
     {
       id: 'python-developer',
       title: 'Python Developer',
-      company: 'EcoScale AI Studio',
-      location: 'Austin, Texas',
+      company: 'EcoScale AI',
+      location: 'Austin, TX',
+      type: 'Full-time',
+      match: '91%',
+      icon: <Monitor size={18} strokeWidth={2} />,
+      tags: ['Python', 'Django', 'PostgreSQL'],
+    },
+    {
+      id: 'python-developer-2',
+      title: 'Python Developer',
+      company: 'EcoScale AI',
+      location: 'Austin, TX',
       type: 'Full-time',
       match: '91%',
       icon: <Monitor size={18} strokeWidth={2} />,
@@ -62,90 +71,105 @@ const StudentJobMatching = () => {
     <StudentLayout>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <SectionHeader
-            title="Rekomendasi Pekerjaan Terbaik untuk Anda"
-            description="Lowongan dipilih berdasarkan profil, riwayat akademik, dan kecocokan skill."
-          />
+          <h1 className="text-[30px] font-bold leading-tight">Rekomendasi Pekerjaan</h1>
+          <p className="mt-2 max-w-2xl text-[16px] leading-relaxed ">
+            Cari Rekomendasi pekerjaan yang sesuai dengan profil kompetensi dan minat Anda
+          </p>
         </div>
       </div>
 
       <Card className="overflow-hidden shadow-sm">
-        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_auto]">
-          <div className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="grid h-16 w-16 place-items-center rounded-xl bg-[#eef5ff] text-[#0d6efd]" aria-hidden="true">
+        <div className="p-4 md:p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[10px] border border-[#d7dbe3] bg-[#f7f9fc] text-[#0d6efd] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]" aria-hidden="true">
                 {featuredJob.icon}
               </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <span className="inline-flex items-center rounded-full bg-[#e7f7f4] px-3 py-1 text-[12px] font-semibold text-[#0f766e]">
-                      {featuredJob.match} Match
-                    </span>
-                    <h2 className="mt-3 text-[26px] font-bold leading-tight text-[#050505]">{featuredJob.title}</h2>
-                    <button className="mt-1 text-left text-[14px] font-semibold text-[#0d6efd] hover:underline" type="button">
-                      {featuredJob.company}
-                    </button>
-                    <p className="mt-1 text-[14px] text-[#4f5a6d]">{featuredJob.location}</p>
-                  </div>
+              <div className="min-w-0">
+                <span className="inline-flex items-center rounded-full bg-[#8bf0c5] px-3 py-1 text-[12px] font-semibold text-[#0f766e]">
+                  {featuredJob.match} Match
+                </span>
+                <h2 className="mt-3 text-[18px] font-semibold leading-tight text-[#111827] md:text-[20px]">
+                  {featuredJob.title}
+                </h2>
+                <button className="mt-0.5 text-left text-[13px] font-medium text-[#4b5563] hover:text-[#0d6efd]" type="button">
+                  {featuredJob.company} • {featuredJob.location}
+                </button>
 
-                  <Button className="whitespace-nowrap" type="button">
-                    Lamar Sekarang
-                  </Button>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2.5">
+                <div className="mt-3 flex flex-wrap gap-2.5">
                   {featuredJob.tags.map((tag) => (
-                    <span key={tag} className="bg-[#63a2ff] text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">
+                    <span key={tag} className="inline-flex items-center rounded-[5px] bg-[#dbe4f0] px-2.5 py-1 text-[11px] font-medium text-[#586271]">
                       {tag}
                     </span>
                   ))}
                 </div>
 
-                <p className="mt-4 max-w-4xl text-[14px] leading-relaxed text-[#4f5a6d]">{featuredJob.description}</p>
+                <p className="mt-3 max-w-5xl text-[12px] leading-normal text-[#5f6675] md:text-[13px]">
+                  {featuredJob.description}
+                </p>
               </div>
             </div>
+
+            <button className="rounded-md p-1.5 text-[#111827] transition-colors hover:bg-[#f3f4f6] hover:text-[#0d6efd]" type="button" aria-label="Simpan lowongan">
+              <Bookmark size={16} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="mt-4 flex items-center justify-end rounded-b-lg border-t border-[#dbe2ee] bg-[#edf3ff] px-4 py-3 md:px-5">
+            <Button className="h-9 min-w-29.5 rounded-md px-4 text-[13px] font-semibold shadow-none" type="button">
+              Lamar Sekarang
+            </Button>
           </div>
         </div>
       </Card>
 
       <SectionHeader title="Rekomendasi Lainnya" />
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {jobs.concat(jobs).map((job, index) => (
-          <Card key={`${job.id}-${index}`} className="p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-[5px] bg-[#0d6efd] text-white" aria-hidden="true">
+          <Card key={`${job.id}-${index}`} className="p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="p-2.5 border rounded-md">
                   {job.icon}
                 </div>
-                <div>
-                  <h3 className="text-[16px] font-bold text-[#050505]">{job.title}</h3>
-                  <p className="mt-1 text-[13px] text-[#4f5a6d]">
+
+                <div className="min-w-0">
+                  <h3 className="text-[15px] font-semibold leading-tight text-[#111827]">{job.title}</h3>
+                  <p className="mt-1 text-[12px] text-[#5b6472]">
                     {job.company} • {job.location}
                   </p>
                 </div>
               </div>
-              <span className="inline-flex items-center rounded-full bg-[#e7f7f4] px-2.5 py-1 text-[11px] font-semibold text-[#0f766e]">
-                {job.match} Match
-              </span>
+
+              <span className="whitespace-nowrap text-[11px] font-medium text-[#24856c]">{job.match}% Match</span>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2.5">
+            <div className="mt-4 flex flex-wrap gap-2">
               {job.tags.map((tag) => (
-                <span key={tag} className="bg-[#63a2ff] text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">
+                <span key={tag} className="inline-flex items-center rounded-sm bg-[#eef1f6] px-2.5 py-1 text-[11px] font-medium">
                   {tag}
                 </span>
               ))}
             </div>
 
-            <Link
-              className="mt-6 flex h-10 w-full items-center justify-center rounded-[5px] bg-[#0d6efd] px-4.5 py-2.5 text-[14px] font-semibold text-white transition-transform hover:-translate-y-px"
-              to={`/student/job-matching/${job.id}`}
-            >
-              <span className="text-white">Lihat Detail</span>
-            </Link>
+            <div className="mt-4 flex items-center gap-2">
+              <Link
+                className="flex h-10 flex-1 items-center justify-center rounded-[5px] bg-[#0d5bd7] px-4 text-[13px] text-white! font-semibold transition-colors hover:bg-[#0b4fbf]"
+                to={`/student/job-matching/${job.id}`}
+              >
+                Lihat Detail
+              </Link>
+
+              <button
+                className="grid w-10 h-10 shrink-0 place-items-center rounded-[5px] border-2 border-[#0d5bd7] text-[#0d5bd7] transition-colors hover:bg-[#edf4ff]"
+                type="button"
+                aria-label={`Simpan ${job.title}`}
+              >
+                <Bookmark size={20} strokeWidth={2} aria-hidden="true" />
+              </button>
+            </div>
           </Card>
         ))}
       </div>

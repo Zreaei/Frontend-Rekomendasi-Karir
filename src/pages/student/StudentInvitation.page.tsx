@@ -6,7 +6,6 @@ import {
 	Building2,
 	CheckCircle2,
 	ClipboardList,
-	Filter,
 	Search,
 	Star,
 } from 'lucide-react'
@@ -67,10 +66,14 @@ const invitations = [
 const StudentInvitation = () => {
 	return (
 		<StudentLayout>
-			<SectionHeader
-				title="Undangan Rekrutmen"
-				description="Daftar undangan eksklusif dari HR perusahaan yang tertarik dengan profil Anda. Peluang karir ini dikurasi berdasarkan kecocokan skill dan preferensi Anda."
-			/>
+			<div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[30px] font-bold leading-tight">Undangan Rekrutmen</h1>
+          <p className="mt-2 max-w-2xl text-[16px] leading-relaxed ">
+            Daftar undangan eksklusif dari HR perusahaan yang tertarik dengan profil Anda.
+          </p>
+        </div>
+      </div>
 
 			<div className="grid gap-5 xl:grid-cols-3">
 				{invitations.map((invitation, index) => (
