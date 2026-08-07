@@ -22,11 +22,10 @@ const UniversitySidebar = ({ collapsed, onToggle }: UniversitySidebarProps) => {
   const logout = useAuthStore((state) => state.logout)
 
   const navBase =
-    `group grid h-11 min-h-11 w-full grid-cols-[44px_minmax(0,1fr)] items-center overflow-hidden rounded-xl px-0 text-[15px] font-medium leading-none !text-white transition-[width,background-color,margin] duration-300 ease-in-out hover:bg-white/10 hover:!text-white`
-  const navActive = '!bg-[#0f5ce0] !text-white hover:!bg-[#0d4ebf] hover:!text-white'
-  const iconBase =
-    'grid h-full w-11 flex-none place-items-center !text-white transition-colors group-hover:!text-white'
-  const labelClass = `whitespace-nowrap text-sm text-left transition-[max-width,opacity,transform] duration-300 ease-in-out ${
+    `group grid h-11 min-h-11 w-full grid-cols-[44px_minmax(0,1fr)] items-center overflow-hidden rounded-lg px-0 text-[14px] font-medium leading-none transition-all duration-300 ease-in-out hover:bg-[#eef4ff]`
+  const navActive = 'bg-[#dfe9ff]'
+
+  const labelClass = `whitespace-nowrap text-left transition-[max-width,opacity,transform] duration-300 ease-in-out ${
     collapsed ? 'max-w-0 opacity-0 translate-x-0' : 'max-w-[180px] opacity-100 translate-x-0'
   }`
 
@@ -37,13 +36,13 @@ const UniversitySidebar = ({ collapsed, onToggle }: UniversitySidebarProps) => {
 
   return (
     <aside
-      className={`sticky top-0 left-0 flex h-screen shrink-0 flex-col overflow-hidden bg-[#031635] transition-[width] duration-300 ease-in-out ${
+      className={`sticky top-0 left-0 flex h-screen shrink-0 flex-col overflow-hidden bg-white border-r border-[#d7dbe3] transition-[width] duration-300 ease-in-out ${
         collapsed ? 'w-19' : 'w-60'
       }`}
     >
       {!collapsed ? (
         <button
-          className="absolute right-4 top-6 z-10 grid h-8 w-8 place-items-center rounded-xl text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+          className="absolute right-4 top-6 z-10 grid h-8 w-8 place-items-center rounded-lg text-[#6d7480] border border-transparent transition-colors hover:bg-[#eef4ff] hover:text-[#0d6efd]"
           type="button"
           aria-label="Collapse sidebar"
           onClick={onToggle}
@@ -52,13 +51,13 @@ const UniversitySidebar = ({ collapsed, onToggle }: UniversitySidebarProps) => {
         </button>
       ) : null}
 
-      <div className="flex h-20 w-full shrink-0 items-center border-b border-white/10 px-4">
+      <div className="flex h-20 w-full shrink-0 items-center border-b border-[#d7dbe3] px-4">
         <div className="flex w-full items-center gap-3 overflow-hidden">
-          <div className="group/brand relative flex h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-xl bg-[#0f5ce0] text-white">
+          <div className="group/brand relative flex h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-xl bg-[#0d6efd] text-white">
             <Landmark size={20} strokeWidth={2} />
             {collapsed ? (
               <button
-                className="absolute inset-0 grid place-items-center rounded-xl bg-[#0f5ce0] opacity-0 transition-opacity group-hover/brand:opacity-100"
+                className="absolute inset-0 grid place-items-center rounded-xl bg-[#0d6efd] opacity-0 transition-opacity group-hover/brand:opacity-100"
                 type="button"
                 aria-label="Expand sidebar"
                 onClick={onToggle}
@@ -68,59 +67,89 @@ const UniversitySidebar = ({ collapsed, onToggle }: UniversitySidebarProps) => {
             ) : null}
           </div>
           <div className={labelClass}>
-            <p className="text-[18px] font-semibold text-white">Talentry</p>
-            <p className="mt-0.5 text-[15px] text-white/70">Universitas</p>
+            <p className="text-[18px] font-semibold text-[#0f1728]">Talentry</p>
+            <p className="mt-0.5 text-[14px] text-[#6d7480]">Universitas</p>
           </div>
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden px-4 pt-6" aria-label="University navigation">
+      <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden px-4 pt-6" aria-label="University navigation">
         <NavLink to="/university" end className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <span className={iconBase} aria-hidden="true">
-            <LayoutDashboard size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Dashboard</span>
+          {({ isActive }) => (
+            <>
+              <span className={`grid h-full w-11 flex-none place-items-center transition-colors ${isActive ? 'text-[#0d6efd]' : 'text-[#6d7480] group-hover:text-[#0d6efd]'}`} aria-hidden="true">
+                <LayoutDashboard size={18} strokeWidth={2} />
+              </span>
+              <span className={`${labelClass} ${isActive ? 'text-[#0d6efd]' : 'text-[#2a2f39] group-hover:text-[#0d6efd]'}`}>Dashboard</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/university/manajemen-mahasiswa" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <span className={iconBase} aria-hidden="true">
-            <Users size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Manajemen Mahasiswa</span>
+          {({ isActive }) => (
+            <>
+              <span className={`grid h-full w-11 flex-none place-items-center transition-colors ${isActive ? 'text-[#0d6efd]' : 'text-[#6d7480] group-hover:text-[#0d6efd]'}`} aria-hidden="true">
+                <Users size={18} strokeWidth={2} />
+              </span>
+              <span className={`${labelClass} ${isActive ? 'text-[#0d6efd]' : 'text-[#2a2f39] group-hover:text-[#0d6efd]'}`}>Manajemen Mahasiswa</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/university/manajemen-clo" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <span className={iconBase} aria-hidden="true">
-            <ListChecks size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Manajemen CLO</span>
+          {({ isActive }) => (
+            <>
+              <span className={`grid h-full w-11 flex-none place-items-center transition-colors ${isActive ? 'text-[#0d6efd]' : 'text-[#6d7480] group-hover:text-[#0d6efd]'}`} aria-hidden="true">
+                <ListChecks size={18} strokeWidth={2} />
+              </span>
+              <span className={`${labelClass} ${isActive ? 'text-[#0d6efd]' : 'text-[#2a2f39] group-hover:text-[#0d6efd]'}`}>Manajemen CLO</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/university/manajemen-nilai" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <span className={iconBase} aria-hidden="true">
-            <ClipboardCheck size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Manajemen Nilai</span>
+          {({ isActive }) => (
+            <>
+              <span className={`grid h-full w-11 flex-none place-items-center transition-colors ${isActive ? 'text-[#0d6efd]' : 'text-[#6d7480] group-hover:text-[#0d6efd]'}`} aria-hidden="true">
+                <ClipboardCheck size={18} strokeWidth={2} />
+              </span>
+              <span className={`${labelClass} ${isActive ? 'text-[#0d6efd]' : 'text-[#2a2f39] group-hover:text-[#0d6efd]'}`}>Manajemen Nilai</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/university/verifikasi-sertifikat" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <span className={iconBase} aria-hidden="true">
-            <ShieldCheck size={20} strokeWidth={2} />
-          </span>
-          <span className={labelClass}>Verifikasi Sertifikat</span>
+          {({ isActive }) => (
+            <>
+              <span className={`grid h-full w-11 flex-none place-items-center transition-colors ${isActive ? 'text-[#0d6efd]' : 'text-[#6d7480] group-hover:text-[#0d6efd]'}`} aria-hidden="true">
+                <ShieldCheck size={18} strokeWidth={2} />
+              </span>
+              <span className={`${labelClass} ${isActive ? 'text-[#0d6efd]' : 'text-[#2a2f39] group-hover:text-[#0d6efd]'}`}>Verifikasi Sertifikat</span>
+            </>
+          )}
         </NavLink>
       </nav>
 
-      <div className="shrink-0 border-t border-white/10 px-4 py-5">
+      <div className="shrink-0 border-t border-[#d7dbe3] p-4">
+        <div className={`mb-3 flex items-center gap-3 rounded-xl bg-[#f7f9fc] transition-all duration-300 ${collapsed ? 'justify-center p-2' : 'px-3 py-3'}`}>
+          <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#d9e5ff] text-[13px] font-bold text-[#0d6efd]">
+            UN
+          </div>
+          <div className={`min-w-0 flex-1 overflow-hidden transition-all duration-300 ${collapsed ? 'max-w-0 opacity-0' : 'max-w-[150px] opacity-100'}`}>
+            <p className="truncate text-[13px] font-semibold text-[#0f1728]">Nama Universitas</p>
+            <p className="truncate text-[12px] text-[#6d7480]">Admin Kampus</p>
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={handleLogout}
-          className={`${navBase} !text-white/70`}
+          className={`flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0d6efd] text-[13px] font-semibold text-white transition-colors hover:bg-[#0b5ed7] ${collapsed ? 'px-0' : 'px-4'}`}
         >
-          <span className={iconBase} aria-hidden="true">
-            <LogOut size={20} strokeWidth={2} />
+          <LogOut size={16} strokeWidth={2} aria-hidden="true" />
+          <span className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${collapsed ? 'max-w-0 opacity-0' : 'max-w-[100px] opacity-100'}`}>
+            Logout
           </span>
-          <span className={labelClass}>Log Out</span>
         </button>
       </div>
     </aside>

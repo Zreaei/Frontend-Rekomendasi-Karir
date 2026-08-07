@@ -1,3 +1,6 @@
+// ==========================================
+// INTERFACES
+// ==========================================
 export interface OverviewMetrics {
   totalUniversitas: number;
   totalMahasiswa: number;
@@ -30,6 +33,48 @@ export interface ActivityLog {
   time: string;
   type: 'info' | 'warning' | 'success' | 'error';
 }
+
+export interface CompanyMetrics {
+  total: number;
+  pending: number;
+  verified: number;
+}
+
+export interface CompanyVerificationData {
+  id: string;
+  name: string;
+  industry: string;
+  email: string;
+  phone: string;
+  location: string;
+  documents: string[];
+  date: string;
+  status: 'pending' | 'terverifikasi' | 'ditolak';
+}
+
+export interface CompanyDetail {
+  id: string;
+  companyName: string;
+  adminName: string;
+  adminEmail: string;
+  industry: string;
+  companySize: string;
+  website: string;
+  headquarters: string;
+  description: string;
+  status?: 'pending' | 'terverifikasi' | 'ditolak';
+  submissionDate?: string;
+  rejectionReason?: string;
+  documents: {
+    type: string;
+    name: string;
+    status?: 'verified' | 'pending' | 'rejected';
+  }[];
+}
+
+// ==========================================
+// DUMMY DATA
+// ==========================================
 
 export const dummyOverviewMetrics: OverviewMetrics = {
   totalUniversitas: 158,
@@ -81,3 +126,171 @@ export const dummyActivityLogs: ActivityLog[] = [
   { id: '2', action: 'Sinkronisasi data master Prodi dari API PDDIKTI', time: '15 menit yang lalu', type: 'warning' },
   { id: '3', action: 'Super Admin login melalui IP 192.168.1.182', time: '45 menit yang lalu', type: 'success' },
 ];
+
+export const dummyCompanyMetrics: CompanyMetrics = {
+  total: 84,
+  pending: 12,
+  verified: 72,
+};
+
+export const dummyCompanyList: CompanyVerificationData[] = [
+  {
+    id: '1',
+    name: 'Skyline Tech Solutions',
+    industry: 'Software Development',
+    email: 'hr@skylinetech.id',
+    phone: '+62 21 5550 1234',
+    location: 'Jakarta Selatan, Indonesia',
+    documents: ['NIB / SIUP', 'Company Profile'],
+    date: '24 Okt 2023',
+    status: 'pending',
+  },
+  {
+    id: '2',
+    name: 'EcoGreen Energy',
+    industry: 'Renewable Resources',
+    email: 'admin@ecogreen.org',
+    phone: '+62 31 9992 4455',
+    location: 'Surabaya, Jawa Timur',
+    documents: ['NIB / SIUP', 'Company Profile'],
+    date: '20 Okt 2023',
+    status: 'terverifikasi',
+  },
+  {
+    id: '3',
+    name: 'Global Logistics Co.',
+    industry: 'Transport & Cargo',
+    email: 'contact@globallogistics.com',
+    phone: '+62 21 4433 9900',
+    location: 'Bekasi, Jawa Barat',
+    documents: ['NIB / SIUP', 'Company Profile'],
+    date: '18 Okt 2023',
+    status: 'ditolak',
+  },
+  {
+    id: '4',
+    name: 'MedCare Pharma',
+    industry: 'Healthcare & Medical',
+    email: 'support@medcare.co.id',
+    phone: '+62 21 3333 1122',
+    location: 'Tangerang Selatan, Banten',
+    documents: ['NIB / SIUP', 'Company Profile'],
+    date: '15 Okt 2023',
+    status: 'pending',
+  },
+];
+
+// DATA DINAMIS DETAIL PERUSAHAAN
+export const dummyCompanyDetails: Record<string, CompanyDetail> = {
+  '1': {
+    id: '1',
+    companyName: 'Skyline Tech Solutions',
+    adminName: 'Sigit Kurnia',
+    adminEmail: 'hr@skylinetech.id',
+    industry: 'Software Development',
+    companySize: '100 - 500 Karyawan',
+    website: 'https://skylinetech.id',
+    headquarters: 'Jakarta Selatan, Indonesia',
+    description: 'Skyline Tech Solutions adalah perusahaan yang berfokus pada pengembangan perangkat lunak berbasis cloud dan solusi transformasi digital untuk berbagai sektor industri.',
+    status: 'pending',
+    submissionDate: '24 Okt 2023 • 14:32 WIB',
+    documents: [
+      { type: 'Nomor NIB', name: '9120000000458', status: 'pending' },
+      { type: 'Izin Usaha', name: 'Skyline_Izin_Usaha.pdf' },
+      { type: 'Company Profile', name: 'Profile_Skyline.pdf' },
+    ]
+  },
+  '2': {
+    id: '2',
+    companyName: 'EcoGreen Energy',
+    adminName: 'Aulia Fitria',
+    adminEmail: 'admin@ecogreen.org',
+    industry: 'Renewable Resources',
+    companySize: '50 - 100 Karyawan',
+    website: 'https://ecogreen.org',
+    headquarters: 'Surabaya, Jawa Timur',
+    description: 'EcoGreen berfokus pada energi terbarukan dan pengelolaan sumber daya ramah lingkungan untuk masa depan yang lebih baik.',
+    status: 'terverifikasi',
+    submissionDate: '20 Okt 2023 • 09:15 WIB',
+    documents: [
+      { type: 'Nomor NIB', name: '8820000000123', status: 'verified' },
+      { type: 'Company Profile', name: 'EcoGreen_Profile.pdf' },
+    ]
+  },
+  '3': {
+    id: '3',
+    companyName: 'Global Logistics Co.',
+    adminName: 'Budi Santoso',
+    adminEmail: 'contact@globallogistics.com',
+    industry: 'Transport & Cargo',
+    companySize: '1.000 - 5.000 Karyawan',
+    website: 'https://globallogistics.com',
+    headquarters: 'Bekasi, Jawa Barat',
+    description: 'Global Logistics Co. adalah penyedia layanan transportasi dan kargo terkemuka di Asia Tenggara, melayani pengiriman domestik dan internasional.',
+    status: 'ditolak',
+    submissionDate: '18 Okt 2023 • 16:45 WIB',
+    rejectionReason: 'Dokumen SIUP tidak terbaca jelas dan masa berlaku hampir habis. Mohon unggah kembali dokumen yang valid dan terbaca dengan jelas untuk melanjutkan proses verifikasi.',
+    documents: [
+      { type: 'Nomor NIB', name: '7720000000999', status: 'rejected' },
+      { type: 'Company Profile', name: 'GlobalLogistics_Profile.pdf' },
+    ]
+  },
+  '4': {
+    id: '4',
+    companyName: 'MedCare Pharma',
+    adminName: 'Dr. Sarah Widi',
+    adminEmail: 'support@medcare.co.id',
+    industry: 'Healthcare & Medical',
+    companySize: '500 - 1.000 Karyawan',
+    website: 'https://medcare.co.id',
+    headquarters: 'Tangerang Selatan, Banten',
+    description: 'MedCare Pharma bergerak di bidang riset dan distribusi alat kesehatan serta obat-obatan farmasi berkualitas tinggi.',
+    status: 'pending',
+    submissionDate: '15 Okt 2023 • 11:20 WIB',
+    documents: [
+      { type: 'Nomor NIB', name: '5520000000444', status: 'pending' },
+      { type: 'Izin Usaha', name: 'MedCare_Izin_BPOM.pdf' },
+      { type: 'Company Profile', name: 'MedCare_Profile.pdf' },
+    ]
+  },
+  'default': {
+    id: 'default',
+    companyName: 'Perusahaan Belum Lengkap',
+    adminName: 'Admin Default',
+    adminEmail: 'admin@default.com',
+    industry: 'Umum',
+    companySize: '1 - 50 Karyawan',
+    website: '-',
+    headquarters: '-',
+    description: 'Data detail perusahaan belum tersedia sepenuhnya di database mockup.',
+    status: 'pending',
+    documents: []
+  }
+};
+
+// ==========================================
+// MOCK API LOGIC (State memori sementara)
+// ==========================================
+export const updateCompanyData = (id: string, updatedDetail: CompanyDetail, newStatus?: 'pending' | 'terverifikasi' | 'ditolak', rejectReason?: string) => {
+  // Update Detail in-memory
+  if (dummyCompanyDetails[id]) {
+    dummyCompanyDetails[id] = { ...updatedDetail };
+    
+    if (newStatus) {
+      dummyCompanyDetails[id].status = newStatus;
+    }
+    if (rejectReason !== undefined) {
+      dummyCompanyDetails[id].rejectionReason = rejectReason;
+    }
+  }
+
+  // Update List in-memory agar nyambung ke halaman utama
+  const listIndex = dummyCompanyList.findIndex(c => c.id === id);
+  if (listIndex !== -1) {
+    dummyCompanyList[listIndex].name = updatedDetail.companyName;
+    dummyCompanyList[listIndex].industry = updatedDetail.industry;
+    if (newStatus) {
+      dummyCompanyList[listIndex].status = newStatus;
+    }
+  }
+};

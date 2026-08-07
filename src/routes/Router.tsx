@@ -10,16 +10,16 @@ import CompanyLayout from '../layouts/CompanyLayout'
 import UniversityLayout from '../layouts/UniversityLayout'
 
 // ADMIN PAGES
-// ============================================
 import AdminDashboard from '../pages/admin/Dashboard.page'
 import AdminKelolaPerusahaan from '../pages/admin/KelolaPerusahaan.page'
+import AdminDetailVerifikasiPerusahaan from '../pages/admin/DetailVerifikasiPerusahaan.page' 
+import AdminPerusahaanDiterimaDitolak from '../pages/admin/PerusahaanDiterima-Ditolak.page' 
 import AdminKelolaUniversitas from '../pages/admin/KelolaUniversitas.page'
 import AdminLogAktifitas from '../pages/admin/LogAktifitasPengguna.page'
 import AdminManajemenPengguna from '../pages/admin/ManajemenPengguna.page'
 import AdminMasterData from '../pages/admin/MasterData.page'
 
 // STUDENT PAGES
-// ============================================
 import StudentDashboard from '../pages/student/StudentDashboard.page'
 import StudentJobMatching from '../pages/student/StudentJobMatching.page'
 import StudentJobApply from '../pages/student/StudentJobApply.page'
@@ -28,7 +28,6 @@ import StudentNotification from '../pages/student/StudentNotification.page'
 import StudentHelp from '../pages/student/StudentHelp.page'
 
 // COMPANY PAGES
-// ============================================
 import Company_Dashboard from '../pages/company/Company_Dashboard.page'
 import Company_DaftarPelamar from '../pages/company/Company_DaftarPelamar.page'
 import Company_KelolaLowongan from '../pages/company/Company_KelolaLowongan.page'
@@ -40,7 +39,6 @@ import Company_UbahProfile from '../pages/company/Company_UbahProfile.page'
 import Company_PengaturanAkun from '../pages/company/Company_PengaturanAkun.page'
 
 // UNIVERSITY PAGES
-// ============================================
 import UniversityDashboard from '../pages/university/UniversityDashboard.page'
 import UniversityManajemenMahasiswa from '../pages/university/UniversityManajemenMahasiswa.page'
 import EditMahasiswa from '../pages/university/EditMahasiswa.page'
@@ -67,6 +65,8 @@ const AppRouter = () => {
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="kelola-perusahaan" element={<AdminKelolaPerusahaan />} />
+        <Route path="kelola-perusahaan/detail/:id" element={<AdminDetailVerifikasiPerusahaan />} /> 
+        <Route path="kelola-perusahaan/status/:id" element={<AdminPerusahaanDiterimaDitolak />} />
         <Route path="kelola-universitas" element={<AdminKelolaUniversitas />} />
         <Route path="log-aktivitas" element={<AdminLogAktifitas />} />
         <Route path="manajemen-pengguna" element={<AdminManajemenPengguna />} />
