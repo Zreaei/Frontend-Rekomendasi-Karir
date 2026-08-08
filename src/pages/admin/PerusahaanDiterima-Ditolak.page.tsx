@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { ChevronRight, CheckCircle2, Ban, PencilLine, Building2, FileText, Eye, X, AlertTriangle, RotateCcw } from 'lucide-react'
+import { ChevronRight, CheckCircle2, Ban, AlertTriangle, PencilLine, Building2, FileText, Eye, X, RotateCcw } from 'lucide-react'
 import { dummyCompanyDetails, dummyCompanyList, updateCompanyData } from './AdminData'
 import type { CompanyDetail } from './AdminData'
+import Toast from './components/Toast'
+import ConfirmModal from './components/ConfirmModal'
 
 const AdminPerusahaanDiterimaDitolak = () => {
   const { id } = useParams()
@@ -64,18 +66,7 @@ const AdminPerusahaanDiterimaDitolak = () => {
   return (
     <div className="w-full pb-12 relative animate-in fade-in duration-300">
       
-      {notification && (
-        <div className={`fixed top-8 right-8 z-[9999] flex items-start gap-4 p-4 bg-white border rounded-xl w-full max-w-[420px] transform transition-all animate-in slide-in-from-top-10 fade-in duration-500 ease-out overflow-hidden shadow-2xl ${notification.type === 'success' ? 'border-[#10b981]/40 border-l-4 border-l-[#10b981]' : 'border-[#f59e0b]/40 border-l-4 border-l-[#f59e0b]'}`}>
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notification.type === 'success' ? 'bg-[#e6f9f0]' : 'bg-[#fffbeb]'}`}>
-            {notification.type === 'success' ? <CheckCircle2 size={22} className="text-[#10b981]" /> : <AlertTriangle size={22} className="text-[#f59e0b]" />}
-          </div>
-          <div className="flex-1 pt-0.5">
-            <h3 className="text-[14px] font-bold text-[#111827]">{notification.type === 'success' ? 'Berhasil!' : 'Perhatian'}</h3>
-            <p className="text-[13px] text-[#5b6170] mt-1 leading-relaxed">{notification.message}</p>
-          </div>
-          <button onClick={() => setNotification(null)} className="text-[#a0a6b5] hover:text-[#111827] transition-colors p-1 shrink-0"><X size={18} /></button>
-        </div>
-      )}
+      <Toast notification={notification} onClose={() => setNotification(null)} />
 
       <div className="flex items-center gap-2 text-[13px] font-bold text-[#5b6170] mb-5">
         <Link to="/admin/kelola-perusahaan" className="hover:text-[#0f5ce0] transition-colors flex items-center gap-1">Kelola Perusahaan</Link>
@@ -159,27 +150,16 @@ const AdminPerusahaanDiterimaDitolak = () => {
         </div>
       </div>
 
-      {showConfirmModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-[24px] w-full max-w-[450px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 text-center pb-8 border border-[#e4e9f4]">
-            <div className="pt-8 pb-5 flex justify-center">
-              <div className="w-20 h-20 rounded-full bg-[#fffbeb] flex items-center justify-center border-[6px] border-[#fde68a]">
-                <RotateCcw size={36} className="text-[#f59e0b]" strokeWidth={2.5} />
-              </div>
-            </div>
-            <div className="px-8 space-y-3">
-              <h2 className="text-[20px] font-bold text-[#111827]">Evaluasi Ulang Perusahaan?</h2>
-              <p className="text-[14px] text-[#5b6170] leading-relaxed">
-                Apakah Anda yakin ingin mengevaluasi ulang perusahaan ini? Status verifikasinya saat ini akan dicabut dan dikembalikan menjadi <strong className="text-[#111827]">Pending</strong>.
-              </p>
-            </div>
-            <div className="px-8 mt-8 flex items-center gap-3">
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3 text-[14px] font-bold text-[#5b6170] hover:bg-[#f1f4f9] rounded-xl transition-colors border border-[#e4e9f4]">Batal</button>
-              <button onClick={executeRevokeOrReevaluate} className="flex-1 py-3 bg-[#0f5ce0] hover:bg-[#0d4ebf] text-white text-[14px] font-bold rounded-xl transition-colors shadow-sm">Ya, Lanjutkan</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        icon={RotateCcw}
+        title="Evaluasi Ulang Perusahaan?"
+        message={<>Apakah Anda yakin ingin mengevaluasi ulang perusahaan ini? Status verifikasinya saat ini akan dicabut dan dikembalikan menjadi <strong className="text-[#111827]">Pending</strong>.</>}
+        confirmLabel="Ya, Lanjutkan"
+        tone="warning"
+        onConfirm={executeRevokeOrReevaluate}
+        onCancel={() => setShowConfirmModal(false)}
+      />
 
       {isEditAdminOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">

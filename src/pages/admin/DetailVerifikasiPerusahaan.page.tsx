@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { ChevronRight, CheckCircle2, Ban, Info, AlertTriangle, PencilLine, Building2, FileText, Eye, X } from 'lucide-react'
 import { dummyCompanyDetails, updateCompanyData } from './AdminData'
 import type { CompanyDetail } from './AdminData'
+import Toast from './components/Toast'
 
 const DetailVerifikasiPerusahaan = () => {
   const { id } = useParams()
@@ -53,18 +54,7 @@ const DetailVerifikasiPerusahaan = () => {
 
   return (
     <div className="w-full pb-12 relative animate-in fade-in duration-300">
-      {notification && (
-        <div className={`fixed top-6 right-6 z-[9999] flex items-start gap-4 p-4 bg-white border rounded-xl w-full max-w-[420px] transform transition-all animate-in slide-in-from-top-10 fade-in duration-500 ease-out overflow-hidden ${notification.type === 'success' ? 'border-[#10b981]/40 border-l-4 border-l-[#10b981] shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)]' : 'border-[#f59e0b]/40 border-l-4 border-l-[#f59e0b] shadow-[0_10px_40px_-10px_rgba(245,158,11,0.2)]'}`}>
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notification.type === 'success' ? 'bg-[#e6f9f0]' : 'bg-[#fffbeb]'}`}>
-            {notification.type === 'success' ? <CheckCircle2 size={22} className="text-[#10b981]" /> : <AlertTriangle size={22} className="text-[#f59e0b]" />}
-          </div>
-          <div className="flex-1 pt-0.5">
-            <h3 className="text-[14px] font-bold text-[#111827]">{notification.type === 'success' ? 'Berhasil!' : 'Perhatian'}</h3>
-            <p className="text-[13px] text-[#5b6170] mt-1 leading-relaxed">{notification.message}</p>
-          </div>
-          <button onClick={() => setNotification(null)} className="text-[#a0a6b5] hover:text-[#111827] transition-colors p-1 shrink-0"><X size={18} /></button>
-        </div>
-      )}
+      <Toast notification={notification} onClose={() => setNotification(null)} />
 
       <div className="flex items-center gap-2 text-[13px] font-bold text-[#5b6170] mb-5">
         <Link to="/admin/kelola-perusahaan" className="hover:text-[#0f5ce0] transition-colors flex items-center gap-1">Kelola Perusahaan</Link>
@@ -80,10 +70,10 @@ const DetailVerifikasiPerusahaan = () => {
       </div>
 
       <div className="bg-white rounded-t-[16px] border border-[#e4e9f4] shadow-sm flex overflow-hidden">
-        <button onClick={() => { setActiveAction('verify'); setErrorMsg(''); }} className={`flex-1 py-4 flex items-center justify-center gap-2 text-[14px] font-bold transition-colors border-b-[3px] ${activeAction === 'verify' ? 'border-[#10b981] text-[#10b981] bg-[#f8faff]' : 'border-transparent text-[#7b8191] hover:bg-gray-50'}`}>
+        <button onClick={() => { setActiveAction('verify'); setErrorMsg(''); }} className={`flex-1 py-4 flex items-center justify-center gap-2 text-[14px] font-bold transition-colors border-b-[3px] ${activeAction === 'verify' ? 'border-[#10b981] text-[#10b981] bg-[#f8faff]' : 'border-transparent text-[#7b8191] hover:bg-[#f8faff]'}`}>
           <CheckCircle2 size={18} strokeWidth={2.5} /> Verifikasi Akun
         </button>
-        <button onClick={() => { setActiveAction('reject'); setErrorMsg(''); }} className={`flex-1 py-4 flex items-center justify-center gap-2 text-[14px] font-bold transition-colors border-b-[3px] ${activeAction === 'reject' ? 'border-[#ef4444] text-[#ef4444] bg-[#fef2f2]' : 'border-transparent text-[#7b8191] hover:bg-gray-50'}`}>
+        <button onClick={() => { setActiveAction('reject'); setErrorMsg(''); }} className={`flex-1 py-4 flex items-center justify-center gap-2 text-[14px] font-bold transition-colors border-b-[3px] ${activeAction === 'reject' ? 'border-[#ef4444] text-[#ef4444] bg-[#fef2f2]' : 'border-transparent text-[#7b8191] hover:bg-[#f8faff]'}`}>
           <Ban size={18} strokeWidth={2.5} /> Tolak Pendaftaran
         </button>
       </div>

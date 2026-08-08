@@ -53,10 +53,10 @@ const ActivityTooltip = ({ active, label, payload }: ChartTooltipProps) => {
 };
 
 import {
-  dummyOverviewMetrics,
+  getOverviewMetrics,
   dummyActivityTrends,
-  dummyVerificationQueue,
-  dummyMasterDataStats,
+  getVerificationQueue,
+  getMasterDataStats,
   dummyActivityLogs,
 } from './AdminData';
 
@@ -95,9 +95,9 @@ const AdminDashboard = () => {
   ];
 
   useEffect(() => {
-    setOverview(dummyOverviewMetrics);
-    setQueue(dummyVerificationQueue);
-    setMasterStats(dummyMasterDataStats);
+    setOverview(getOverviewMetrics());
+    setQueue(getVerificationQueue());
+    setMasterStats(getMasterDataStats());
     setLogs(dummyActivityLogs);
   }, []);
 
@@ -130,7 +130,7 @@ const AdminDashboard = () => {
       case 'info': return 'bg-[#0f5ce0]';
       case 'warning': return 'bg-[#f59e0b]';
       case 'success': return 'bg-[#10b981]';
-      default: return 'bg-gray-400';
+      default: return 'bg-[#a0a6b5]';
     }
   };
 
@@ -197,7 +197,7 @@ const AdminDashboard = () => {
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-        <div className="bg-white p-5 rounded-[12px] border border-[#e4e9f4] shadow-sm">
+        <div className="bg-white p-5 rounded-[16px] border border-[#e4e9f4] shadow-sm">
           <div className="w-9 h-9 rounded-lg bg-[#f0f5ff] flex items-center justify-center text-[#0f5ce0] mb-4">
             <GraduationCap size={20} strokeWidth={2} />
           </div>
@@ -205,7 +205,7 @@ const AdminDashboard = () => {
           <p className="text-[24px] font-bold text-[#111827]">{formatNumber(overview.totalUniversitas)}</p>
         </div>
         
-        <div className="bg-white p-5 rounded-[12px] border border-[#e4e9f4] shadow-sm">
+        <div className="bg-white p-5 rounded-[16px] border border-[#e4e9f4] shadow-sm">
           <div className="w-9 h-9 rounded-lg bg-[#f0f5ff] flex items-center justify-center text-[#0f5ce0] mb-4">
             <Users size={20} strokeWidth={2} />
           </div>
@@ -213,7 +213,7 @@ const AdminDashboard = () => {
           <p className="text-[24px] font-bold text-[#111827]">{formatNumber(overview.totalMahasiswa)}</p>
         </div>
 
-        <div className="bg-white p-5 rounded-[12px] border border-[#e4e9f4] shadow-sm">
+        <div className="bg-white p-5 rounded-[16px] border border-[#e4e9f4] shadow-sm">
           <div className="w-9 h-9 rounded-lg bg-[#f0f5ff] flex items-center justify-center text-[#0f5ce0] mb-4">
             <ShieldCheck size={20} strokeWidth={2} />
           </div>
@@ -221,7 +221,7 @@ const AdminDashboard = () => {
           <p className="text-[24px] font-bold text-[#111827]">{formatNumber(overview.perusahaanTerverifikasi)}</p>
         </div>
 
-        <div className="bg-white p-5 rounded-[12px] border border-[#e4e9f4] shadow-sm">
+        <div className="bg-white p-5 rounded-[16px] border border-[#e4e9f4] shadow-sm">
           <div className="w-9 h-9 rounded-lg bg-[#f0f5ff] flex items-center justify-center text-[#0f5ce0] mb-4">
             <Briefcase size={20} strokeWidth={2} />
           </div>
@@ -233,7 +233,7 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
         
         {/* Tren Aktivitas Chart */}
-        <div className="bg-white p-6 rounded-[12px] border border-[#e4e9f4] shadow-sm min-w-0">
+        <div className="bg-white p-6 rounded-[16px] border border-[#e4e9f4] shadow-sm min-w-0">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
             <div>
               <h2 className="text-[16px] font-bold text-[#111827]">Tren Aktivitas Pengguna</h2>
@@ -304,7 +304,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Antrean Verifikasi */}
-        <div className="bg-[#fcfdff] p-6 rounded-[12px] border border-[#e4e9f4] shadow-sm flex flex-col">
+        <div className="bg-[#fcfdff] p-6 rounded-[16px] border border-[#e4e9f4] shadow-sm flex flex-col">
           <h2 className="text-[16px] font-bold text-[#111827]">Antrean Verifikasi</h2>
           <p className="text-[12px] text-[#7b8191] mt-0.5 pb-4 border-b border-[#e4e9f4]">
             Perusahaan menunggu persetujuan ({queue.length} total)
@@ -328,7 +328,7 @@ const AdminDashboard = () => {
           </div>
           
           <button 
-            onClick={() => navigate('/admin/kelola-perusahaan')}
+            onClick={() => navigate('/admin/kelola-perusahaan', { state: { presetFilter: 'pending' } })}
             className="w-full mt-auto py-2.5 text-[12px] font-bold text-[#0f5ce0] hover:bg-[#eef4ff] rounded-[8px] transition"
           >
             LIHAT SEMUA ANTREAN
@@ -340,7 +340,7 @@ const AdminDashboard = () => {
       <div className="mb-6">
         <h2 className="text-[15px] font-bold text-[#111827] mb-4">Statistik Master Data</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div className="bg-[#f7faff] p-5 rounded-[12px] border border-[#e4e9f4] flex items-center gap-4">
+          <div className="bg-[#f7faff] p-5 rounded-[16px] border border-[#e4e9f4] flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0f5ce0] shadow-sm border border-[#e4e9f4]">
               <GraduationCap size={20} />
             </div>
@@ -349,7 +349,7 @@ const AdminDashboard = () => {
               <p className="text-[20px] font-bold text-[#111827]">{formatNumber(masterStats.programStudi)}</p>
             </div>
           </div>
-          <div className="bg-[#f7faff] p-5 rounded-[12px] border border-[#e4e9f4] flex items-center gap-4">
+          <div className="bg-[#f7faff] p-5 rounded-[16px] border border-[#e4e9f4] flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0f5ce0] shadow-sm border border-[#e4e9f4]">
               <BookOpen size={20} />
             </div>
@@ -358,7 +358,7 @@ const AdminDashboard = () => {
               <p className="text-[20px] font-bold text-[#111827]">{formatNumber(masterStats.mataKuliah)}</p>
             </div>
           </div>
-          <div className="bg-[#f7faff] p-5 rounded-[12px] border border-[#e4e9f4] flex items-center gap-4">
+          <div className="bg-[#f7faff] p-5 rounded-[16px] border border-[#e4e9f4] flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0f5ce0] shadow-sm border border-[#e4e9f4]">
               <Target size={20} />
             </div>
@@ -371,7 +371,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Log Aktivitas Terbaru */}
-      <div className="bg-white p-6 rounded-[12px] border border-[#e4e9f4] shadow-sm">
+      <div className="bg-white p-6 rounded-[16px] border border-[#e4e9f4] shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-[16px] font-bold text-[#111827]">Log Aktivitas Terbaru</h2>
           <button 

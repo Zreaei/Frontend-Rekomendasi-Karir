@@ -15,6 +15,7 @@ import AdminKelolaPerusahaan from '../pages/admin/KelolaPerusahaan.page'
 import AdminDetailVerifikasiPerusahaan from '../pages/admin/DetailVerifikasiPerusahaan.page' 
 import AdminPerusahaanDiterimaDitolak from '../pages/admin/PerusahaanDiterima-Ditolak.page' 
 import AdminKelolaUniversitas from '../pages/admin/KelolaUniversitas.page'
+import AdminTambahUniv from '../pages/admin/TambahUniv.page' // <-- IMPORT BARU
 import AdminLogAktifitas from '../pages/admin/LogAktifitasPengguna.page'
 import AdminManajemenPengguna from '../pages/admin/ManajemenPengguna.page'
 import AdminMasterData from '../pages/admin/MasterData.page'
@@ -68,6 +69,7 @@ const AppRouter = () => {
         <Route path="kelola-perusahaan/detail/:id" element={<AdminDetailVerifikasiPerusahaan />} /> 
         <Route path="kelola-perusahaan/status/:id" element={<AdminPerusahaanDiterimaDitolak />} />
         <Route path="kelola-universitas" element={<AdminKelolaUniversitas />} />
+        <Route path="kelola-universitas/tambah" element={<AdminTambahUniv />} /> {/* <-- ROUTE BARU */}
         <Route path="log-aktivitas" element={<AdminLogAktifitas />} />
         <Route path="manajemen-pengguna" element={<AdminManajemenPengguna />} />
         <Route path="master-data" element={<AdminMasterData />} />
