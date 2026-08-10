@@ -1,35 +1,50 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, ChevronDown, BookOpen, CheckCircle2, ClipboardList, RotateCcw } from 'lucide-react'
-import { UniversityService, type Subject, type NilaiMahasiswa, type Student, type SubjectCLO } from './UniversityData'
+import { Search, ChevronDown, BookOpen, CheckCircle2, ClipboardList, RotateCcw, Loader2, AlertTriangle } from 'lucide-react'
+import { universityDashboardApi, type CourseProgress } from '../../services/university.service'
+
+type GradingStatus = 'COMPLETED' | 'IN PROGRESS' | 'WAITING REVIEW'
+
+// Status progres dari backend -> label pada halaman ini.
+const STATUS_LABEL: Record<string, GradingStatus> = {
+  Selesai: 'COMPLETED',
+  Sebagian: 'IN PROGRESS',
+  Belum: 'WAITING REVIEW',
+}
+
+interface SubjectRow extends CourseProgress {
+  gradingStatus: GradingStatus
+}
 
 const UniversityManajemenNilai = () => {
   const navigate = useNavigate()
-  const [subjects, setSubjects] = useState<Subject[]>([])
-  const [allGrades, setAllGrades] = useState<NilaiMahasiswa[]>([])
-  const [students, setStudents] = useState<Student[]>([])
-  const [allClos, setAllClos] = useState<SubjectCLO[]>([])
 
-  const loadData = async () => {
-    const subData = await UniversityService.getSubjects()
-    const gradeData = await UniversityService.getAllNilai()
-    const studData = await UniversityService.getStudents()
-    
-    let cloData: SubjectCLO[] = []
-    for (const sub of subData) {
-      const clos = await UniversityService.getCLOsBySubject(sub.id)
-      cloData = [...cloData, ...clos]
+  const [subjects, setSubjects] = useState<SubjectRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  // Progres penilaian sudah dihitung backend, jadi cukup satu permintaan.
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const { courses } = await universityDashboardApi.get()
+      setSubjects(
+        (courses ?? []).map((c) => ({
+          ...c,
+          gradingStatus: STATUS_LABEL[c.status] ?? 'WAITING REVIEW',
+        })),
+      )
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.message ?? 'Gagal memuat data mata kuliah. Pastikan server berjalan.')
+    } finally {
+      setLoading(false)
     }
-
-    setSubjects(subData)
-    setAllGrades(gradeData)
-    setStudents(studData)
-    setAllClos(cloData)
-  }
+  }, [])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [semesterFilter, setSemesterFilter] = useState('Semua Semester')
@@ -38,61 +53,31 @@ const UniversityManajemenNilai = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
-  const availableSemesters = useMemo(() => Array.from(new Set(subjects.map(s => s.semester))).sort(), [subjects])
-  
-  const getDynamicStatus = (subjectName: string, subjectId: string) => {
-    const courseClos = allClos.filter(c => c.subjectId === subjectId)
-    if (courseClos.length === 0 || students.length === 0) return 'WAITING REVIEW'
+  const availableSemesters = useMemo(
+    () => Array.from(new Set(subjects.map(s => s.semester))).filter((s): s is number => !!s).sort((a, b) => a - b),
+    [subjects],
+  )
 
-    const courseGrades = allGrades.filter(g => g.course === subjectName)
-    if (courseGrades.length === 0) return 'WAITING REVIEW'
-
-    let isAllComplete = true
-    let hasAnyGrade = false
-
-    students.forEach(student => {
-      courseClos.forEach(clo => {
-        const found = courseGrades.find(g => g.studentId === student.id && g.code === clo.code && g.score > 0)
-        if (found) {
-          hasAnyGrade = true
-        } else {
-          isAllComplete = false
-        }
-      })
-    })
-
-    if (isAllComplete) return 'COMPLETED'
-    if (hasAnyGrade) return 'IN PROGRESS'
-    return 'WAITING REVIEW'
-  }
-
-  const subjectsWithStatus = useMemo(() => {
-    return subjects.map(s => ({ 
-      ...s, 
-      gradingStatus: getDynamicStatus(s.name, s.id) 
-    }))
-  }, [subjects, allGrades, students, allClos])
-
-  const availableStatuses = useMemo(() => Array.from(new Set(subjectsWithStatus.map(s => s.gradingStatus))).sort(), [subjectsWithStatus])
+  const availableStatuses = useMemo(
+    () => Array.from(new Set(subjects.map(s => s.gradingStatus))).sort(),
+    [subjects],
+  )
 
   const dynamicStats = useMemo(() => {
-    const total = subjectsWithStatus.length;
-    if (total === 0) return { activeCourses: 0, completionRate: '0%', needsVerification: 0 };
-
-    const completedCount = subjectsWithStatus.filter(s => s.gradingStatus === 'COMPLETED').length;
-    const reviewCount = subjectsWithStatus.filter(s => s.gradingStatus === 'WAITING REVIEW').length;
-    const percentage = Math.round((completedCount / total) * 100);
-
+    const total = subjects.length
+    if (total === 0) return { activeCourses: 0, completionRate: '0%', needsVerification: 0 }
+    const completedCount = subjects.filter(s => s.gradingStatus === 'COMPLETED').length
+    const reviewCount = subjects.filter(s => s.gradingStatus === 'WAITING REVIEW').length
     return {
       activeCourses: total,
-      completionRate: `${percentage}%`,
-      needsVerification: reviewCount
-    };
-  }, [subjectsWithStatus]);
+      completionRate: `${Math.round((completedCount / total) * 100)}%`,
+      needsVerification: reviewCount,
+    }
+  }, [subjects])
 
   const filteredSubjects = useMemo(() => {
-    return subjectsWithStatus.filter((subject) => {
-      const matchSemester = semesterFilter === 'Semua Semester' || subject.semester.toString() === semesterFilter
+    return subjects.filter((subject) => {
+      const matchSemester = semesterFilter === 'Semua Semester' || String(subject.semester ?? '') === semesterFilter
       const matchStatus = statusFilter === 'Semua Status' || subject.gradingStatus === statusFilter
       
       const searchLower = searchQuery.toLowerCase()
@@ -100,7 +85,7 @@ const UniversityManajemenNilai = () => {
       
       return matchSemester && matchStatus && matchSearch
     })
-  }, [subjectsWithStatus, semesterFilter, statusFilter, searchQuery])
+  }, [subjects, semesterFilter, statusFilter, searchQuery])
 
   const totalPages = Math.ceil(filteredSubjects.length / ITEMS_PER_PAGE) || 1
   const startIndex = filteredSubjects.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1
@@ -108,8 +93,7 @@ const UniversityManajemenNilai = () => {
   
   const displayedSubjects = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE
-    const end = start + ITEMS_PER_PAGE
-    return filteredSubjects.slice(start, end)
+    return filteredSubjects.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredSubjects, currentPage])
 
   const getPaginationGroup = () => {
@@ -141,6 +125,34 @@ const UniversityManajemenNilai = () => {
     }
   }
 
+  // ---------- Loading ----------
+  if (loading) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat daftar mata kuliah...</p>
+      </div>
+    )
+  }
+
+  // ---------- Error ----------
+  if (loadError && subjects.length === 0) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl max-w-md">
+          <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-800">Gagal memuat data</p>
+            <p className="text-xs text-red-700 mt-0.5">{loadError}</p>
+          </div>
+        </div>
+        <button onClick={loadData} className="px-6 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] transition">
+          Coba Lagi
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300 pb-12 relative max-w-[1200px] mx-auto">
       <div>
@@ -157,7 +169,6 @@ const UniversityManajemenNilai = () => {
             <p className="text-[32px] font-black text-[#111827] leading-none mt-1">{dynamicStats.activeCourses}</p>
           </div>
         </div>
-
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-6 shadow-sm flex flex-col gap-4">
           <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] text-[#10b981] flex items-center justify-center border border-[#e6f9f0]">
             <CheckCircle2 size={16} strokeWidth={2.5} />
@@ -167,7 +178,6 @@ const UniversityManajemenNilai = () => {
             <p className="text-[32px] font-black text-[#111827] leading-none mt-1">{dynamicStats.completionRate}</p>
           </div>
         </div>
-
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-6 shadow-sm flex flex-col gap-4">
           <div className="w-8 h-8 rounded-lg bg-[#fef2f2] text-red-500 flex items-center justify-center border border-[#fee2e2]">
             <ClipboardList size={16} strokeWidth={2.5} />
@@ -182,7 +192,6 @@ const UniversityManajemenNilai = () => {
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm flex flex-col overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 border-b border-[#e4e9f4]">
           <h2 className="text-[16px] font-bold text-[#111827] whitespace-nowrap">Daftar Mata Kuliah</h2>
-
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             <div className="relative w-full sm:w-[220px]">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a0a6b5]" size={14} />
@@ -194,7 +203,6 @@ const UniversityManajemenNilai = () => {
                 className="w-full pl-9 pr-4 py-2.5 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] focus:outline-none focus:border-[#0f5ce0] transition shadow-sm"
               />
             </div>
-
             <div className="relative">
               <select 
                 value={semesterFilter}
@@ -202,11 +210,10 @@ const UniversityManajemenNilai = () => {
                 className="px-4 py-2.5 pr-9 border border-[#e4e9f4] rounded-lg text-[13px] text-[#5b6170] font-semibold bg-white hover:bg-gray-50 focus:outline-none focus:border-[#0f5ce0] transition appearance-none cursor-pointer shadow-sm min-w-[140px]"
               >
                 <option value="Semua Semester">Semua Semester</option>
-                {availableSemesters.map(s => <option key={s} value={s.toString()}>Semester {s}</option>)}
+                {availableSemesters.map(s => <option key={s} value={String(s)}>Semester {s}</option>)}
               </select>
               <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7b8191] pointer-events-none" />
             </div>
-
             <div className="relative">
               <select 
                 value={statusFilter}
@@ -218,7 +225,6 @@ const UniversityManajemenNilai = () => {
               </select>
               <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7b8191] pointer-events-none" />
             </div>
-
             {isFilterActive && (
               <button 
                 onClick={resetFilters}
@@ -239,6 +245,7 @@ const UniversityManajemenNilai = () => {
                 <th className="px-6 py-5 whitespace-nowrap text-center">SKS</th>
                 <th className="px-6 py-5 whitespace-nowrap text-center">Jumlah CLO</th>
                 <th className="px-6 py-5 whitespace-nowrap text-center">Semester</th>
+                <th className="px-6 py-5 whitespace-nowrap text-center">Dinilai</th>
                 <th className="px-6 py-5 whitespace-nowrap text-center">Status</th>
                 <th className="px-6 py-5 whitespace-nowrap text-center">Aksi</th>
               </tr>
@@ -260,7 +267,13 @@ const UniversityManajemenNilai = () => {
                       <span className="text-[13px] font-bold text-[#5b6170]">{subject.cloCount}</span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap text-center">
-                      <span className="text-[13px] font-bold text-[#5b6170]">{subject.semester}</span>
+                      <span className="text-[13px] font-bold text-[#5b6170]">{subject.semester ?? '-'}</span>
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap text-center">
+                      <span className="text-[13px] font-bold text-[#111827]">
+                        {subject.gradedStudents}
+                        <span className="text-[#7b8191] font-medium"> / {subject.totalStudents}</span>
+                      </span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap text-center">
                       <span className={`inline-flex items-center justify-center w-[130px] px-2.5 py-1 text-[10px] font-extrabold rounded-md uppercase tracking-wider ${getStatusStyle(subject.gradingStatus)}`}>
@@ -269,7 +282,7 @@ const UniversityManajemenNilai = () => {
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap text-center">
                       <button 
-                        onClick={() => navigate(`/university/kelola-nilai/${subject.id}`, { state: { subjectData: subject } })}
+                        onClick={() => navigate(`/university/kelola-nilai/${subject.id}`)}
                         className="px-5 py-2 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d4ebf] transition-all shadow-sm active:scale-95"
                       >
                         Kelola Nilai
@@ -279,8 +292,10 @@ const UniversityManajemenNilai = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-sm text-[#a0a6b5] font-medium">
-                    Tidak ada mata kuliah yang sesuai dengan filter atau pencarian.
+                  <td colSpan={8} className="text-center py-12 text-sm text-[#a0a6b5] font-medium">
+                    {subjects.length === 0
+                      ? 'Belum ada mata kuliah. Tambahkan lewat Manajemen CLO & Matakuliah.'
+                      : 'Tidak ada mata kuliah yang sesuai dengan filter atau pencarian.'}
                   </td>
                 </tr>
               )}
@@ -291,12 +306,10 @@ const UniversityManajemenNilai = () => {
         {filteredSubjects.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm rounded-b-[16px] gap-4">
             
-            {/* BAGIAN KIRI: Teks Informasi */}
             <div className="text-[13px] text-[#7b8191] font-medium text-center sm:text-left w-full sm:w-auto">
               Menampilkan <span className="text-[#111827] font-bold">{startIndex}-{endIndex}</span> dari <span className="text-[#111827] font-bold">{filteredSubjects.length}</span> matakuliah
             </div>
 
-            {/* BAGIAN KANAN: Tombol Paginasi */}
             <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
               <button 
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
@@ -331,10 +344,8 @@ const UniversityManajemenNilai = () => {
                 Selanjutnya
               </button>
             </div>
-
           </div>
         )}
-
       </div>
     </div>
   )

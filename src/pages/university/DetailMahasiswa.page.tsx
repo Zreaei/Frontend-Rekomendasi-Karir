@@ -1,7 +1,75 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, Edit2, GraduationCap, BarChart2, Award, History, CheckCircle2, FileText, Calendar, Mail, ExternalLink } from 'lucide-react'
-import { UniversityService, type StudentDetail } from './UniversityData'
+import { ChevronRight, Edit2, GraduationCap, BarChart2, Award, History, CheckCircle2, FileText, Calendar, Mail, ExternalLink, Loader2 } from 'lucide-react'
+import { studentApi } from '../../services/university.service'
+
+const AVATAR_COLORS = [
+  'bg-[#eef4ff] text-[#0f5ce0]',
+  'bg-[#e6f9f0] text-[#10b981]',
+  'bg-[#fffbeb] text-[#f59e0b]',
+  'bg-[#f4f3ff] text-[#6366f1]',
+  'bg-[#fee2e2] text-[#ef4444]',
+  'bg-[#ecfeff] text-[#06b6d4]',
+]
+const colorFromName = (name: string) => {
+  let sum = 0
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i)
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length]
+}
+const initialFromName = (name: string) =>
+  name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+
+const formatDate = (raw?: string | null): string => {
+  if (!raw) return '-'
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return '-'
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+const CERT_STATUS: Record<string, 'Verified' | 'Rejected' | 'Pending'> = {
+  pending: 'Pending',
+  approved: 'Verified',
+  verified: 'Verified',
+  rejected: 'Rejected',
+}
+
+interface CloDetail {
+  id: string
+  code: string
+  course: string
+  description: string
+  skills: string[]
+  score: number
+}
+
+interface CertItem {
+  id: string
+  title: string
+  issuer: string
+  date: string
+  status: 'Verified' | 'Rejected' | 'Pending'
+  url?: string | null
+}
+
+interface StudentDetail {
+  id: string
+  name: string
+  email: string
+  nim: string
+  major: string
+  faculty: string
+  year: string
+  gpa: string
+  status: 'Active' | 'Graduated' | 'Inactive'
+  initial: string
+  bgColor: string
+  avatarUrl?: string | null
+  totalSks: number
+  totalClo: number
+  certificationsCount: number
+  cloDetails: CloDetail[]
+  certifications: CertItem[]
+}
 
 const EmptyState = ({
   icon,
@@ -34,23 +102,73 @@ const EmptyState = ({
 const DetailMahasiswa = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-
   const [studentData, setStudentData] = useState<StudentDetail | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     if (!id) return
+    let aktif = true
     setIsLoading(true)
-    UniversityService.getStudentDetail(id).then((data) => {
-      setStudentData(data)
-      setIsLoading(false)
-    })
+
+    studentApi
+      .getDetail(id)
+      .then((data: any) => {
+        if (!aktif) return
+        const s = data?.student ?? {}
+        const name = s?.user?.name ?? 'Tanpa Nama'
+
+        setStudentData({
+          id: s.id,
+          name,
+          email: s?.user?.email ?? '-',
+          nim: s.nim ?? '-',
+          major: s.major ?? '-',
+          faculty: s.faculty ?? s?.university?.name ?? '-',
+          year: s.entryYear ? String(s.entryYear) : '-',
+          gpa: s.gpa !== null && s.gpa !== undefined ? String(s.gpa) : '-',
+          status: s.graduatedAt ? 'Graduated' : s?.user?.status === 'suspended' ? 'Inactive' : 'Active',
+          initial: initialFromName(name),
+          bgColor: colorFromName(name),
+          avatarUrl: null,
+          totalSks: data?.stats?.totalSks ?? 0,
+          totalClo: data?.stats?.totalClo ?? 0,
+          certificationsCount: data?.stats?.certificationsCount ?? 0,
+          cloDetails: (data?.cloDetails ?? []).map((c: any) => ({
+            id: c.id,
+            code: c.code,
+            course: c.course,
+            description: c.description,
+            skills: c.skills ?? [],
+            score: c.score,
+          })),
+          certifications: (data?.certificates ?? []).map((c: any) => ({
+            id: c.id,
+            title: c.title ?? '-',
+            issuer: c.issuer ?? '-',
+            date: formatDate(c.created_at ?? c.createdAt),
+            status: CERT_STATUS[String(c.status ?? '').toLowerCase()] ?? 'Pending',
+            url: c.fileUrl ?? null,
+          })),
+        })
+      })
+      .catch((err: any) => {
+        if (!aktif) return
+        setStudentData(undefined)
+        setLoadError(err?.response?.data?.message ?? 'Gagal memuat data mahasiswa.')
+      })
+      .finally(() => {
+        if (aktif) setIsLoading(false)
+      })
+
+    return () => { aktif = false }
   }, [id])
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-[#7b8191]">Memuat data mahasiswa...</p>
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat data mahasiswa...</p>
       </div>
     )
   }
@@ -58,24 +176,23 @@ const DetailMahasiswa = () => {
   if (!studentData) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-[#7b8191] mb-4">Data mahasiswa tidak ditemukan.</p>
+        <p className="text-[#7b8191] mb-4">{loadError || 'Data mahasiswa tidak ditemukan.'}</p>
         <button onClick={() => navigate('/university/manajemen-mahasiswa')} className="px-4 py-2 bg-[#0f5ce0] text-white rounded-xl">Kembali</button>
       </div>
     )
   }
 
   const handleEditProfile = () => {
-    navigate(`/university/edit-mahasiswa/${studentData.id}`, { state: { studentData } })
+    navigate(`/university/edit-mahasiswa/${studentData.id}`)
   }
 
-  const handleOpenCertificate = (url?: string) => {
+  const handleOpenCertificate = (url?: string | null) => {
     if (!url) return
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300 pb-12 relative max-w-[1200px] mx-auto">
-
       <div className="flex items-center gap-2 text-sm text-[#7b8191] font-medium">
         <button onClick={() => navigate('/university/manajemen-mahasiswa')} className="hover:text-[#0f5ce0] transition">
           Manajemen Mahasiswa
@@ -86,7 +203,6 @@ const DetailMahasiswa = () => {
 
       <div className="bg-white rounded-[20px] border border-[#e4e9f4] shadow-sm p-6 flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="flex flex-col sm:flex-row gap-6 items-start w-full">
-
           <div className="relative shrink-0">
             {studentData.avatarUrl ? (
               <img src={studentData.avatarUrl} alt={studentData.name} className="w-28 h-28 rounded-2xl object-cover border border-[#e4e9f4]" />
@@ -111,11 +227,9 @@ const DetailMahasiswa = () => {
               </div>
             )}
           </div>
-
           <div className="flex-1 w-full">
             <h1 className="text-2xl font-bold text-[#111827]">{studentData.name}</h1>
             <p className="text-[15px] font-bold text-[#0f5ce0] mt-0.5">{studentData.faculty}</p>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 mt-5">
               <div className="flex items-center gap-2 text-sm text-[#5b6170]">
                 <FileText size={16} className="text-[#a0a6b5]" />
@@ -140,7 +254,6 @@ const DetailMahasiswa = () => {
             </div>
           </div>
         </div>
-
         <div className="flex flex-col gap-4 w-full md:w-auto shrink-0 mt-4 md:mt-0">
           <div className="bg-[#f8faff] border border-[#eef4ff] rounded-2xl p-4 text-center">
             <p className="text-[10px] font-bold text-[#0f5ce0] uppercase tracking-widest mb-1">IPK Kumulatif</p>
@@ -274,10 +387,8 @@ const DetailMahasiswa = () => {
                 <div className="w-full h-32 bg-[#f8faff] border border-[#e4e9f4] rounded-xl flex items-center justify-center mb-4 relative overflow-hidden">
                   <Award size={32} className="text-[#a0a6b5] opacity-30" />
                 </div>
-
                 <h3 className="text-sm font-bold text-[#111827] leading-snug line-clamp-2">{cert.title}</h3>
                 <p className="text-[11px] text-[#7b8191] mt-1 line-clamp-1">{cert.issuer} • {cert.date}</p>
-
                 <div className="flex items-center justify-between mt-auto pt-5">
                   <span className={`px-2.5 py-1 text-[9px] font-extrabold rounded-md uppercase tracking-wider ${
                     cert.status === 'Verified' ? 'bg-[#e6f9f0] text-[#10b981]' :
@@ -286,7 +397,6 @@ const DetailMahasiswa = () => {
                   }`}>
                     {cert.status === 'Verified' ? 'VERIFIED' : cert.status === 'Rejected' ? 'REJECTED' : 'PENDING REVIEW'}
                   </span>
-
                   {cert.status === 'Verified' ? (
                     <button
                       onClick={() => handleOpenCertificate(cert.url)}
@@ -319,7 +429,6 @@ const DetailMahasiswa = () => {
           />
         )}
       </div>
-
     </div>
   )
 }

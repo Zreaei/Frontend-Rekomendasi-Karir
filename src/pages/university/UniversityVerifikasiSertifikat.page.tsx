@@ -1,45 +1,100 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ClipboardList, CheckCircle2, XCircle, Download, Search } from 'lucide-react'
-import { UniversityService, type SertifikatMahasiswa } from './UniversityData'
+import { ClipboardList, CheckCircle2, XCircle, Download, Search, Loader2, AlertTriangle } from 'lucide-react'
+import { certificateApi } from '../../services/university.service'
 
-interface MergedCertificate extends SertifikatMahasiswa {
+type DisplayStatus = 'Pending' | 'Verified' | 'Rejected'
+
+// Status backend -> status tampilan. Beberapa nilai diterima agar tetap cocok
+// bila konstanta di backend memakai "approved" atau "verified".
+const STATUS_MAP: Record<string, DisplayStatus> = {
+  pending: 'Pending',
+  approved: 'Verified',
+  verified: 'Verified',
+  rejected: 'Rejected',
+}
+
+interface CertificateRow {
+  id: string
+  title: string
+  issuer: string
+  date: string
+  status: DisplayStatus
   studentName: string
   studentNim: string
   studentInitial: string
   studentBgColor: string
 }
 
+const AVATAR_COLORS = [
+  'bg-[#eef4ff] text-[#0f5ce0]',
+  'bg-[#e6f9f0] text-[#10b981]',
+  'bg-[#fffbeb] text-[#f59e0b]',
+  'bg-[#f4f3ff] text-[#6366f1]',
+  'bg-[#fee2e2] text-[#ef4444]',
+  'bg-[#ecfeff] text-[#06b6d4]',
+]
+const colorFromName = (name: string) => {
+  let sum = 0
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i)
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length]
+}
+const initialFromName = (name: string) =>
+  name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+
+const formatDate = (raw?: string | null): string => {
+  if (!raw) return '-'
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return '-'
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 const UniversityVerifikasiSertifikat = () => {
   const navigate = useNavigate()
-  const location = useLocation()   
-  const [certificates, setCertificates] = useState<MergedCertificate[]>([])
-  const [activeTab, setActiveTab] = useState<'Semua Status' | 'Pending' | 'Verified' | 'Rejected'>('Semua Status')
-  const [searchQuery, setSearchQuery] = useState('')
+  const location = useLocation()
 
+  const [certificates, setCertificates] = useState<CertificateRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  const [activeTab, setActiveTab] = useState<'Semua Status' | DisplayStatus>('Semua Status')
+  const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      // Seluruh status diambil sekali agar hitungan tiap tab langsung tersedia.
+      const rows = await certificateApi.list()
+      setCertificates(
+        (rows ?? []).map((c: any) => {
+          const name = c?.student?.user?.name ?? 'Tanpa Nama'
+          return {
+            id: c.id,
+            title: c.title ?? '-',
+            issuer: c.issuer ?? '-',
+            date: formatDate(c.created_at ?? c.createdAt),
+            status: STATUS_MAP[String(c.status ?? '').toLowerCase()] ?? 'Pending',
+            studentName: name,
+            studentNim: c?.student?.nim ?? '-',
+            studentInitial: initialFromName(name),
+            studentBgColor: colorFromName(name),
+          }
+        }),
+      )
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.message ?? 'Gagal memuat data sertifikat. Pastikan server berjalan.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Dimuat ulang saat kembali dari halaman detail, agar status terbaru ikut terbawa.
   useEffect(() => {
     loadData()
-  }, [location])
-
-  const loadData = async () => {
-    const studentsData = await UniversityService.getStudents()
-    const certsData = await UniversityService.getAllSertifikat()
-
-    const mergedData: MergedCertificate[] = certsData.map(cert => {
-      const student = studentsData.find(s => s.id === cert.studentId)
-      return {
-        ...cert,
-        studentName: student ? student.name : 'Unknown Student',
-        studentNim: student ? student.nim : '-',
-        studentInitial: student ? student.initial : '?',
-        studentBgColor: student ? student.bgColor : 'bg-gray-100 text-gray-600'
-      }
-    })
-    setCertificates(mergedData)
-  }
+  }, [loadData, location.key])
 
   const stats = useMemo(() => ({
     pending: certificates.filter(c => c.status === 'Pending').length,
@@ -70,8 +125,7 @@ const UniversityVerifikasiSertifikat = () => {
   
   const displayedCertificates = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE
-    const end = start + ITEMS_PER_PAGE
-    return filteredCertificates.slice(start, end)
+    return filteredCertificates.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredCertificates, currentPage])
 
   const getPaginationGroup = () => {
@@ -97,6 +151,7 @@ const UniversityVerifikasiSertifikat = () => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const getStatusBadge = (status: string) => {
@@ -124,6 +179,34 @@ const UniversityVerifikasiSertifikat = () => {
     }
   }
 
+  // ---------- Loading ----------
+  if (loading) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat data sertifikat...</p>
+      </div>
+    )
+  }
+
+  // ---------- Error ----------
+  if (loadError && certificates.length === 0) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl max-w-md">
+          <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-800">Gagal memuat data</p>
+            <p className="text-xs text-red-700 mt-0.5">{loadError}</p>
+          </div>
+        </div>
+        <button onClick={loadData} className="px-6 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] transition">
+          Coba Lagi
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300 pb-12 relative max-w-[1200px] mx-auto">
       
@@ -146,7 +229,6 @@ const UniversityVerifikasiSertifikat = () => {
             <p className="text-[32px] font-black text-[#111827] leading-none mt-1.5">{stats.pending}</p>
           </div>
         </div>
-
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-6 shadow-sm flex flex-col items-center justify-center gap-3 text-center">
           <div className="w-10 h-10 rounded-xl bg-[#e6f9f0] text-[#10b981] flex items-center justify-center border border-[#d1f4e0]">
             <CheckCircle2 size={20} strokeWidth={2.5} />
@@ -156,7 +238,6 @@ const UniversityVerifikasiSertifikat = () => {
             <p className="text-[32px] font-black text-[#111827] leading-none mt-1.5">{stats.verified}</p>
           </div>
         </div>
-
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-6 shadow-sm flex flex-col items-center justify-center gap-3 text-center">
           <div className="w-10 h-10 rounded-xl bg-[#fef2f2] text-red-500 flex items-center justify-center border border-[#fee2e2]">
             <XCircle size={20} strokeWidth={2.5} />
@@ -203,7 +284,8 @@ const UniversityVerifikasiSertifikat = () => {
             </div>
             <button 
               onClick={handleExportCSV}
-              className="flex items-center justify-center px-3 py-2 border border-[#e4e9f4] bg-white text-[#5b6170] rounded-lg hover:bg-gray-50 transition-all shadow-sm"
+              disabled={filteredCertificates.length === 0}
+              className="flex items-center justify-center px-3 py-2 border border-[#e4e9f4] bg-white text-[#5b6170] rounded-lg hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
               title="Unduh Data CSV"
             >
               <Download size={16} strokeWidth={2.5} />
@@ -211,7 +293,7 @@ const UniversityVerifikasiSertifikat = () => {
           </div>
         </div>
 
-        {/* layout tabel yang dirapihkan */}
+        {/* tabel */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[950px]">
             <thead>
@@ -253,7 +335,7 @@ const UniversityVerifikasiSertifikat = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button 
-                        onClick={() => navigate(`/university/detail-sertifikat/${cert.id}`, { state: { certData: cert } })}
+                        onClick={() => navigate(`/university/detail-sertifikat/${cert.id}`)}
                         className="inline-flex items-center justify-center px-5 py-2 border border-[#0f5ce0] text-[#0f5ce0] text-[12px] font-bold rounded-lg hover:bg-[#f4f7ff] transition active:scale-95"
                       >
                         Lihat Detail
@@ -264,7 +346,9 @@ const UniversityVerifikasiSertifikat = () => {
               ) : (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-sm text-[#a0a6b5] font-medium">
-                    Tidak ada sertifikat yang ditemukan.
+                    {certificates.length === 0
+                      ? 'Belum ada sertifikat yang diunggah mahasiswa.'
+                      : 'Tidak ada sertifikat yang ditemukan.'}
                   </td>
                 </tr>
               )}
@@ -295,7 +379,6 @@ const UniversityVerifikasiSertifikat = () => {
             </div>
           </div>
         )}
-
       </div>
     </div>
   )

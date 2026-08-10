@@ -1,62 +1,88 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, Users, Edit2, Download, Search, ChevronDown, ChevronUp, CheckCircle2, X, Code, Layers, GraduationCap, AlertTriangle } from 'lucide-react'
-import { UniversityService, type Subject, type SubjectCLO, type Student, type NilaiMahasiswa } from './UniversityData'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, BookOpen, Users, Edit2, Download, Search, ChevronDown, ChevronUp, CheckCircle2, X, Code, Layers, GraduationCap, AlertTriangle, Loader2 } from 'lucide-react'
+import { cloGradeApi, type SubjectGradeData } from '../../services/university.service'
+
+type CLOItem = SubjectGradeData['clos'][number]
+type StudentItem = SubjectGradeData['students'][number]
+
+const AVATAR_COLORS = [
+  'bg-[#eef4ff] text-[#0f5ce0]',
+  'bg-[#e6f9f0] text-[#10b981]',
+  'bg-[#fffbeb] text-[#f59e0b]',
+  'bg-[#f4f3ff] text-[#6366f1]',
+  'bg-[#fee2e2] text-[#ef4444]',
+  'bg-[#ecfeff] text-[#06b6d4]',
+]
+const colorFromName = (name: string) => {
+  let sum = 0
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i)
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length]
+}
+const initialFromName = (name: string) =>
+  name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 
 const UniversityKelolaNilai = () => {
   const { id } = useParams<{ id: string }>()
-  const location = useLocation()
   const navigate = useNavigate()
-  
-  const [subjectData, setSubjectData] = useState<Subject | undefined>(location.state?.subjectData)
-  const [isLoading, setIsLoading] = useState(true)
 
-  const [clos, setClos] = useState<SubjectCLO[]>([])
-  const [students, setStudents] = useState<Student[]>([])
+  const [subjectData, setSubjectData] = useState<SubjectGradeData['subject'] | null>(null)
+  const [clos, setClos] = useState<CLOItem[]>([])
+  const [students, setStudents] = useState<StudentItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [savingWeights, setSavingWeights] = useState(false)
+
   const [searchStudentQuery, setSearchStudentQuery] = useState('')
   const [isEditingBobot, setIsEditingBobot] = useState(false)
   const [draftWeights, setDraftWeights] = useState<Record<string, string>>({})
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null)
+  // Nilai dikunci pada id CLO, bukan kodenya, karena kode bisa berulang.
   const [draftGrades, setDraftGrades] = useState<Record<string, Record<string, string>>>({})
   const [initialGrades, setInitialGrades] = useState<Record<string, Record<string, string>>>({})
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'warning'} | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!id) {
       navigate('/university/manajemen-nilai')
       return
     }
     setIsLoading(true)
-    UniversityService.getSubjectById(id).then(subject => {
-      setSubjectData(subject)
-      setIsLoading(false)
-      if (!subject) {
-        navigate('/university/manajemen-nilai')
-        return
-      }
-      loadData(subject)
-    })
-  }, [id])
+    setLoadError('')
+    try {
+      const data = await cloGradeApi.getBySubject(id)
+      setSubjectData(data.subject)
+      setClos(data.clos)
+      setStudents(data.students)
 
-  const loadData = async (subject: Subject) => {
-    const cloData = await UniversityService.getCLOsBySubject(subject.id)
-    const studentData = await UniversityService.getStudents()
-    const gradeData = await UniversityService.getAllNilai()
-    
-    setClos(cloData)
-    setStudents(studentData) 
-    const initialDrafts: Record<string, Record<string, string>> = {}
-    studentData.forEach(student => {
-      initialDrafts[student.id] = {}
-      cloData.forEach(clo => {
-        const existingGrade = gradeData.find(g => g.course === subject.name && g.studentId === student.id && g.code === clo.code)
-        initialDrafts[student.id][clo.code] = existingGrade && existingGrade.score > 0 ? existingGrade.score.toString() : ''
-      })
-    })
-    setDraftGrades(initialDrafts)
-    setInitialGrades(JSON.parse(JSON.stringify(initialDrafts)))
+      const drafts: Record<string, Record<string, string>> = {}
+      for (const s of data.students) {
+        drafts[s.id] = {}
+        for (const c of data.clos) {
+          const nilai = s.grades?.[c.id]
+          drafts[s.id][c.id] = nilai !== undefined && nilai !== null ? String(nilai) : ''
+        }
+      }
+      setDraftGrades(drafts)
+      setInitialGrades(JSON.parse(JSON.stringify(drafts)))
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.message ?? 'Gagal memuat data nilai. Pastikan server berjalan.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [id, navigate])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const showNotification = (msg: string, type: 'success' | 'warning') => {
+    setNotification({ message: msg, type })
+    setTimeout(() => setNotification(null), 4000)
+    if (type === 'success') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleEditBobotClick = () => {
@@ -75,7 +101,6 @@ const UniversityKelolaNilai = () => {
       setDraftWeights(prev => ({ ...prev, [cloId]: '' }))
       return
     }
-
     const numVal = parseInt(val, 10)
     if (!isNaN(numVal) && numVal >= 0) {
       setDraftWeights(prev => ({ ...prev, [cloId]: numVal.toString() }))
@@ -83,31 +108,42 @@ const UniversityKelolaNilai = () => {
   }
 
   const handleSaveBobot = async () => {
-    if (totalDraftWeight !== 100) return
-
-    const updatedClos = clos.map(c => ({ ...c, weight: Number(draftWeights[c.id]) || 0 }))
-    for (const clo of updatedClos) {
-      await UniversityService.saveCLO(clo)
+    if (totalDraftWeight !== 100 || !id) return
+    setSavingWeights(true)
+    try {
+      await cloGradeApi.setWeights(
+        id,
+        clos.map(c => ({ cloId: c.id, weight: Number(draftWeights[c.id]) || 0 })),
+      )
+      setClos(prev => prev.map(c => ({ ...c, weight: Number(draftWeights[c.id]) || 0 })))
+      setIsEditingBobot(false)
+      showNotification('Distribusi bobot CLO berhasil diperbarui.', 'success')
+    } catch (err: any) {
+      showNotification(err?.response?.data?.message ?? 'Gagal menyimpan bobot CLO.', 'warning')
+    } finally {
+      setSavingWeights(false)
     }
-    setClos(updatedClos)
-    setIsEditingBobot(false)
-    showNotification("Distribusi bobot CLO berhasil diperbarui.", 'success')
   }
 
   const calculateFinalScore = (studentId: string) => {
-    if (clos.length === 0) return 0
-    let totalScore = 0
+    if (clos.length === 0) return '0.0'
+    const totalBobot = clos.reduce((a, c) => a + (c.weight || 0), 0)
+    if (totalBobot === 0) {
+      // bobot belum diatur -> rata-rata sederhana
+      const rata = clos.reduce((a, c) => a + (Number(draftGrades[studentId]?.[c.id]) || 0), 0) / clos.length
+      return rata.toFixed(1)
+    }
+    let total = 0
     clos.forEach(clo => {
-      const weight = clo.weight || 0
-      const score = Number(draftGrades[studentId]?.[clo.code]) || 0
-      totalScore += (score * weight) / 100
+      const score = Number(draftGrades[studentId]?.[clo.id]) || 0
+      total += (score * (clo.weight || 0)) / 100
     })
-    return totalScore.toFixed(1)
+    return total.toFixed(1)
   }
 
   const checkStatus = (studentId: string) => {
     if (clos.length === 0) return 'Tidak Lengkap'
-    const isComplete = clos.every(clo => (Number(draftGrades[studentId]?.[clo.code]) || 0) > 0)
+    const isComplete = clos.every(clo => (Number(draftGrades[studentId]?.[clo.id]) || 0) > 0)
     return isComplete ? 'Selesai' : 'Tidak Lengkap'
   }
 
@@ -119,57 +155,71 @@ const UniversityKelolaNilai = () => {
     const currentDraft = draftGrades[studentId]
     const original = initialGrades[studentId]
     if (!currentDraft || !original) return false
-    return clos.some(clo => (currentDraft[clo.code] || '') !== (original[clo.code] || ''))
+    return clos.some(clo => (currentDraft[clo.id] || '') !== (original[clo.id] || ''))
   }
 
   const handleSaveStudentGrades = async (studentId: string) => {
+    if (!id) return
+    if (!hasUnsavedChanges(studentId)) {
+      showNotification('Tidak ada perubahan nilai yang dilakukan.', 'warning')
+      return
+    }
+
     const currentDraft = draftGrades[studentId]
-    const original = initialGrades[studentId]
-    
-    let hasChanges = false
-    for (const clo of clos) {
-      if ((currentDraft[clo.code] || '') !== (original[clo.code] || '')) {
-        hasChanges = true
-        break
-      }
+    const scores = clos
+      .filter(c => currentDraft[c.id] !== '' && currentDraft[c.id] !== undefined)
+      .map(c => ({ cloId: c.id, score: Number(currentDraft[c.id]) }))
+
+    if (scores.length === 0) {
+      showNotification('Isi minimal satu nilai CLO sebelum menyimpan.', 'warning')
+      return
     }
 
-    if (!hasChanges) {
-      showNotification("Tidak ada perubahan nilai yang dilakukan.", 'warning')
-      return 
+    setSavingId(studentId)
+    try {
+      const hasil: any = await cloGradeApi.save(studentId, id, scores)
+      setInitialGrades(prev => ({ ...prev, [studentId]: { ...currentDraft } }))
+      setExpandedStudentId(null)
+      showNotification(
+        hasil?.skillsGranted
+          ? `Nilai tersimpan. Nilai akhir ${hasil.finalScore} — ${hasil.skillsGranted} keahlian matkul ditambahkan ke kompetensi mahasiswa.`
+          : `Nilai tersimpan. Nilai akhir mata kuliah: ${hasil?.finalScore ?? '-'}.`,
+        'success',
+      )
+    } catch (err: any) {
+      showNotification(err?.response?.data?.message ?? 'Gagal menyimpan nilai.', 'warning')
+    } finally {
+      setSavingId(null)
     }
-
-    const studentGradesToSave: NilaiMahasiswa[] = clos.map(clo => ({
-      id: `new_${Date.now()}_${clo.code}`,
-      studentId: studentId,
-      code: clo.code,
-      course: subjectData!.name,
-      description: clo.description,
-      skills: clo.skills,
-      score: Number(currentDraft[clo.code]) || 0
-    }))
-
-    await UniversityService.saveNilaiBatch(studentGradesToSave)
-    
-    setInitialGrades(prev => ({
-      ...prev,
-      [studentId]: { ...currentDraft }
-    }))
-
-    setExpandedStudentId(null)
-    showNotification("Perubahan nilai berhasil disimpan.", 'success')
   }
+
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => 
+      s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) || 
+      (s.nim ?? '').toLowerCase().includes(searchStudentQuery.toLowerCase())
+    )
+  }, [students, searchStudentQuery])
 
   const handleExportExcel = () => {
-    showNotification("Data nilai mahasiswa berhasil diekspor ke format Excel.", 'success')
-  }
-
-  const showNotification = (msg: string, type: 'success' | 'warning') => {
-    setNotification({ message: msg, type })
-    setTimeout(() => setNotification(null), 4000)
-    if (type === 'success') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+    if (filteredStudents.length === 0) return
+    const headers = ['NIM', 'Nama', ...clos.map(c => `${c.code} (${c.weight || 0}%)`), 'Nilai Akhir', 'Status']
+    const rows = filteredStudents.map(s => [
+      `"${s.nim ?? '-'}"`,
+      `"${s.name}"`,
+      ...clos.map(c => draftGrades[s.id]?.[c.id] || ''),
+      calculateFinalScore(s.id),
+      `"${checkStatus(s.id)}"`,
+    ])
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `Nilai_${subjectData?.code ?? 'MataKuliah'}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const anyUnsavedChanges = useMemo(() => {
@@ -194,21 +244,13 @@ const UniversityKelolaNilai = () => {
     navigate('/university/manajemen-nilai')
   }
 
-  const filteredStudents = useMemo(() => {
-    return students.filter(s => 
-      s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) || 
-      s.nim.toLowerCase().includes(searchStudentQuery.toLowerCase())
-    )
-  }, [students, searchStudentQuery])
-
   const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE) || 1
   const startIndex = filteredStudents.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1
   const endIndex = Math.min(currentPage * ITEMS_PER_PAGE, filteredStudents.length)
   
   const displayedStudents = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE
-    const end = start + ITEMS_PER_PAGE
-    return filteredStudents.slice(start, end)
+    return filteredStudents.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredStudents, currentPage])
 
   const getPaginationGroup = () => {
@@ -218,32 +260,46 @@ const UniversityKelolaNilai = () => {
     return [1, '...', currentPage, '...', totalPages]
   }
 
-  const handleGradeChange = (studentId: string, cloCode: string, value: string) => {
+  const handleGradeChange = (studentId: string, cloId: string, value: string) => {
     if (value === '') {
-      setDraftGrades(prev => ({...prev, [studentId]: {...prev[studentId], [cloCode]: ''}}))
+      setDraftGrades(prev => ({...prev, [studentId]: {...prev[studentId], [cloId]: ''}}))
       return
     }
-
     const numVal = parseInt(value, 10)
     if (!isNaN(numVal) && numVal >= 0 && numVal <= 100) {
-      setDraftGrades(prev => ({...prev, [studentId]: {...prev[studentId], [cloCode]: numVal.toString()}}))
+      setDraftGrades(prev => ({...prev, [studentId]: {...prev[studentId], [cloId]: numVal.toString()}}))
     }
   }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-[#7b8191]">Memuat data mata kuliah...</p>
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat data mata kuliah...</p>
       </div>
     )
   }
 
-  if (!subjectData) return null
+  if (loadError || !subjectData) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl max-w-md">
+          <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-800">Gagal memuat data</p>
+            <p className="text-xs text-red-700 mt-0.5">{loadError || 'Mata kuliah tidak ditemukan.'}</p>
+          </div>
+        </div>
+        <button onClick={() => navigate('/university/manajemen-nilai')} className="px-6 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] transition">
+          Kembali ke Daftar
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300 pb-12 relative max-w-[1200px] mx-auto">
       
-      {/* Toast Notification dengan Glow & Border Sesuai Tipe (Success = Hijau, Warning = Kuning) */}
       {notification && (
         <div className={`fixed top-8 right-8 z-[100] flex items-start gap-4 p-4 bg-white border rounded-xl w-full max-w-[420px] transform transition-all animate-in slide-in-from-top-10 fade-in duration-500 ease-out overflow-hidden ${
           notification.type === 'success' 
@@ -271,15 +327,11 @@ const UniversityKelolaNilai = () => {
         </div>
       )}
 
-      {/* Header Info & Back */}
       <button onClick={handleBackToList} className="flex items-center gap-2 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-fit mb-1">
         <ArrowLeft size={16} strokeWidth={2.5} /> Kembali ke Daftar Mata Kuliah
       </button>
 
-      {/* Top Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        
-        {/* Card 1: Subject Info */}
         <div className="md:col-span-2 bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm p-6 flex flex-col sm:flex-row justify-between gap-6">
           <div className="flex items-start gap-5">
             <div className="w-14 h-14 rounded-[14px] bg-[#f4f7ff] text-[#0f5ce0] flex items-center justify-center border border-[#eef2ff] shrink-0">
@@ -296,10 +348,12 @@ const UniversityKelolaNilai = () => {
                   <Layers size={16} strokeWidth={2.5} className="text-[#10b981]" /> 
                   {subjectData.sks} SKS
                 </span>
-                <span className="flex items-center gap-1.5 text-[#5b6170]">
-                  <GraduationCap size={16} strokeWidth={2.5} className="text-[#f59e0b]" /> 
-                  Semester {subjectData.semester}
-                </span>
+                {subjectData.semester ? (
+                  <span className="flex items-center gap-1.5 text-[#5b6170]">
+                    <GraduationCap size={16} strokeWidth={2.5} className="text-[#f59e0b]" /> 
+                    Semester {subjectData.semester}
+                  </span>
+                ) : null}
               </div>
             </div>
           </div>
@@ -311,7 +365,6 @@ const UniversityKelolaNilai = () => {
           </div>
         </div>
 
-        {/* Card 2: Total Students */}
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm p-6 flex flex-col justify-center gap-3">
           <div className="w-10 h-10 rounded-[10px] bg-[#e6f9f0] text-[#10b981] flex items-center justify-center border border-[#d1f4e0]">
             <Users size={20} strokeWidth={2.5} />
@@ -321,22 +374,19 @@ const UniversityKelolaNilai = () => {
             <p className="text-[12px] font-bold text-[#7b8191]">Mahasiswa Terdaftar</p>
           </div>
         </div>
-
       </div>
 
-      {/* Distribusi Bobot CLO Section */}
       <div className="flex flex-col gap-4 mt-2">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-[16px] font-bold text-[#111827]">Distribusi Bobot CLO</h2>
             <p className="text-[13px] text-[#7b8191] mt-0.5">Matriks evaluasi yang dihitung untuk hasil pembelajaran kursus.</p>
           </div>
-          <button onClick={handleEditBobotClick} className="flex items-center gap-1.5 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition">
+          <button onClick={handleEditBobotClick} disabled={clos.length === 0} className="flex items-center gap-1.5 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition disabled:opacity-40">
             <Edit2 size={14} strokeWidth={2.5} /> Edit Bobot
           </button>
         </div>
 
-        {/* List Tampilan Bobot CLO */}
         <div className="flex flex-wrap gap-4 animate-in fade-in duration-200">
           {clos.map(clo => (
             <div key={clo.id} className="bg-[#f4f7ff] border border-[#eef2ff] rounded-xl px-5 py-4 flex flex-col justify-center min-w-[140px] shadow-sm">
@@ -348,15 +398,11 @@ const UniversityKelolaNilai = () => {
         </div>
       </div>
 
-      {/* Daftar Nilai Siswa Table Section */}
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm flex flex-col overflow-hidden mt-2">
         
-        {/* Toolbar: Search & Export */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 border-b border-[#e4e9f4]">
           <h2 className="text-[16px] font-bold text-[#111827] whitespace-nowrap">Daftar Nilai Siswa</h2>
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            
-            {/* Search Bar Mahasiswa */}
             <div className="relative w-full sm:w-[250px]">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a0a6b5]" size={14} />
               <input 
@@ -367,18 +413,16 @@ const UniversityKelolaNilai = () => {
                 className="w-full pl-9 pr-4 py-2.5 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] focus:outline-none focus:border-[#0f5ce0] transition shadow-sm"
               />
             </div>
-
-            {/* Tombol Export */}
             <button 
               onClick={handleExportExcel}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0f5ce0] text-white text-[13px] font-bold rounded-lg hover:bg-[#0d4ebf] transition-all shadow-sm"
+              disabled={filteredStudents.length === 0}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0f5ce0] text-white text-[13px] font-bold rounded-lg hover:bg-[#0d4ebf] transition-all shadow-sm disabled:opacity-50"
             >
-              <Download size={14} strokeWidth={2.5} /> Export Excel
+              <Download size={14} strokeWidth={2.5} /> Export CSV
             </button>
           </div>
         </div>
 
-        {/* Tabel */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
@@ -395,19 +439,17 @@ const UniversityKelolaNilai = () => {
                   const isExpanded = expandedStudentId === student.id
                   const finalScore = calculateFinalScore(student.id)
                   const status = checkStatus(student.id)
-
                   return (
                     <React.Fragment key={student.id}>
-                      {/* Main Row */}
                       <tr className={`transition ${isExpanded ? 'bg-[#fafbfe]' : 'hover:bg-[#fafbfe]'}`}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-full ${student.bgColor} flex items-center justify-center font-bold text-[13px]`}>
-                              {student.initial}
+                            <div className={`w-10 h-10 rounded-full ${colorFromName(student.name)} flex items-center justify-center font-bold text-[13px]`}>
+                              {initialFromName(student.name)}
                             </div>
                             <div>
                               <p className="text-[14px] font-bold text-[#111827]">{student.name}</p>
-                              <p className="text-[12px] text-[#7b8191]">NIM: {student.nim}</p>
+                              <p className="text-[12px] text-[#7b8191]">NIM: {student.nim ?? '-'}</p>
                             </div>
                           </div>
                         </td>
@@ -431,8 +473,10 @@ const UniversityKelolaNilai = () => {
                               )}
                               <button 
                                 onClick={() => handleSaveStudentGrades(student.id)}
-                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d4ebf] transition shadow-sm active:scale-95"
+                                disabled={savingId === student.id}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0f5ce0] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d4ebf] transition shadow-sm active:scale-95 disabled:opacity-60"
                               >
+                                {savingId === student.id && <Loader2 size={13} className="animate-spin" />}
                                 Simpan Perubahan
                               </button>
                             </div>
@@ -447,7 +491,6 @@ const UniversityKelolaNilai = () => {
                         </td>
                       </tr>
 
-                      {/* Accordion Content (Matrix) */}
                       {isExpanded && (
                         <tr className="bg-[#fafbfe]">
                           <td colSpan={4} className="px-6 py-6 border-b-2 border-[#e4e9f4]">
@@ -486,8 +529,8 @@ const UniversityKelolaNilai = () => {
                                       <input 
                                         type="number"
                                         min="0" max="100"
-                                        value={draftGrades[student.id]?.[clo.code] !== undefined ? draftGrades[student.id]?.[clo.code] : ''}
-                                        onChange={(e) => handleGradeChange(student.id, clo.code, e.target.value)}
+                                        value={draftGrades[student.id]?.[clo.id] ?? ''}
+                                        onChange={(e) => handleGradeChange(student.id, clo.id, e.target.value)}
                                         className="w-[60px] h-[36px] bg-white border border-[#e4e9f4] rounded-lg text-center text-[15px] font-black text-[#111827] focus:outline-none focus:border-[#0f5ce0] transition hide-arrows"
                                         placeholder="0"
                                       />
@@ -507,7 +550,9 @@ const UniversityKelolaNilai = () => {
               ) : (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-sm text-[#a0a6b5] font-medium">
-                    Mahasiswa dengan kata kunci tersebut tidak ditemukan.
+                    {students.length === 0
+                      ? 'Belum ada mahasiswa terdaftar di kampus ini.'
+                      : 'Mahasiswa dengan kata kunci tersebut tidak ditemukan.'}
                   </td>
                 </tr>
               )}
@@ -515,16 +560,11 @@ const UniversityKelolaNilai = () => {
           </table>
         </div>
 
-        {/* Paginasi Tersinkron - Teks di KIRI, Tombol di KANAN */}
         {filteredStudents.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm rounded-b-[16px] gap-4">
-            
-            {/* BAGIAN KIRI: Teks Informasi */}
             <div className="text-[13px] text-[#7b8191] font-medium text-center sm:text-left w-full sm:w-auto">
               Menampilkan <span className="text-[#111827] font-bold">{startIndex}-{endIndex}</span> dari <span className="text-[#111827] font-bold">{filteredStudents.length}</span> mahasiswa
             </div>
-
-            {/* BAGIAN KANAN: Tombol Paginasi */}
             <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
               <button 
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
@@ -533,7 +573,6 @@ const UniversityKelolaNilai = () => {
               >
                 Sebelumnya
               </button>
-              
               <div className="flex items-center gap-1">
                 {getPaginationGroup().map((item, idx) => (
                   <button 
@@ -550,7 +589,6 @@ const UniversityKelolaNilai = () => {
                   </button>
                 ))}
               </div>
-              
               <button 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
                 disabled={currentPage === totalPages} 
@@ -559,13 +597,10 @@ const UniversityKelolaNilai = () => {
                 Selanjutnya
               </button>
             </div>
-
           </div>
         )}
-
       </div>
 
-      {/* --- MODAL POP-UP EDIT BOBOT DENGAN BACKDROP BLUR --- */}
       {isEditingBobot && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 px-4">
           <div className="bg-white rounded-[20px] p-6 w-full max-w-lg shadow-xl flex flex-col gap-4 animate-in zoom-in-95 duration-200">
@@ -587,7 +622,7 @@ const UniversityKelolaNilai = () => {
                   <div className="flex items-center gap-1 bg-white rounded-lg border border-[#e4e9f4] px-3 py-1.5 focus-within:bg-white focus-within:border-[#0f5ce0]">
                     <input 
                       type="number"
-                      value={draftWeights[clo.id] !== undefined ? draftWeights[clo.id] : ''}
+                      value={draftWeights[clo.id] ?? ''}
                       onChange={(e) => handleWeightChange(clo.id, e.target.value)}
                       className="w-full bg-transparent text-[18px] font-black text-[#0f5ce0] focus:outline-none text-center hide-arrows p-0"
                       placeholder="0"
@@ -618,25 +653,25 @@ const UniversityKelolaNilai = () => {
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setIsEditingBobot(false)} 
-                  className="px-5 py-2.5 text-[13px] font-bold text-[#5b6170] bg-white border border-[#e4e9f4] hover:bg-gray-50 rounded-xl transition"
+                  disabled={savingWeights}
+                  className="px-5 py-2.5 text-[13px] font-bold text-[#5b6170] bg-white border border-[#e4e9f4] hover:bg-gray-50 rounded-xl transition disabled:opacity-50"
                 >
                   Batal
                 </button>
                 <button 
                   onClick={handleSaveBobot}
-                  disabled={totalDraftWeight !== 100}
-                  className="px-5 py-2.5 text-[13px] font-bold text-white bg-[#0f5ce0] hover:bg-[#0d4ebf] disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition shadow-sm"
+                  disabled={totalDraftWeight !== 100 || savingWeights}
+                  className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-bold text-white bg-[#0f5ce0] hover:bg-[#0d4ebf] disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition shadow-sm"
                 >
+                  {savingWeights && <Loader2 size={14} className="animate-spin" />}
                   Simpan
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       )}
 
-      {/* CSS untuk menyembunyikan panah input number */}
       <style>{`
         .hide-arrows::-webkit-outer-spin-button,
         .hide-arrows::-webkit-inner-spin-button {

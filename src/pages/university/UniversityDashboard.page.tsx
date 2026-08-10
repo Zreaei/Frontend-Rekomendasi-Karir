@@ -1,24 +1,38 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, BookOpen, GraduationCap, Star, ChevronDown, ArrowRight, Download } from 'lucide-react'
-import { UniversityService, type DashboardStats, type Course } from './UniversityData'
+import { Users, BookOpen, GraduationCap, Star, ChevronDown, ArrowRight, Download, Loader2, AlertCircle } from 'lucide-react'
+import {
+  universityDashboardApi,
+  type DashboardStats,
+  type CourseProgress,
+} from '../../services/university.service'
 
 const UniversityDashboard = () => {
   const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [stats, setStats] = useState<DashboardStats>({ students: 0, courses: 0, totalCLO: 0, gradesInputted: 0 })
-  const [pendingCourses, setPendingCourses] = useState<Course[]>([])
+  const [pendingCourses, setPendingCourses] = useState<CourseProgress[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
-  const loadDashboard = () => {
-    UniversityService.getDashboardStats().then(setStats)
-    UniversityService.getCourseGradingProgress().then(data => {
-      setPendingCourses(data.filter(c => c.status !== 'Selesai'))
-    })
-  }
+  const loadDashboard = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const { stats: s, courses } = await universityDashboardApi.get()
+      setStats(s)
+      // hanya tampilkan matkul yang penilaiannya belum lengkap
+      setPendingCourses(courses.filter((c) => c.status !== 'Selesai'))
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.message ?? 'Gagal memuat data dashboard. Pastikan server berjalan.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     loadDashboard()
-  }, [])
+  }, [loadDashboard])
 
   const handleGoToKelolaNilai = (subjectId: string) => {
     navigate(`/university/kelola-nilai/${subjectId}`)
@@ -64,6 +78,35 @@ const UniversityDashboard = () => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  // ---------- Loading ----------
+  if (loading) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat ringkasan universitas...</p>
+      </div>
+    )
+  }
+
+  // ---------- Error ----------
+  if (loadError) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl max-w-md">
+          <AlertCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-800">Gagal memuat data</p>
+            <p className="text-xs text-red-700 mt-0.5">{loadError}</p>
+          </div>
+        </div>
+        <button onClick={loadDashboard} className="px-6 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] transition">
+          Coba Lagi
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -75,7 +118,8 @@ const UniversityDashboard = () => {
         </div>
         <button
           onClick={handleExportCSV}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#0f5ce0] text-white text-sm font-bold rounded-xl hover:bg-[#0d4ebf] transition-all shadow-sm active:scale-95"
+          disabled={pendingCourses.length === 0}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#0f5ce0] text-white text-sm font-bold rounded-xl hover:bg-[#0d4ebf] transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download size={18} />
           Ekspor Laporan
@@ -93,7 +137,6 @@ const UniversityDashboard = () => {
             <p className="text-3xl font-bold text-[#111827] mt-1">{stats.students}</p>
           </div>
         </div>
-
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 shadow-sm flex flex-col gap-4">
           <div className="w-10 h-10 rounded-[10px] bg-[#eff6ff] text-[#3b82f6] flex items-center justify-center shrink-0">
             <BookOpen size={20} />
@@ -125,7 +168,6 @@ const UniversityDashboard = () => {
         </div>
 
       </div>
-
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm overflow-hidden">
 
         <div className="px-6 py-5 flex items-start justify-between border-b border-[#e4e9f4]">
@@ -150,9 +192,15 @@ const UniversityDashboard = () => {
             <div className="col-span-2 text-center">Mahasiswa Dinilai</div>
             <div className="col-span-2 text-center">Status</div>
           </div>
-
           <div className="divide-y divide-[#e4e9f4]">
-            {pendingCourses.map((course) => (
+            {pendingCourses.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <p className="text-sm font-semibold text-[#5b6170]">Semua mata kuliah sudah dinilai</p>
+                <p className="text-xs text-[#7b8191] mt-1">
+                  Mata kuliah akan muncul di sini bila masih ada mahasiswa yang belum memiliki nilai.
+                </p>
+              </div>
+            ) : pendingCourses.map((course) => (
               <div key={course.id} className="flex flex-col">
                 <div
                   onClick={() => toggleExpand(course.id)}

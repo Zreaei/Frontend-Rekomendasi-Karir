@@ -21,6 +21,8 @@ interface CloItem {
   semester?: number | null
   deskripsi: string
   skor: number
+  skorKemiripan: number
+  bobotNilai: number
   method: 'semantic' | 'skill'
   matchedRequirement: string | null
 }
@@ -297,7 +299,7 @@ const Company_DetailKandidat = () => {
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e4e9f4] shadow-sm flex flex-col">
+<div className="lg:col-span-2 bg-white rounded-2xl border border-[#e4e9f4] shadow-sm flex flex-col">
           <div className="flex items-center justify-between p-6 border-b border-[#f1f4f9]">
             <h2 className="text-sm font-bold text-[#111827] uppercase tracking-wide">Analisis Kesesuaian CLO</h2>
             <span className="px-3 py-1.5 bg-[#111827] text-white text-xs font-bold rounded-lg">
@@ -326,6 +328,7 @@ const Company_DetailKandidat = () => {
                       {idx + 1}. {item.matkul} <span className="text-[#0f5ce0]">{item.cloCode}</span>
                     </h3>
                     <div className="flex items-center gap-3 shrink-0">
+                      {/* hasil = kemiripan semantik x bobot nilai */}
                       <span className="px-2.5 py-1 bg-[#eef4ff] text-[#0f5ce0] text-xs font-bold rounded-lg">
                         {item.skor}%
                       </span>
@@ -345,15 +348,23 @@ const Company_DetailKandidat = () => {
                           <div className="text-sm font-bold text-[#111827] mt-1">{item.nilai}</div>
                         </div>
                       </div>
+
                       <div>
                         <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">{item.cloCode}</div>
                         <p className="text-sm text-[#5b6170] mt-1 leading-relaxed">{item.deskripsi}</p>
                       </div>
-                      <p className="text-xs text-[#7b8191] italic">
-                        {item.method === 'semantic' && item.matchedRequirement
-                          ? `Kemiripan ${item.skor}% dengan persyaratan: "${item.matchedRequirement}".`
-                          : `Mata kuliah asal CLO ini menutup ${item.skor}% kebutuhan keahlian pada posisi ${toTitleCase(kandidat.roleMatch)}.`}
-                      </p>
+
+                      <div className="flex flex-col gap-1">
+                        <p className="text-xs text-[#7b8191] italic">
+                          {`Kontribusi ${item.skorKemiripan ?? item.skor}% × nilai ${item.nilai} (${(item.bobotNilai ?? 1).toFixed(2)}) = ${item.skor}% kontribusi`}
+                          {item.method !== 'semantic' && ' (berbasis keahlian, embedding belum tersedia)'}
+                        </p>
+                        {item.matchedRequirement && (
+                          <p className="text-xs text-[#a0a6b5] italic">
+                            Paling mendekati persyaratan: "{item.matchedRequirement}"
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -362,7 +373,6 @@ const Company_DetailKandidat = () => {
           </div>
           )}
         </div>
-
       </div>
 
     </div>

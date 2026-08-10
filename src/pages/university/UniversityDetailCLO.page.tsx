@@ -1,20 +1,39 @@
-import { useState, useEffect } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Search, Plus, Edit2, Trash2, BookOpen, CheckCircle2, X, AlertTriangle, FileText, LayoutGrid } from 'lucide-react'
-import { UniversityService, type Subject, type SubjectCLO } from './UniversityData'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Search, Plus, Edit2, Trash2, BookOpen, CheckCircle2, X, AlertTriangle, FileText, LayoutGrid, Loader2 } from 'lucide-react'
+import { subjectApi } from '../../services/university.service'
+
+interface Subject {
+  id: string
+  code: string
+  name: string
+  sks: number
+  semester: number | null
+}
+
+interface SubjectCLO {
+  id: string
+  subjectId: string
+  code: string
+  description: string
+  skills: string[]
+  hasEmbedding?: boolean
+  gradeCount?: number
+}
 
 const UniversityDetailCLO = () => {
   const { id } = useParams<{ id: string }>()
-  const location = useLocation()
   const navigate = useNavigate()
 
-  const [subjectData, setSubjectData] = useState<Subject | undefined>(location.state?.subjectData)
+  const [subjectData, setSubjectData] = useState<Subject | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
-
   const [clos, setClos] = useState<SubjectCLO[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [notification, setNotification] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const [isFormMode, setIsFormMode] = useState(false)
   const [currentSkillInput, setCurrentSkillInput] = useState('')
@@ -22,27 +41,55 @@ const UniversityDetailCLO = () => {
     id: '', subjectId: id || '', code: '', description: '', skills: []
   })
 
+  const loadClos = useCallback(async (subjectId: string) => {
+    const data = await subjectApi.listClos(subjectId)
+    setClos(
+      (data ?? []).map((c: any) => ({
+        id: c.id,
+        subjectId: c.subjectId,
+        code: c.code ?? '-',
+        description: c.description ?? '',
+        skills: c.skills ?? [],
+        hasEmbedding: c.hasEmbedding,
+        gradeCount: c.gradeCount ?? 0,
+      })),
+    )
+  }, [])
+
   useEffect(() => {
     if (!id) {
       navigate('/university/manajemen-clo')
       return
     }
+    let aktif = true
     setIsLoading(true)
-    UniversityService.getSubjectById(id).then(subject => {
-      setSubjectData(subject)
-      setIsLoading(false)
-      if (!subject) {
-        navigate('/university/manajemen-clo')
-        return
-      }
-      loadData(subject.id)
-    })
-  }, [id])
 
-  const loadData = async (subjectId: string) => {
-    const data = await UniversityService.getCLOsBySubject(subjectId)
-    setClos(data)
-  }
+    subjectApi
+      .getById(id)
+      .then(async (subject: any) => {
+        if (!aktif) return
+        if (!subject) {
+          navigate('/university/manajemen-clo')
+          return
+        }
+        setSubjectData({
+          id: subject.id,
+          code: subject.code ?? '-',
+          name: subject.name ?? '-',
+          sks: subject.sks ?? 0,
+          semester: subject.semester ?? null,
+        })
+        await loadClos(subject.id)
+      })
+      .catch(() => {
+        if (aktif) navigate('/university/manajemen-clo')
+      })
+      .finally(() => {
+        if (aktif) setIsLoading(false)
+      })
+
+    return () => { aktif = false }
+  }, [id, navigate, loadClos])
 
   const filteredClos = clos.filter(clo => 
     clo.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -53,31 +100,58 @@ const UniversityDetailCLO = () => {
     setFormData({ id: '', subjectId: subjectData!.id, code: `CLO ${clos.length + 1}`, description: '', skills: [] })
     setIsFormMode(true)
     setCurrentSkillInput('')
+    setErrorMsg(null)
   }
 
   const handleOpenEdit = (clo: SubjectCLO) => {
     setFormData({ ...clo })
     setIsFormMode(true)
     setCurrentSkillInput('')
+    setErrorMsg(null)
   }
 
   const confirmDelete = async () => {
-    if (itemToDelete && subjectData) {
-      await UniversityService.deleteCLO(itemToDelete)
-      await loadData(subjectData.id)
+    if (!itemToDelete || !subjectData) return
+    setDeleting(true)
+    try {
+      await subjectApi.deleteClo(itemToDelete, true)
+      await loadClos(subjectData.id)
       setItemToDelete(null)
-      showNotification("Data CLO berhasil dihapus.")
+      showNotification('Data CLO berhasil dihapus.')
+    } catch (err: any) {
+      setItemToDelete(null)
+      setErrorMsg(err?.response?.data?.message ?? 'Gagal menghapus CLO.')
+    } finally {
+      setDeleting(false)
     }
   }
 
   const handleSave = async () => {
     if (!formData.code || !formData.description || !subjectData) return
-    
-    const newClo: SubjectCLO = { ...formData, id: formData.id || Date.now().toString() }
-    await UniversityService.saveCLO(newClo)
-    await loadData(subjectData.id)
-    setIsFormMode(false)
-    showNotification("Data CLO berhasil disimpan.")
+    setSaving(true)
+    setErrorMsg(null)
+    try {
+      if (formData.id) {
+        await subjectApi.updateClo(formData.id, {
+          code: formData.code.trim(),
+          description: formData.description.trim(),
+          skills: formData.skills,
+        })
+      } else {
+        await subjectApi.createClo(subjectData.id, {
+          code: formData.code.trim(),
+          description: formData.description.trim(),
+          skills: formData.skills,
+        })
+      }
+      await loadClos(subjectData.id)
+      setIsFormMode(false)
+      showNotification('Data CLO berhasil disimpan.')
+    } catch (err: any) {
+      setErrorMsg(err?.response?.data?.message ?? 'Gagal menyimpan CLO.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const showNotification = (msg: string) => {
@@ -106,8 +180,9 @@ const UniversityDetailCLO = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-[#7b8191]">Memuat data mata kuliah...</p>
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat data mata kuliah...</p>
       </div>
     )
   }
@@ -118,7 +193,6 @@ const UniversityDetailCLO = () => {
   //  FORM TAMBAH / EDIT CLO
   if (isFormMode) {
     const formTitle = formData.id ? "Edit Course Learning Outcome (CLO)" : "Tambah Course Learning Outcome (CLO)"
-
     return (
       <div className="w-full flex flex-col gap-6 animate-in slide-in-from-right-8 fade-in duration-300 pb-12 relative max-w-[1000px] mx-auto">
         <button onClick={() => setIsFormMode(false)} className="flex items-center gap-2 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-fit">
@@ -132,6 +206,12 @@ const UniversityDetailCLO = () => {
             Mata Kuliah: <span className="font-semibold text-[#0f5ce0]">{subjectData.name} ({subjectData.code})</span>
           </div>
         </div>
+
+        {errorMsg && (
+          <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl flex items-center gap-2">
+            <AlertTriangle size={18} /> {errorMsg}
+          </div>
+        )}
 
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm p-8 flex flex-col gap-6 border-t-[4px] border-t-[#0f5ce0]">
           
@@ -157,12 +237,16 @@ const UniversityDetailCLO = () => {
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 placeholder="Masukkan deskripsi detail mengenai learning outcome yang diharapkan..."
                 rows={5}
+                maxLength={500}
                 className="w-full px-4 py-4 bg-white border border-[#e4e9f4] rounded-xl text-[14px] text-[#111827] focus:outline-none focus:border-[#0f5ce0] transition resize-none leading-relaxed shadow-sm"
               />
               <span className="absolute bottom-4 right-4 text-[11px] font-medium text-[#a0a6b5]">
                 {formData.description.length}/500
               </span>
             </div>
+            <p className="text-[11px] text-[#7b8191]">
+              Mengubah deskripsi akan memperbarui vektor semantik CLO ini, sehingga pencocokan dengan persyaratan lowongan tetap akurat.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -185,17 +269,20 @@ const UniversityDetailCLO = () => {
                 className="flex-1 min-w-[200px] bg-transparent text-[13px] text-[#111827] focus:outline-none px-2 py-1"
               />
             </div>
+            <p className="text-[11px] text-[#7b8191]">
+              Skill ini juga ditambahkan ke daftar keahlian mata kuliah, dan diberikan ke mahasiswa saat dinyatakan lulus.
+            </p>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#f1f4f9] mt-4">
-            <button onClick={() => setIsFormMode(false)} className="px-8 py-3 text-[13px] font-bold text-[#5b6170] bg-white border border-[#e4e9f4] hover:bg-[#f8faff] rounded-xl transition-colors active:scale-95 shadow-sm">
+            <button onClick={() => setIsFormMode(false)} disabled={saving} className="px-8 py-3 text-[13px] font-bold text-[#5b6170] bg-white border border-[#e4e9f4] hover:bg-[#f8faff] rounded-xl transition-colors active:scale-95 shadow-sm disabled:opacity-50">
               Batal
             </button>
-            <button onClick={handleSave} disabled={!formData.code || !formData.description} className="px-8 py-3 text-[13px] font-bold text-white bg-[#0f5ce0] hover:bg-[#0d4ebf] disabled:bg-gray-300 shadow-sm rounded-xl transition-all active:scale-95">
+            <button onClick={handleSave} disabled={!formData.code || !formData.description || saving} className="flex items-center gap-2 px-8 py-3 text-[13px] font-bold text-white bg-[#0f5ce0] hover:bg-[#0d4ebf] disabled:bg-gray-300 shadow-sm rounded-xl transition-all active:scale-95">
+              {saving && <Loader2 size={16} className="animate-spin" />}
               Simpan CLO
             </button>
           </div>
-
         </div>
       </div>
     )
@@ -204,7 +291,6 @@ const UniversityDetailCLO = () => {
   return (
     <div className="w-full flex flex-col gap-5 animate-in fade-in duration-300 pb-12 relative max-w-[1200px] mx-auto">
       
-      {/* Toast Notification */}
       {notification && (
         <div className="fixed top-8 right-8 z-[100] flex items-start gap-4 p-4 bg-white border border-[#10b981]/40 border-l-4 border-l-[#10b981] rounded-xl shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] w-full max-w-[420px] transform transition-all animate-in slide-in-from-top-10 fade-in duration-500 ease-out overflow-hidden">
           <div className="w-10 h-10 rounded-full bg-[#e6f9f0] flex items-center justify-center shrink-0">
@@ -220,12 +306,16 @@ const UniversityDetailCLO = () => {
         </div>
       )}
 
-      {/* Tombol Kembali */}
       <button onClick={() => navigate('/university/manajemen-clo')} className="flex items-center gap-2 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition w-fit mb-1">
         <ArrowLeft size={16} strokeWidth={2.5} /> Kembali ke Daftar Mata Kuliah
       </button>
 
-      {/* Header Card (Mata Kuliah Info) */}
+      {errorMsg && (
+        <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl flex items-center gap-2">
+          <AlertTriangle size={18} /> {errorMsg}
+        </div>
+      )}
+
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="flex items-start gap-5 w-full">
           <div className="w-12 h-12 rounded-xl bg-[#f4f7ff] text-[#0f5ce0] flex items-center justify-center border border-[#eef2ff] shrink-0 mt-1">
@@ -234,7 +324,9 @@ const UniversityDetailCLO = () => {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="px-2 py-0.5 bg-[#eef4ff] text-[#0f5ce0] text-[10px] font-extrabold rounded uppercase">{subjectData.code}</span>
-              <span className="text-[12px] font-semibold text-[#7b8191]">{subjectData.sks} SKS • Semester {subjectData.semester}</span>
+              <span className="text-[12px] font-semibold text-[#7b8191]">
+                {subjectData.sks} SKS{subjectData.semester ? ` • Semester ${subjectData.semester}` : ''}
+              </span>
             </div>
             <h1 className="text-[22px] font-bold text-[#111827] tracking-tight">{subjectData.name}</h1>
             <p className="text-[13px] text-[#7b8191] mt-1.5 max-w-[500px] leading-relaxed">
@@ -247,10 +339,8 @@ const UniversityDetailCLO = () => {
         </button>
       </div>
 
-      {/* Stats & Search Bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         
-        {/* Total CLO */}
         <div className="bg-white rounded-[16px] border border-[#e4e9f4] p-5 shadow-sm flex flex-col justify-center min-h-[96px]">
           <div className="w-7 h-7 rounded-md bg-[#eef4ff] text-[#0f5ce0] flex items-center justify-center mb-3">
             <LayoutGrid size={14} />
@@ -261,7 +351,6 @@ const UniversityDetailCLO = () => {
           </div>
         </div>
 
-        {/* Search */}
         <div className="md:col-span-3 bg-white rounded-[16px] border border-[#e4e9f4] p-5 shadow-sm flex items-center justify-center min-h-[96px]">
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#a0a6b5]" size={16} />
@@ -276,7 +365,6 @@ const UniversityDetailCLO = () => {
         </div>
       </div>
 
-      {/* Tabel CLO */}
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm flex flex-col overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
@@ -294,6 +382,9 @@ const UniversityDetailCLO = () => {
                   <tr key={clo.id} className="hover:bg-[#fafbfe] transition">
                     <td className="px-6 py-6 align-top">
                       <span className="text-[14px] font-black text-[#0f5ce0] tracking-wide">{clo.code}</span>
+                      {clo.hasEmbedding === false && (
+                        <p className="text-[10px] font-bold text-[#f59e0b] mt-1.5 uppercase tracking-wider">Tanpa vektor</p>
+                      )}
                     </td>
                     <td className="px-6 py-6 align-top">
                       <p className="text-[13px] text-[#111827] leading-relaxed text-justify pr-6">
@@ -325,7 +416,9 @@ const UniversityDetailCLO = () => {
               ) : (
                 <tr>
                   <td colSpan={4} className="text-center py-16 text-[13px] text-[#a0a6b5] font-medium">
-                    Tidak ada data CLO yang ditemukan. Silakan tambah data baru.
+                    {clos.length === 0
+                      ? 'Mata kuliah ini belum memiliki CLO. Klik "Tambah CLO" untuk membuat.'
+                      : 'Tidak ada data CLO yang sesuai dengan pencarian.'}
                   </td>
                 </tr>
               )}
@@ -334,7 +427,6 @@ const UniversityDetailCLO = () => {
         </div>
       </div>
 
-      {/* Modal Hapus */}
       {itemToDelete && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 px-4">
           <div className="bg-white rounded-[20px] p-6 w-full max-w-sm shadow-xl flex flex-col gap-4 text-center animate-in zoom-in-95 duration-200">
@@ -344,27 +436,34 @@ const UniversityDetailCLO = () => {
             <div>
               <h3 className="text-xl font-bold text-[#111827]">Hapus CLO?</h3>
               <p className="text-sm text-[#5b6170] mt-2">
-                Apakah Anda yakin ingin menghapus data CLO ini? Tindakan ini tidak dapat dibatalkan.
+                {(() => {
+                  const n = clos.find(c => c.id === itemToDelete)?.gradeCount ?? 0
+                  return n > 0
+                    ? `CLO ini memiliki ${n} nilai mahasiswa. Menghapusnya akan menghapus nilai-nilai tersebut secara permanen.`
+                    : 'Apakah Anda yakin ingin menghapus data CLO ini? Tindakan ini tidak dapat dibatalkan.'
+                })()}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-4">
               <button 
                 onClick={() => setItemToDelete(null)}
-                className="py-2.5 text-sm font-bold text-[#5b6170] bg-white border border-[#e4e9f4] rounded-xl hover:bg-gray-50 transition active:scale-95"
+                disabled={deleting}
+                className="py-2.5 text-sm font-bold text-[#5b6170] bg-white border border-[#e4e9f4] rounded-xl hover:bg-gray-50 transition active:scale-95 disabled:opacity-50"
               >
                 Batal
               </button>
               <button 
                 onClick={confirmDelete}
-                className="py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 shadow-sm transition active:scale-95"
+                disabled={deleting}
+                className="flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 shadow-sm transition active:scale-95 disabled:opacity-60"
               >
+                {deleting && <Loader2 size={14} className="animate-spin" />}
                 Ya, Hapus
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   )
 }

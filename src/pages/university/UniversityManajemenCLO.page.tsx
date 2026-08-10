@@ -1,27 +1,63 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Trash2, ChevronDown, BookCopy, LayoutGrid, AlertTriangle, ArrowRight, CheckCircle2, X, RotateCcw, ArrowLeft, Info } from 'lucide-react'
-import { UniversityService, type Subject } from './UniversityData'
+import { Search, Plus, Trash2, ChevronDown, BookCopy, LayoutGrid, AlertTriangle, ArrowRight, CheckCircle2, X, RotateCcw, ArrowLeft, Info, Loader2 } from 'lucide-react'
+import { subjectApi } from '../../services/university.service'
+
+interface Subject {
+  id: string
+  code: string
+  name: string
+  sks: number
+  semester: number
+  cloCount: number
+}
 
 const UniversityManajemenCLO = () => {
   const navigate = useNavigate()
   const [subjects, setSubjects] = useState<Subject[]>([])
-  const [subjectStats, setSubjectStats] = useState({ totalSubjects: 0, totalCLO: 0, noCLO: 0 })
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   const [isAddingMode, setIsAddingMode] = useState(false)
   const [newSubject, setNewSubject] = useState({ code: '', name: '', sks: 3, semester: 1 })
   const [formError, setFormError] = useState<string | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
   const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null)
-  const loadData = async () => {
-    const data = await UniversityService.getSubjects()
-    setSubjects(data)
-    const stats = await UniversityService.getSubjectStats()
-    setSubjectStats(stats)
-  }
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const rows = await subjectApi.list()
+      setSubjects(
+        (rows ?? []).map((s: any) => ({
+          id: s.id,
+          code: s.code ?? '-',
+          name: s.name ?? '-',
+          sks: s.sks ?? 0,
+          semester: s.semester ?? 0,
+          cloCount: s.cloCount ?? 0,
+        })),
+      )
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.message ?? 'Gagal memuat mata kuliah. Pastikan server berjalan.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
+
+  // Statistik diturunkan dari daftar yang sudah dimuat, tanpa permintaan tambahan.
+  const subjectStats = useMemo(() => ({
+    totalSubjects: subjects.length,
+    totalCLO: subjects.reduce((acc, s) => acc + s.cloCount, 0),
+    noCLO: subjects.filter((s) => s.cloCount === 0).length,
+  }), [subjects])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [semesterFilter, setSemesterFilter] = useState('Semua Semester')
@@ -30,8 +66,14 @@ const UniversityManajemenCLO = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
-  const availableSemesters = useMemo(() => Array.from(new Set(subjects.map(s => s.semester))).sort(), [subjects])
-  const availableSks = useMemo(() => Array.from(new Set(subjects.map(s => s.sks))).sort(), [subjects])
+  const availableSemesters = useMemo(
+    () => Array.from(new Set(subjects.map(s => s.semester))).filter(Boolean).sort((a, b) => a - b),
+    [subjects],
+  )
+  const availableSks = useMemo(
+    () => Array.from(new Set(subjects.map(s => s.sks))).filter(Boolean).sort((a, b) => a - b),
+    [subjects],
+  )
 
   const filteredSubjects = useMemo(() => {
     return subjects.filter((subject) => {
@@ -63,40 +105,50 @@ const UniversityManajemenCLO = () => {
   }
 
   const confirmDelete = async () => {
-    if (subjectToDelete) {
-      await UniversityService.deleteSubject(subjectToDelete)
+    if (!subjectToDelete) return
+    setDeleting(true)
+    try {
+      await subjectApi.remove(subjectToDelete)
       await loadData()
       setSubjectToDelete(null)
       window.scrollTo({ top: 0, behavior: 'smooth' })
-      setNotification("Mata kuliah berhasil dihapus dari sistem.")
+      setNotification('Mata kuliah berhasil dihapus dari sistem.')
       setTimeout(() => setNotification(null), 4000)
+    } catch (err: any) {
+      setSubjectToDelete(null)
+      setLoadError(err?.response?.data?.message ?? 'Gagal menghapus mata kuliah.')
+    } finally {
+      setDeleting(false)
     }
   }
 
   const handleSaveSubject = async () => {
     if (!newSubject.code || !newSubject.name) {
-      setFormError("Kode dan Nama Mata Kuliah wajib diisi.")
+      setFormError('Kode dan Nama Mata Kuliah wajib diisi.')
       return
     }
-    
-    const subjectData: Subject = {
-      id: Date.now().toString(),
-      code: newSubject.code,
-      name: newSubject.name,
-      sks: Number(newSubject.sks),
-      semester: Number(newSubject.semester),
-      cloCount: 0 
-    }
 
-    await UniversityService.saveSubject(subjectData)
-    await loadData()
-    
-    setIsAddingMode(false)
-    setNewSubject({ code: '', name: '', sks: 3, semester: 1 })
+    setSaving(true)
     setFormError(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-    setNotification("Mata kuliah baru berhasil ditambahkan!")
-    setTimeout(() => setNotification(null), 4000)
+    try {
+      await subjectApi.create({
+        code: newSubject.code.trim(),
+        name: newSubject.name.trim(),
+        sks: Number(newSubject.sks),
+        semester: Number(newSubject.semester),
+      })
+      await loadData()
+
+      setIsAddingMode(false)
+      setNewSubject({ code: '', name: '', sks: 3, semester: 1 })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setNotification('Mata kuliah baru berhasil ditambahkan!')
+      setTimeout(() => setNotification(null), 4000)
+    } catch (err: any) {
+      setFormError(err?.response?.data?.message ?? 'Gagal menyimpan mata kuliah.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const resetFilters = () => {
@@ -107,6 +159,7 @@ const UniversityManajemenCLO = () => {
   }
 
   const isFilterActive = searchQuery !== '' || semesterFilter !== 'Semua Semester' || sksFilter !== 'Filter SKS'
+
   if (isAddingMode) {
     return (
       <div className="w-full flex flex-col gap-6 animate-in slide-in-from-right-8 fade-in duration-300 pb-12 relative max-w-[1000px] mx-auto">
@@ -213,19 +266,50 @@ const UniversityManajemenCLO = () => {
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#f1f4f9] mt-2">
             <button 
               onClick={() => { setIsAddingMode(false); setFormError(null); }}
-              className="px-6 py-2.5 text-[14px] font-bold text-[#0f5ce0] bg-white hover:bg-[#f8faff] rounded-xl transition-colors active:scale-95"
+              disabled={saving}
+              className="px-6 py-2.5 text-[14px] font-bold text-[#0f5ce0] bg-white hover:bg-[#f8faff] rounded-xl transition-colors active:scale-95 disabled:opacity-50"
             >
               Batal
             </button>
             <button 
               onClick={handleSaveSubject}
-              className="px-6 py-2.5 text-[14px] font-bold text-white bg-[#0f5ce0] hover:bg-[#0d4ebf] shadow-sm rounded-xl transition-all active:scale-95"
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2.5 text-[14px] font-bold text-white bg-[#0f5ce0] hover:bg-[#0d4ebf] shadow-sm rounded-xl transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             >
+              {saving && <Loader2 size={16} className="animate-spin" />}
               Simpan Mata Kuliah
             </button>
           </div>
 
         </div>
+      </div>
+    )
+  }
+
+  // ---------- Loading ----------
+  if (loading) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-3 text-[#5b6170]">
+        <Loader2 size={28} className="animate-spin text-[#0f5ce0]" />
+        <p className="text-sm font-medium">Memuat mata kuliah...</p>
+      </div>
+    )
+  }
+
+  // ---------- Error ----------
+  if (loadError && subjects.length === 0) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl max-w-md">
+          <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-800">Gagal memuat data</p>
+            <p className="text-xs text-red-700 mt-0.5">{loadError}</p>
+          </div>
+        </div>
+        <button onClick={loadData} className="px-6 py-2.5 bg-[#0f5ce0] rounded-xl text-sm font-bold text-white hover:bg-[#0d4ebf] transition">
+          Coba Lagi
+        </button>
       </div>
     )
   }
@@ -249,6 +333,13 @@ const UniversityManajemenCLO = () => {
         </div>
       )}
 
+      {loadError && subjects.length > 0 && (
+        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
+          <AlertTriangle size={18} className="text-red-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">{loadError}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-[26px] font-bold text-[#111827] tracking-tight">Manajemen CLO & Matakuliah</h1>
@@ -261,9 +352,6 @@ const UniversityManajemenCLO = () => {
             <div className="w-11 h-11 rounded-[10px] bg-[#f4f7ff] text-[#0f5ce0] flex items-center justify-center border border-[#eef2ff]">
               <BookCopy size={20} strokeWidth={2.5} />
             </div>
-            <span className="px-3 py-1.5 bg-[#f4f7ff] text-[#0f5ce0] text-[10px] font-extrabold uppercase tracking-wider rounded-md">
-              Semester Ganjil
-            </span>
           </div>
           <div className="mt-4">
             <p className="text-[13px] font-bold text-[#7b8191]">Total Mata Kuliah</p>
@@ -397,7 +485,7 @@ const UniversityManajemenCLO = () => {
                       {subject.sks} SKS
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-[13px] font-medium text-[#5b6170]">
-                      Semester {subject.semester}
+                      {subject.semester ? `Semester ${subject.semester}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-[13px] font-medium text-[#5b6170]">
                       {subject.cloCount} CLO
@@ -416,7 +504,7 @@ const UniversityManajemenCLO = () => {
                         
                         {/* Tombol Kelola CLO */}
                         <button 
-                          onClick={() => navigate(`/university/detail-clo/${subject.id}`, { state: { subjectData: subject } })}
+                          onClick={() => navigate(`/university/detail-clo/${subject.id}`)}
                           className="flex items-center gap-1.5 text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] transition"
                         >
                           Kelola CLO <ArrowRight size={14} strokeWidth={2.5} />
@@ -429,7 +517,9 @@ const UniversityManajemenCLO = () => {
               ) : (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-sm text-[#a0a6b5] font-medium">
-                    Tidak ada mata kuliah yang sesuai dengan filter atau pencarian.
+                    {subjects.length === 0
+                      ? 'Belum ada mata kuliah. Tambahkan lewat tombol "Tambah Mata Kuliah".'
+                      : 'Tidak ada mata kuliah yang sesuai dengan filter atau pencarian.'}
                   </td>
                 </tr>
               )}
@@ -437,7 +527,7 @@ const UniversityManajemenCLO = () => {
           </table>
         </div>
 
-        {/* Paginasi Ditukar Posisinya */}
+        {/* Paginasi */}
         {filteredSubjects.length > 0 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm rounded-b-[16px]">
             
@@ -494,20 +584,23 @@ const UniversityManajemenCLO = () => {
             <div>
               <h3 className="text-xl font-bold text-[#111827]">Hapus Data?</h3>
               <p className="text-sm text-[#5b6170] mt-2">
-                Apakah Anda yakin ingin menghapus data mata kuliah ini? Tindakan ini tidak dapat dibatalkan.
+                Mata kuliah beserta seluruh CLO-nya akan dihapus. Tindakan ini tidak dapat dibatalkan.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-4">
               <button 
                 onClick={() => setSubjectToDelete(null)}
-                className="py-2.5 text-sm font-bold text-[#5b6170] bg-white border border-[#e4e9f4] rounded-xl hover:bg-gray-50 transition active:scale-95"
+                disabled={deleting}
+                className="py-2.5 text-sm font-bold text-[#5b6170] bg-white border border-[#e4e9f4] rounded-xl hover:bg-gray-50 transition active:scale-95 disabled:opacity-50"
               >
                 Batal
               </button>
               <button 
                 onClick={confirmDelete}
-                className="py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 shadow-sm transition active:scale-95"
+                disabled={deleting}
+                className="flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 shadow-sm transition active:scale-95 disabled:opacity-60"
               >
+                {deleting && <Loader2 size={14} className="animate-spin" />}
                 Ya, Hapus
               </button>
             </div>
