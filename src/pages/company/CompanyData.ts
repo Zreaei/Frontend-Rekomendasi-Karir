@@ -47,16 +47,112 @@ export interface Lowongan {
   status: 'Aktif' | 'Draft' | 'Selesai';
   tanggalPosting?: string; 
   tanggalBatas?: string;
+  // Daftar tanggung jawab yang ditulis oleh HR saat membuat lowongan.
+  // Ini yang jadi acuan judul bernomor pada "Analisis Kompetensi" di halaman
+  // detail kandidat — BUKAN nama mata kuliah.
+  tanggungJawab?: string[];
 }
 
 export const initialLowongan: Lowongan[] = [
-  { id: 1, role: 'Junior Full-Stack Engineer', department: 'Tech & Product', type: 'Full-time', location: 'Jakarta', date: 'DIBUAT 12 OKT 2023', status: 'Aktif' },
-  { id: 2, role: 'Senior UI/UX Designer', department: 'Creative', type: 'Contract', location: 'Remote', date: 'DIBUAT 10 OKT 2023', status: 'Draft' },
-  { id: 3, role: 'Accounting Intern', department: 'Finance', type: 'Internship', location: 'Jakarta', date: 'DIBUAT 15 SEP 2023', status: 'Selesai' },
-  { id: 4, role: 'Data Analyst', department: 'Business Intelligence', type: 'Full-time', location: 'Jakarta', date: 'DIBUAT 01 OKT 2023', status: 'Aktif' },
-  { id: 5, role: 'Security Engineer', department: 'Engineering', type: 'Full-time', location: 'Jakarta', date: 'DIBUAT 15 SEP 2023', status: 'Aktif' },
-  { id: 6, role: 'Customer Success Lead', department: 'Ops', type: 'Full-time', location: 'Bali', date: 'DIBUAT 15 SEP 2023', status: 'Selesai' },
-  { id: 7, role: 'Content Strategist', department: 'Marketing', type: 'Contract', location: 'Jakarta', date: 'DIBUAT 05 SEP 2023', status: 'Draft' }
+  {
+    id: 1,
+    role: 'Junior Full-Stack Engineer',
+    department: 'Tech & Product',
+    type: 'Full-time',
+    location: 'Jakarta',
+    date: 'DIBUAT 12 OKT 2023',
+    status: 'Aktif',
+    tanggungJawab: [
+      'Responsive UI Component Development',
+      'Frontend State Management',
+      'RESTful API Design & Development',
+      'Database Modeling & Optimization'
+    ]
+  },
+  {
+    id: 2,
+    role: 'Senior UI/UX Designer',
+    department: 'Creative',
+    type: 'Contract',
+    location: 'Remote',
+    date: 'DIBUAT 10 OKT 2023',
+    status: 'Draft',
+    tanggungJawab: [
+      'User Research & Persona Development',
+      'Wireframing & Prototyping',
+      'Design System Maintenance'
+    ]
+  },
+  {
+    id: 3,
+    role: 'Accounting Intern',
+    department: 'Finance',
+    type: 'Internship',
+    location: 'Jakarta',
+    date: 'DIBUAT 15 SEP 2023',
+    status: 'Selesai',
+    tanggungJawab: [
+      'Financial Record Reconciliation',
+      'Invoice Processing',
+      'Expense Report Auditing'
+    ]
+  },
+  {
+    id: 4,
+    role: 'Data Analyst',
+    department: 'Business Intelligence',
+    type: 'Full-time',
+    location: 'Jakarta',
+    date: 'DIBUAT 01 OKT 2023',
+    status: 'Aktif',
+    tanggungJawab: [
+      'Data Cleaning & Preprocessing',
+      'Exploratory Data Analysis & Visualization',
+      'Business Intelligence Reporting'
+    ]
+  },
+  {
+    id: 5,
+    role: 'Security Engineer',
+    department: 'Engineering',
+    type: 'Full-time',
+    location: 'Jakarta',
+    date: 'DIBUAT 15 SEP 2023',
+    status: 'Aktif',
+    tanggungJawab: [
+      'Vulnerability Assessment & Penetration Testing',
+      'Security Infrastructure Hardening',
+      'Incident Response & Monitoring'
+    ]
+  },
+  {
+    id: 6,
+    role: 'Customer Success Lead',
+    department: 'Ops',
+    type: 'Full-time',
+    location: 'Bali',
+    date: 'DIBUAT 15 SEP 2023',
+    status: 'Selesai',
+    tanggungJawab: [
+      'Client Onboarding & Training',
+      'Retention Strategy Execution',
+      'Cross-functional Escalation Management'
+    ]
+  },
+  {
+    id: 7,
+    role: 'Content Strategist',
+    department: 'Marketing',
+    type: 'Contract',
+    location: 'Jakarta',
+    date: 'DIBUAT 05 SEP 2023',
+    status: 'Draft',
+    tanggungJawab: [
+      'Editorial Calendar Planning',
+      'SEO Content Optimization',
+      'Brand Voice Guidelines'
+    ]
+  }
 ];
 
 export const getApplicantCountForRole = (role: string): number => {
@@ -67,6 +163,10 @@ export const getAvgMatchForRole = (role: string): number | null => {
   const list = initialApplicants.filter(a => a.role === role)
   if (list.length === 0) return null
   return Math.round(list.reduce((acc, a) => acc + a.match, 0) / list.length)
+}
+
+export const getActiveLowongan = (): Lowongan[] => {
+  return initialLowongan.filter(l => l.status === 'Aktif')
 }
 
 // 3. MANAJEMEN DATA PROFIL PERUSAHAAN
@@ -195,13 +295,36 @@ export const getPendingRecommendationsCount = (): number => {
 
 // 7. DETAIL AKADEMIK KANDIDAT (UNTUK HALAMAN DETAIL KANDIDAT)
 // ==========================================
+
+// CLO = bukti akademik (nama mata kuliah, nilai, kontribusi) yang mendukung
+// sebuah tanggung jawab. Ini BUKAN judul bernomor pada UI — hanya isi di
+// dalam accordion.
 export interface CloItem {
   id: number;
-  skor: number;
-  matkul: string;
-  nilai: number;
-  kode: string;
-  deskripsi: string;
+  kode: string;        // "CLO 1"
+  deskripsi: string;   // deskripsi singkat capaian pembelajaran, mis. "Implement responsive layouts using modern CSS frameworks"
+  matkul: string;      // nama mata kuliah, mis. "Pemrograman Web"
+  nilai: number;       // nilai mata kuliah, mis. 93
+  kontribusi: number;  // % kontribusi CLO ini terhadap tanggung jawab, mis. 90
+}
+
+// TanggungJawab = judul bernomor ("TANGGUNG JAWAB 1", dst) pada UI.
+// Teksnya harus persis sama dengan yang ditulis HR di Lowongan.tanggungJawab.
+export interface TanggungJawabItem {
+  id: number;
+  deskripsi: string;   // persis sama dengan string di Lowongan.tanggungJawab
+  matchScore: number;
+  cloItems: CloItem[];
+}
+
+// KompetensiGroup = satu card "Analisis Kompetensi: {kategori}".
+// Satu group merepresentasikan satu lowongan yang sedang dibuka (Aktif).
+export interface KompetensiGroup {
+  id: number;
+  lowonganId: number;
+  kategori: string;     // diambil dari Lowongan.role
+  matchScore: number;
+  tanggungJawabList: TanggungJawabItem[];
 }
 
 export interface CandidateAcademicDetail {
@@ -210,9 +333,12 @@ export interface CandidateAcademicDetail {
   periode: string;
   ipk: string;
   sertifikat: { nama: string; link: string }[];
-  cloAnalysis: CloItem[];
+  kompetensiGroups: KompetensiGroup[];
 }
 
+// Data hasil kurasi manual (opsional) per kandidat. Kalau id kandidat tidak
+// ada di sini, sistem otomatis membangun kompetensiGroups dari lowongan yang
+// sedang Aktif lewat buildKompetensiGroupsForCandidate().
 export const candidateAcademicDetails: Record<number, CandidateAcademicDetail> = {
   1: {
     bio: 'Budi Santoso adalah lulusan Computer Science dengan minat kuat pada pengembangan aplikasi berskala besar. Memiliki pengalaman proyek dalam pengembangan sistem berbasis web menggunakan React.js dan TypeScript, serta terbiasa bekerja dalam tim lintas fungsi menggunakan metodologi Agile.',
@@ -224,18 +350,167 @@ export const candidateAcademicDetails: Record<number, CandidateAcademicDetail> =
       { nama: 'Google Data Analytics Professional', link: 'https://grow.google/certificates/data-analytics/' },
       { nama: 'Meta Front-End Developer Professional', link: 'https://www.coursera.org/professional-certificates/meta-front-end-developer' }
     ],
-    cloAnalysis: [
-      { id: 1, skor: 98, matkul: 'Komunikasi Profesional', nilai: 100, kode: 'CLO 5', deskripsi: 'Menunjukkan etika profesional dan kemampuan komunikasi interpersonal yang efektif dalam lingkungan kerja kolaboratif.' },
-      { id: 2, skor: 95, matkul: 'Basis Data Terdistribusi', nilai: 95, kode: 'CLO 2', deskripsi: 'Mampu merancang, mengimplementasikan, dan mengoptimalkan sistem basis data terdistribusi yang andal dan aman.' },
-      { id: 3, skor: 96, matkul: 'Struktur Data', nilai: 95, kode: 'CLO 1', deskripsi: 'Mampu mengimplementasikan berbagai struktur data seperti array, stack, queue, tree, dan graf dalam pemecahan persoalan yang efisien serta menyelesaikan masalah komputasi kompleks.' },
-      { id: 4, skor: 96, matkul: 'Rekayasa Perangkat Lunak', nilai: 94, kode: 'CLO 4', deskripsi: 'Mampu merencanakan, mengelola, dan mengeksekusi proyek pengembangan perangkat lunak menggunakan metodologi Agile secara kolaboratif.' },
-      { id: 5, skor: 94, matkul: 'Desain & Analisis Algoritma', nilai: 93, kode: 'CLO 3', deskripsi: 'Mampu menganalisis kompleksitas waktu dan ruang suatu algoritma serta menerapkan strategi optimasi yang tepat.' }
+    kompetensiGroups: [
+      // Lowongan Aktif #1 — Junior Full-Stack Engineer
+      {
+        id: 1,
+        lowonganId: 1,
+        kategori: 'Junior Full-Stack Engineer',
+        matchScore: 92,
+        tanggungJawabList: [
+          {
+            id: 1,
+            deskripsi: 'Responsive UI Component Development',
+            matchScore: 92,
+            cloItems: [
+              { id: 1, kode: 'CLO 1', deskripsi: 'Implement responsive layouts using modern CSS frameworks', matkul: 'Pemrograman Web', nilai: 93, kontribusi: 90 },
+              { id: 3, kode: 'CLO 3', deskripsi: 'Build interactive components with JavaScript', matkul: 'Framework Frontend Modern', nilai: 95, kontribusi: 85 }
+            ]
+          },
+          {
+            id: 2,
+            deskripsi: 'Frontend State Management',
+            matchScore: 88,
+            cloItems: [
+              { id: 2, kode: 'CLO 2', deskripsi: 'Architect robust state management patterns', matkul: 'Desain Pola Perangkat Lunak', nilai: 85, kontribusi: 95 }
+            ]
+          },
+          {
+            id: 3,
+            deskripsi: 'RESTful API Design & Development',
+            matchScore: 84,
+            cloItems: [
+              { id: 4, kode: 'CLO 4', deskripsi: 'Design and implement scalable RESTful services', matkul: 'Pengembangan Web Lanjut', nilai: 88, kontribusi: 80 }
+            ]
+          },
+          {
+            id: 4,
+            deskripsi: 'Database Modeling & Optimization',
+            matchScore: 78,
+            cloItems: [
+              { id: 6, kode: 'CLO 6', deskripsi: 'Optimize SQL queries for high-performance retrieval', matkul: 'Sistem Basis Data', nilai: 82, kontribusi: 75 }
+            ]
+          }
+        ]
+      },
+      // Lowongan Aktif #2 — Data Analyst
+      {
+        id: 2,
+        lowonganId: 4,
+        kategori: 'Data Analyst',
+        matchScore: 58,
+        tanggungJawabList: [
+          {
+            id: 1,
+            deskripsi: 'Data Cleaning & Preprocessing',
+            matchScore: 60,
+            cloItems: [
+              { id: 1, kode: 'CLO 1', deskripsi: 'Menerapkan teknik dasar pengolahan data terstruktur', matkul: 'Pengantar Basis Data', nilai: 78, kontribusi: 65 }
+            ]
+          },
+          {
+            id: 2,
+            deskripsi: 'Exploratory Data Analysis & Visualization',
+            matchScore: 56,
+            cloItems: [
+              { id: 2, kode: 'CLO 2', deskripsi: 'Membuat visualisasi data untuk mendukung pengambilan keputusan', matkul: 'Visualisasi Data', nilai: 75, kontribusi: 60 }
+            ]
+          }
+        ]
+      },
+      // Lowongan Aktif #3 — Security Engineer
+      {
+        id: 3,
+        lowonganId: 5,
+        kategori: 'Security Engineer',
+        matchScore: 45,
+        tanggungJawabList: [
+          {
+            id: 1,
+            deskripsi: 'Vulnerability Assessment & Penetration Testing',
+            matchScore: 45,
+            cloItems: [
+              { id: 1, kode: 'CLO 1', deskripsi: 'Memahami konsep dasar keamanan aplikasi web', matkul: 'Keamanan Jaringan', nilai: 72, kontribusi: 55 }
+            ]
+          }
+        ]
+      }
     ]
   }
 }
 
+const clampScore = (value: number): number => Math.min(98, Math.max(40, Math.round(value)))
+
+const toTitleCaseLocal = (value: string): string => {
+  return value
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+const buildCloItemsForTanggungJawab = (
+  skills: string[],
+  tjIndex: number,
+  baseScore: number
+): CloItem[] => {
+  const relevantSkills = skills.length > 0 ? skills : ['Kerja Tim', 'Komunikasi']
+  // Ambil 1-2 skill sebagai bukti CLO untuk tanggung jawab ini, digilir
+  // berdasarkan index tanggung jawab supaya tidak selalu skill yang sama.
+  const picked = [
+    relevantSkills[tjIndex % relevantSkills.length],
+    relevantSkills[(tjIndex + 1) % relevantSkills.length]
+  ].filter((skill, idx, arr) => arr.indexOf(skill) === idx)
+
+  return picked.map((skill, idx) => ({
+    id: idx + 1,
+    kode: `CLO ${idx + 1}`,
+    deskripsi: `Menerapkan kompetensi ${skill} secara profesional sesuai standar capaian pembelajaran`,
+    matkul: toTitleCaseLocal(skill),
+    nilai: clampScore(baseScore - idx * 3),
+    kontribusi: clampScore(baseScore + 5 - idx * 5)
+  }))
+}
+
+// Membangun kompetensiGroups secara otomatis: satu group per lowongan yang
+// statusnya Aktif, dan judul bernomor di dalamnya diambil PERSIS dari
+// Lowongan.tanggungJawab (ditulis HR) — bukan dari nama mata kuliah.
+export const buildKompetensiGroupsForCandidate = (kandidat: Recommendation): KompetensiGroup[] => {
+  const activeLowongan = getActiveLowongan()
+
+  return activeLowongan.map((lowongan, groupIdx) => {
+    const isPrimaryMatch = lowongan.role.toUpperCase() === kandidat.roleMatch.toUpperCase()
+    const groupBaseScore = isPrimaryMatch
+      ? kandidat.matchScore
+      : clampScore(kandidat.matchScore - 20 - groupIdx * 6)
+
+    const tanggungJawabSource = lowongan.tanggungJawab && lowongan.tanggungJawab.length > 0
+      ? lowongan.tanggungJawab
+      : [`Kompetensi Umum ${lowongan.role}`]
+
+    const tanggungJawabList: TanggungJawabItem[] = tanggungJawabSource.map((deskripsi, tjIdx) => {
+      const tjScore = clampScore(groupBaseScore - tjIdx * 4)
+      return {
+        id: tjIdx + 1,
+        deskripsi,
+        matchScore: tjScore,
+        cloItems: buildCloItemsForTanggungJawab(kandidat.skills, tjIdx, tjScore)
+      }
+    })
+
+    return {
+      id: groupIdx + 1,
+      lowonganId: lowongan.id,
+      kategori: lowongan.role,
+      matchScore: groupBaseScore,
+      tanggungJawabList
+    }
+  })
+}
+
 const buildFallbackAcademicDetail = (kandidat: Recommendation): CandidateAcademicDetail => {
   const skillList = kandidat.skills.length > 0 ? kandidat.skills : ['Kerja Tim', 'Komunikasi']
+
   return {
     bio: `${kandidat.name} adalah lulusan ${kandidat.major} dari ${kandidat.university} dengan kompetensi utama pada ${skillList.slice(0, 3).join(', ')}. Berdasarkan riwayat akademik, kandidat ini memiliki kecocokan ${kandidat.matchScore}% terhadap posisi ${kandidat.roleMatch}.`,
     jenjang: `S1 ${kandidat.major}`,
@@ -244,14 +519,7 @@ const buildFallbackAcademicDetail = (kandidat: Recommendation): CandidateAcademi
     sertifikat: [
       { nama: `Sertifikasi Kompetensi ${skillList[0]}`, link: '#' }
     ],
-    cloAnalysis: skillList.slice(0, 5).map((skill, idx) => ({
-      id: idx + 1,
-      skor: Math.max(60, kandidat.matchScore - idx * 2),
-      matkul: skill,
-      nilai: Math.max(60, kandidat.matchScore - idx),
-      kode: `CLO ${idx + 1}`,
-      deskripsi: `Mampu menerapkan kompetensi ${skill} secara profesional sesuai standar kompetensi lulusan.`
-    }))
+    kompetensiGroups: buildKompetensiGroupsForCandidate(kandidat)
   }
 }
 

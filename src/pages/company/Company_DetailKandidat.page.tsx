@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { GraduationCap, Briefcase, ChevronDown, ChevronUp, ExternalLink, User, Award, Loader2, AlertCircle } from 'lucide-react'
+import { GraduationCap, Briefcase, ChevronDown, ChevronUp, ExternalLink, User, Award, Loader2, AlertCircle, Target } from 'lucide-react'
 import { matchingApi, invitationApi } from '../../services/company.service'
 
 const toTitleCase = (value: string): string => {
@@ -11,20 +11,31 @@ const toTitleCase = (value: string): string => {
     .join(' ')
 }
 
-// Satu baris analisis = satu CLO (bukan satu matkul).
+// Satu CLO yang menutupi sebuah tanggung jawab.
 interface CloItem {
-  id: number
-  matkul: string
-  subjectCode: string
-  cloCode: string
-  nilai: string
-  semester?: number | null
+  id: string
+  kode: string
   deskripsi: string
-  skor: number
+  matkul: string
+  nilai: string
   skorKemiripan: number
   bobotNilai: number
-  method: 'semantic' | 'skill'
-  matchedRequirement: string | null
+  kontribusi: number
+}
+
+interface TanggungJawab {
+  id: string
+  deskripsi: string
+  matchScore: number
+  cloItems: CloItem[]
+}
+
+// Satu kelompok = satu lowongan aktif perusahaan.
+interface KompetensiGroup {
+  id: string
+  kategori: string
+  matchScore: number
+  tanggungJawabList: TanggungJawab[]
 }
 
 interface CandidateData {
@@ -60,13 +71,17 @@ const Company_DetailKandidat = () => {
 
   const [kandidat, setKandidat] = useState<CandidateData | null>(null)
   const [certificates, setCertificates] = useState<CertItem[]>([])
-  const [cloAnalysis, setCloAnalysis] = useState<CloItem[]>([])
+  const [kompetensiGroups, setKompetensiGroups] = useState<KompetensiGroup[]>([])
   const [skills, setSkills] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
   const [invited, setInvited] = useState(false)
+
+  // Kunci tanggung jawab yang sedang terbuka, berformat "groupId-tjId"
+  // agar unik lintas seluruh card kompetensi.
+  const [openKeys, setOpenKeys] = useState<string[]>([])
 
   const loadData = useCallback(async () => {
     if (!id) return
@@ -75,8 +90,17 @@ const Company_DetailKandidat = () => {
       const data: any = await matchingApi.candidateDetail(id, jobId)
       setKandidat(data?.candidate ?? null)
       setCertificates(data?.certificates ?? [])
-      setCloAnalysis(data?.cloAnalysis ?? [])
       setSkills((data?.candidate?.skills ?? []).map((s: any) => s?.name).filter(Boolean))
+
+      const groups: KompetensiGroup[] = data?.kompetensiGroups ?? []
+      setKompetensiGroups(groups)
+
+      // Buka tanggung jawab pertama pada tiap card sebagai keadaan awal.
+      setOpenKeys(
+        groups
+          .filter((g) => g.tanggungJawabList.length > 0)
+          .map((g) => `${g.id}-${g.tanggungJawabList[0].id}`),
+      )
     } catch (err: any) {
       setKandidat(null)
       setLoadError(err?.response?.data?.message ?? 'Gagal memuat detail kandidat.')
@@ -89,10 +113,9 @@ const Company_DetailKandidat = () => {
     loadData()
   }, [loadData])
 
-  const [openIds, setOpenIds] = useState<number[]>([1, 2, 3])
-
-  const toggleItem = (itemId: number) => {
-    setOpenIds(prev => prev.includes(itemId) ? prev.filter(i => i !== itemId) : [...prev, itemId])
+  const toggleItem = (groupId: string, tjId: string) => {
+    const key = `${groupId}-${tjId}`
+    setOpenKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
   }
 
   const inisial = useMemo(() => {
@@ -280,12 +303,7 @@ const Company_DetailKandidat = () => {
                     <span className="text-xs font-semibold text-[#111827] truncate">{sert.title}</span>
                   </div>
                   {sert.fileUrl ? (
-                    <a
-                      href={sert.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs font-bold text-[#0f5ce0] hover:underline shrink-0"
-                    >
+                    <a href={sert.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs font-bold text-[#0f5ce0] hover:underline shrink-0">
                       Lihat <ExternalLink size={12} />
                     </a>
                   ) : (
@@ -299,82 +317,88 @@ const Company_DetailKandidat = () => {
           </div>
         </div>
 
-<div className="lg:col-span-2 bg-white rounded-2xl border border-[#e4e9f4] shadow-sm flex flex-col">
-          <div className="flex items-center justify-between p-6 border-b border-[#f1f4f9]">
-            <h2 className="text-sm font-bold text-[#111827] uppercase tracking-wide">Analisis Kesesuaian CLO</h2>
-            <span className="px-3 py-1.5 bg-[#111827] text-white text-xs font-bold rounded-lg">
-              MATCH SCORE: {kandidat.matchScore}%
-            </span>
-          </div>
-
-          {cloAnalysis.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="text-sm font-semibold text-[#5b6170]">Belum ada data CLO</p>
+        {/* Kolom kanan: satu card per lowongan aktif perusahaan */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {kompetensiGroups.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-[#e4e9f4] shadow-sm p-10 text-center">
+              <p className="text-sm font-semibold text-[#5b6170]">Belum ada analisis kompetensi</p>
               <p className="text-xs text-[#7b8191] mt-1">
-                Analisis muncul setelah nilai mata kuliah mahasiswa diinput dan mata kuliahnya memiliki CLO.
+                Pastikan perusahaan Anda memiliki lowongan aktif dengan detail persyaratan.
               </p>
             </div>
-          ) : (
-          <div className="flex flex-col divide-y divide-[#f1f4f9]">
-            {cloAnalysis.map((item, idx) => {
-              const isOpen = openIds.includes(item.id)
-              return (
-                <div key={item.id} className="p-6">
-                  <button
-                    onClick={() => toggleItem(item.id)}
-                    className="w-full flex items-center justify-between gap-4 text-left"
-                  >
-                    <h3 className="text-sm font-bold text-[#111827]">
-                      {idx + 1}. {item.matkul} <span className="text-[#0f5ce0]">{item.cloCode}</span>
-                    </h3>
-                    <div className="flex items-center gap-3 shrink-0">
-                      {/* hasil = kemiripan semantik x bobot nilai */}
-                      <span className="px-2.5 py-1 bg-[#eef4ff] text-[#0f5ce0] text-xs font-bold rounded-lg">
-                        {item.skor}%
-                      </span>
-                      {isOpen ? <ChevronUp size={18} className="text-[#7b8191]" /> : <ChevronDown size={18} className="text-[#7b8191]" />}
-                    </div>
-                  </button>
+          ) : kompetensiGroups.map(group => (
+            <div key={group.id} className="bg-white rounded-2xl border border-[#e4e9f4] shadow-sm flex flex-col">
+              <div className="flex items-center justify-between gap-4 p-6 border-b border-[#f1f4f9]">
+                <h2 className="text-sm font-bold text-[#111827] flex items-center gap-2 leading-snug">
+                  <span className="w-7 h-7 rounded-lg bg-[#eef4ff] text-[#0f5ce0] flex items-center justify-center shrink-0">
+                    <Target size={14} />
+                  </span>
+                  <span>Analisis Kompetensi: {group.kategori}</span>
+                </h2>
+                <span className="px-3 py-1.5 bg-white border border-[#d0e0ff] text-[#0f5ce0] text-xs font-bold rounded-full shrink-0 whitespace-nowrap">
+                  Match Score: {group.matchScore}%
+                </span>
+              </div>
 
-                  {isOpen && (
-                    <div className="mt-4 bg-[#f8faff] border border-[#e4e9f4] rounded-xl p-4 flex flex-col gap-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">Matkul</div>
-                          <div className="text-sm font-bold text-[#111827] mt-1">{item.matkul}</div>
+              <div className="flex flex-col divide-y divide-[#f1f4f9]">
+                {group.tanggungJawabList.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-[#a0a6b5] italic">
+                    Lowongan ini belum memiliki detail persyaratan.
+                  </div>
+                ) : group.tanggungJawabList.map((tj, idx) => {
+                  const key = `${group.id}-${tj.id}`
+                  const isOpen = openKeys.includes(key)
+                  return (
+                    <div key={tj.id} className="p-6">
+                      <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider mb-1.5">
+                        Tanggung Jawab {idx + 1}
+                      </div>
+                      <button
+                        onClick={() => toggleItem(group.id, tj.id)}
+                        className="w-full flex items-center justify-between gap-4 text-left"
+                      >
+                        <h3 className="text-base font-bold text-[#111827] leading-snug">{tj.deskripsi}</h3>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="px-2.5 py-1 bg-[#eef4ff] text-[#0f5ce0] text-xs font-bold rounded-lg whitespace-nowrap">
+                            {tj.matchScore}% Match
+                          </span>
+                          {isOpen ? <ChevronUp size={18} className="text-[#7b8191]" /> : <ChevronDown size={18} className="text-[#7b8191]" />}
                         </div>
-                        <div>
-                          <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">Nilai</div>
-                          <div className="text-sm font-bold text-[#111827] mt-1">{item.nilai}</div>
+                      </button>
+
+                      {isOpen && (
+                        <div className="mt-4 flex flex-col gap-3">
+                          {tj.cloItems.length === 0 ? (
+                            <p className="text-xs text-[#a0a6b5] italic bg-[#f8faff] border border-[#e4e9f4] rounded-xl p-4">
+                              Belum ada capaian pembelajaran mahasiswa yang cocok dengan tanggung jawab ini.
+                            </p>
+                          ) : tj.cloItems.map(item => (
+                            <div key={item.id} className="bg-[#f8faff] border border-[#e4e9f4] rounded-xl p-4 flex flex-col gap-2">
+                              <p className="text-sm font-bold text-[#111827] leading-relaxed">
+                                {item.kode} — {item.deskripsi}
+                              </p>
+                              <p className="text-xs text-[#7b8191]">
+                                Mata Kuliah : {item.matkul}
+                              </p>
+                              <div className="flex items-center justify-between pt-1">
+                                <span className="text-sm font-bold text-[#111827]">Nilai : {item.nilai}</span>
+                                <span className="text-xs font-bold text-[#0f5ce0]">{item.kontribusi}% kontribusi</span>
+                              </div>
+                              <p className="text-[11px] text-[#a0a6b5] italic">
+                                Kemiripan {item.skorKemiripan}% × bobot nilai {item.bobotNilai.toFixed(2)} = {item.kontribusi}%
+                              </p>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-
-                      <div>
-                        <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">{item.cloCode}</div>
-                        <p className="text-sm text-[#5b6170] mt-1 leading-relaxed">{item.deskripsi}</p>
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <p className="text-xs text-[#7b8191] italic">
-                          {`Kontribusi ${item.skorKemiripan ?? item.skor}% × nilai ${item.nilai} (${(item.bobotNilai ?? 1).toFixed(2)}) = ${item.skor}% kontribusi`}
-                          {item.method !== 'semantic' && ' (berbasis keahlian, embedding belum tersedia)'}
-                        </p>
-                        {item.matchedRequirement && (
-                          <p className="text-xs text-[#a0a6b5] italic">
-                            Paling mendekati persyaratan: "{item.matchedRequirement}"
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          )}
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-
     </div>
   )
 }
