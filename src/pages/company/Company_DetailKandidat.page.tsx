@@ -92,15 +92,9 @@ const Company_DetailKandidat = () => {
       setCertificates(data?.certificates ?? [])
       setSkills((data?.candidate?.skills ?? []).map((s: any) => s?.name).filter(Boolean))
 
-      const groups: KompetensiGroup[] = data?.kompetensiGroups ?? []
-      setKompetensiGroups(groups)
-
-      // Buka tanggung jawab pertama pada tiap card sebagai keadaan awal.
-      setOpenKeys(
-        groups
-          .filter((g) => g.tanggungJawabList.length > 0)
-          .map((g) => `${g.id}-${g.tanggungJawabList[0].id}`),
-      )
+      setKompetensiGroups(data?.kompetensiGroups ?? [])
+      // Seluruh tanggung jawab tertutup saat halaman pertama dibuka.
+      setOpenKeys([])
     } catch (err: any) {
       setKandidat(null)
       setLoadError(err?.response?.data?.message ?? 'Gagal memuat detail kandidat.')
