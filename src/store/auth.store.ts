@@ -19,6 +19,7 @@ interface AuthState {
 	user: AuthUser | null
 	// ===== login berbasis API (dipakai LoginPage) =====
 	loginWithApi: (user: AuthUser, token: string) => void
+	setUser: (user: AuthUser) => void
 	// ===== action lama (biarkan; masih dipakai komponen lain) =====
 	loginAsAdmin: (token?: string | null) => void
 	loginAsUniversity: (token?: string | null) => void
@@ -51,6 +52,9 @@ export const useAuthStore = create<AuthState>()(
 					user,
 				})
 			},
+			// Dipakai saat data akun perlu disegarkan tanpa login ulang
+			// (mis. setelah mengubah nama di Pengaturan Akun).
+			setUser: (user) => set({ user, role: user.role }),
 
 			loginAsAdmin: (token) => set({ isAuthenticated: true, role: 'admin', token: token ?? null }),
 			loginAsUniversity: (token) => set({ isAuthenticated: true, role: 'university', token: token ?? null }),

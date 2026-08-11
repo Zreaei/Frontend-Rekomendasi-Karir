@@ -37,6 +37,10 @@ export interface CompanyProfile {
   size?: string | null
   address?: string | null
   nib?: string | null
+  rejectionReason?: string | null
+  rejectedAt?: string | null
+  izinUsahaUrl?: string | null
+  suratResmiUrl?: string | null
   status: 'pending' | 'verified' | 'rejected'
   verifiedAt?: string | null
 }
@@ -133,6 +137,15 @@ export const companyApi = {
     const fd = new FormData()
     fd.append('logo', file)
     return unwrap(await api.patch('/companies/me/logo', fd))
+  },
+
+  // PATCH /companies/me/documents -> unggah ulang dokumen legal.
+  // Bila status sedang ditolak, pengajuan otomatis dikembalikan ke pending.
+  uploadDocuments: async (files: { izinUsaha?: File; suratResmi?: File }) => {
+    const fd = new FormData()
+    if (files.izinUsaha) fd.append('izinUsaha', files.izinUsaha)
+    if (files.suratResmi) fd.append('suratResmi', files.suratResmi)
+    return unwrap(await api.patch('/companies/me/documents', fd))
   },
 }
 

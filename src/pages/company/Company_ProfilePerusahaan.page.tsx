@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { initialCompanyProfile, type CompanyProfileData } from './CompanyData'
-import { companyApi, jobApi } from '../../services/company.service'
+import { companyApi, jobApi, applicationApi } from '../../services/company.service'
 import { authApi } from '../../services/api.service'
 
 // ============================================================
@@ -73,7 +73,7 @@ const Company_ProfilePerusahaan = () => {
   })
 
   // Ambil profil + identitas admin + statistik dari backend.
-  const loadData = useCallback(async () => {
+const loadData = useCallback(async () => {
     setLoading(true)
     setLoadError('')
     try {
@@ -84,14 +84,29 @@ const Company_ProfilePerusahaan = () => {
       setProfile(mapProfile(company, me))
       setVerifStatus((company.status as VerifStatus) ?? 'pending')
 
-      // Statistik rekrutmen dihitung dari lowongan milik perusahaan.
-      const jobs = await jobApi.listMine()
+      const jobs = (await jobApi.listMine()) ?? []
+
+      // Total pelamar diambil dari ringkasan perusahaan (satu permintaan),
+      // bukan dijumlahkan per lowongan.
+      const { summary } = await applicationApi.listByCompany().catch((e) => {
+        console.warn('[Profil] gagal ambil pelamar:', e?.response?.status, e?.response?.data?.message)
+        return { applications: [] as any[], summary: {} as Record<string, number> }
+      })
+
+      // Jumlah tampilan berasal dari JobView, yang baru terisi setelah
+      // halaman mahasiswa mencatat kunjungan lowongan.
       const perJob = await Promise.all(
-        (jobs ?? []).map((j: any) => jobApi.stats(j.id).catch(() => null)),
+        jobs.map((j: any) =>
+          jobApi.stats(j.id).catch((e) => {
+            console.warn(`[Profil] gagal ambil statistik "${j.title}":`, e?.response?.status, e?.response?.data?.message)
+            return null
+          }),
+        ),
       )
+
       setStats({
-        activeJobs: (jobs ?? []).filter((j: any) => j.status === 'active').length,
-        totalApplicants: perJob.reduce((acc: number, s: any) => acc + (s?.applicantCount ?? 0), 0),
+        activeJobs: jobs.filter((j: any) => j.status === 'active').length,
+        totalApplicants: summary?.total ?? 0,
         profileViews: perJob.reduce((acc: number, s: any) => acc + (s?.viewCount ?? 0), 0),
       })
     } catch (err: any) {

@@ -77,7 +77,11 @@ export const authApi = {
     return res.data?.data;
   },
   changePassword: async (currentPassword: string, newPassword: string) => {
-    const res = await api.patch("/auth/password", { currentPassword, newPassword });
+    // nama field mengikuti changePasswordSchema di backend
+    const res = await api.patch("/auth/password", {
+      oldPassword: currentPassword,
+      newPassword,
+    });
     return res.data;
   },
   // POST /auth/forgot-password -> kirim tautan pemulihan ke email

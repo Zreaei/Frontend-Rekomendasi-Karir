@@ -1,10 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Globe, UploadCloud, ChevronDown, 
-  Bold, Italic, Underline, List, Link2, Building2, ImagePlus, Edit3
-} from 'lucide-react'
-import { companyApi } from '../../services/company.service'
+import { Globe, UploadCloud, ChevronDown, Bold, Italic, Underline, List, Link2, Building2, ImagePlus, Edit3, FileText, ExternalLink, AlertTriangle } from 'lucide-react'
+import { companyApi,  } from '../../services/company.service'
 
 // Bentuk data lokal halaman (sebelumnya dari CompanyData) supaya UI tidak berubah.
 interface CompanyProfileData {
@@ -57,6 +54,12 @@ const Company_UbahProfile = () => {
   const [isVerified, setIsVerified] = useState(false)
   const [isCustomIndustri, setIsCustomIndustri] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  const [izinUsahaFile, setIzinUsahaFile] = useState<File | null>(null)
+  const [suratResmiFile, setSuratResmiFile] = useState<File | null>(null)
+  const [currentIzinUsaha, setCurrentIzinUsaha] = useState<string | null>(null)
+  const [currentSuratResmi, setCurrentSuratResmi] = useState<string | null>(null)
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null)
   
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -85,10 +88,14 @@ const Company_UbahProfile = () => {
         setLogoPreview(data.logo || null)
         setIsCustomIndustri(!INDUSTRI_OPTIONS.includes(data.bidangIndustri) && data.bidangIndustri !== '')
         setIsVerified(c?.status === 'verified')
+        setCurrentIzinUsaha(c?.izinUsahaUrl ?? null)
+        setCurrentSuratResmi(c?.suratResmiUrl ?? null)
+        setRejectionReason(c?.rejectionReason ?? null)
         if (editorRef.current) {
           editorRef.current.innerHTML = data.description
         }
       })
+      
       .catch((err: any) => {
         if (!aktif) return
         setErrorMessage(
@@ -118,6 +125,28 @@ const handleChange = (field: keyof CompanyProfileData, value: string) => {
     // Berkas disimpan dulu, diunggah ke Supabase saat form disimpan.
     setLogoFile(file)
     setLogoPreview(URL.createObjectURL(file)) // pratinjau lokal saja
+    if (errorMessage) setErrorMessage(null)
+  }
+
+  // Dokumen legal diunggah lewat endpoint terpisah saat form disimpan.
+  const handleDocChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    jenis: 'izinUsaha' | 'suratResmi',
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage('Ukuran dokumen terlalu besar. Maksimal 10MB.')
+      errorBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    if (jenis === 'izinUsaha' && file.type !== 'application/pdf') {
+      setErrorMessage('Dokumen Izin Usaha harus berformat PDF.')
+      errorBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    if (jenis === 'izinUsaha') setIzinUsahaFile(file)
+    else setSuratResmiFile(file)
     if (errorMessage) setErrorMessage(null)
   }
 
@@ -158,7 +187,16 @@ const handleChange = (field: keyof CompanyProfileData, value: string) => {
         await companyApi.uploadLogo(logoFile)
       }
 
-      // 2) simpan data profil (logo tidak ikut, sudah ditangani di atas)
+      // 2) unggah dokumen legal bila ada berkas baru.
+      //    Bila status sedang ditolak, backend otomatis mengembalikan pengajuan ke pending.
+      if (izinUsahaFile || suratResmiFile) {
+        await companyApi.uploadDocuments({
+          izinUsaha: izinUsahaFile ?? undefined,
+          suratResmi: suratResmiFile ?? undefined,
+        })
+      }
+
+      // 3) simpan data profil (logo tidak ikut, sudah ditangani di atas)
       await companyApi.updateProfile({
         name: profile.namaPerusahaan.trim(),
         industry: profile.bidangIndustri.trim(),
@@ -246,6 +284,7 @@ const handleChange = (field: keyof CompanyProfileData, value: string) => {
             </div>
           </div>
 
+          
           <div className="p-7">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-7">
               
@@ -396,6 +435,130 @@ const handleChange = (field: keyof CompanyProfileData, value: string) => {
               </div>
 
             </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-[20px] border border-[#e4e9f4] shadow-sm overflow-hidden">
+          <div className="bg-[#f8faff] px-7 py-5 border-b border-[#e4e9f4] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#eef4ff] text-[#0f5ce0] flex items-center justify-center shrink-0 border border-[#d0e0ff]">
+              <FileText size={18} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#111827]">Dokumen Legal</h3>
+              <p className="text-xs text-[#7b8191] font-medium mt-0.5">
+                {isVerified
+                  ? 'Dokumen terkunci karena perusahaan sudah terverifikasi.'
+                  : 'Unggah ulang dokumen bila ada perbaikan. Pengajuan akan ditinjau kembali oleh Superadmin.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-7 flex flex-col gap-6">
+
+            {/* Alasan penolakan dari Superadmin */}
+            {rejectionReason && !isVerified && (
+              <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
+                <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-red-800">Pendaftaran perlu diperbaiki</p>
+                  <p className="text-xs text-red-700 mt-1 leading-relaxed">{rejectionReason}</p>
+                  <p className="text-xs text-red-700 mt-2">
+                    Unggah dokumen yang sudah diperbaiki di bawah, lalu simpan. Pengajuan otomatis dikirim ulang.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              {/* Izin Usaha */}
+              <div className="flex flex-col gap-2">
+                <label className={labelStyles}>
+                  Izin Usaha (PDF) {!isVerified && <span className="text-red-500">*</span>}
+                </label>
+
+                {currentIzinUsaha && (
+                  <a
+                    href={currentIzinUsaha}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 px-4 py-3 bg-[#f8faff] border border-[#e4e9f4] rounded-xl text-sm font-bold text-[#0f5ce0] hover:border-[#0f5ce0] transition"
+                  >
+                    <FileText size={16} className="shrink-0" />
+                    <span className="truncate">Lihat dokumen saat ini</span>
+                    <ExternalLink size={14} className="shrink-0 ml-auto" />
+                  </a>
+                )}
+
+                {!isVerified && (
+                  <label
+                    htmlFor="izinUsahaUpload"
+                    className="group flex flex-col items-center justify-center gap-2 border-2 border-dashed border-[#cbd5e1] bg-[#f8faff] rounded-[16px] py-6 px-4 cursor-pointer hover:border-[#0f5ce0] hover:bg-[#eef4ff]/50 transition-all"
+                  >
+                    <input
+                      id="izinUsahaUpload"
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => handleDocChange(e, 'izinUsaha')}
+                      className="hidden"
+                    />
+                    <UploadCloud size={22} className="text-[#a0a6b5] group-hover:text-[#0f5ce0] transition" />
+                    <p className="text-xs font-bold text-[#0f5ce0] group-hover:underline">
+                      {izinUsahaFile ? 'Ganti berkas' : 'Unggah dokumen baru'}
+                    </p>
+                    <p className="text-[11px] text-[#7b8191] text-center">
+                      {izinUsahaFile ? izinUsahaFile.name : 'Format PDF, maksimal 10MB'}
+                    </p>
+                  </label>
+                )}
+              </div>
+
+              {/* Surat Otoritas */}
+              <div className="flex flex-col gap-2">
+                <label className={labelStyles}>Surat Otoritas Perusahaan (opsional)</label>
+
+                {currentSuratResmi && (
+                  <a
+                    href={currentSuratResmi}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 px-4 py-3 bg-[#f8faff] border border-[#e4e9f4] rounded-xl text-sm font-bold text-[#0f5ce0] hover:border-[#0f5ce0] transition"
+                  >
+                    <FileText size={16} className="shrink-0" />
+                    <span className="truncate">Lihat dokumen saat ini</span>
+                    <ExternalLink size={14} className="shrink-0 ml-auto" />
+                  </a>
+                )}
+
+                {!isVerified && (
+                  <label
+                    htmlFor="suratResmiUpload"
+                    className="group flex flex-col items-center justify-center gap-2 border-2 border-dashed border-[#cbd5e1] bg-[#f8faff] rounded-[16px] py-6 px-4 cursor-pointer hover:border-[#0f5ce0] hover:bg-[#eef4ff]/50 transition-all"
+                  >
+                    <input
+                      id="suratResmiUpload"
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      onChange={(e) => handleDocChange(e, 'suratResmi')}
+                      className="hidden"
+                    />
+                    <UploadCloud size={22} className="text-[#a0a6b5] group-hover:text-[#0f5ce0] transition" />
+                    <p className="text-xs font-bold text-[#0f5ce0] group-hover:underline">
+                      {suratResmiFile ? 'Ganti berkas' : 'Unggah dokumen baru'}
+                    </p>
+                    <p className="text-[11px] text-[#7b8191] text-center">
+                      {suratResmiFile ? suratResmiFile.name : 'PDF, JPG, atau PNG. Maksimal 10MB'}
+                    </p>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {!isVerified && (izinUsahaFile || suratResmiFile) && (
+              <p className="text-xs text-[#0f5ce0] font-semibold bg-[#eef4ff] border border-[#d0e0ff] rounded-xl px-4 py-3">
+                Dokumen baru akan diunggah saat Anda menekan Simpan Profil, dan pendaftaran otomatis diajukan kembali untuk ditinjau.
+              </p>
+            )}
           </div>
         </div>
 

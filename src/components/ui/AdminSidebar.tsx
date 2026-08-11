@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/auth.store'
+import SidebarUserCard from './SidebarUserCard'
 
 interface AdminSidebarProps {
   collapsed: boolean
@@ -143,15 +144,7 @@ const AdminSidebar = ({ collapsed, onToggle }: AdminSidebarProps) => {
       </nav>
 
       <div className="shrink-0 border-t border-[#d7dbe3] p-4">
-        <div className={`mb-3 flex items-center gap-3 rounded-xl bg-[#f7f9fc] transition-all duration-300 ${collapsed ? 'justify-center p-2' : 'px-3 py-3'}`}>
-          <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#d9e5ff] text-[13px] font-bold text-[#0d6efd]">
-            SA
-          </div>
-          <div className={`min-w-0 flex-1 overflow-hidden transition-all duration-300 ${collapsed ? 'max-w-0 opacity-0' : 'max-w-[150px] opacity-100'}`}>
-            <p className="truncate text-[13px] font-semibold text-[#0f1728]">Super Admin</p>
-            <p className="truncate text-[12px] text-[#6d7480]">Administrator</p>
-          </div>
-        </div>
+        <SidebarUserCard collapsed={collapsed} />
 
         <button
           type="button"

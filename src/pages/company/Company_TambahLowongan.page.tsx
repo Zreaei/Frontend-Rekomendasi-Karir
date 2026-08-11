@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Info, MapPin, Plus, X, ChevronDown, Save, AlertCircle, Calendar, CheckCircle2, ClipboardCheck, Loader2 } from 'lucide-react'
+import { Info, MapPin, Plus, X, ChevronDown, Save, AlertCircle, Calendar, CheckCircle2, ClipboardCheck, Loader2, ShieldAlert } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { jobApi } from '../../services/company.service'
 
@@ -56,6 +56,9 @@ const Company_TambahLowongan = () => {
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(!!editJobId)
   const [isSaving, setIsSaving] = useState(false)
+
+  const [showVerifikasiPopup, setShowVerifikasiPopup] = useState(false)
+  const [pesanVerifikasi, setPesanVerifikasi] = useState('')
 
   // cek ulang sebelum benar-benar ditayangkan
   const [step, setStep] = useState<'form' | 'review'>('form')
@@ -218,10 +221,14 @@ const Company_TambahLowongan = () => {
       }
       navigate('/company/kelola-lowongan')
     } catch (err: any) {
-      setErrorMessage(
-        err?.response?.data?.message ??
-          'Gagal menyimpan lowongan. Pastikan perusahaan Anda sudah diverifikasi.',
-      )
+      // 403 dari backend berarti akun belum/gagal diverifikasi -> tampilkan popup
+      if (err?.response?.status === 403) {
+        setPesanVerifikasi(err?.response?.data?.message ?? 'Akun perusahaan Anda belum diverifikasi.')
+        setShowVerifikasiPopup(true)
+        setStep('form')
+        return
+      }
+      setErrorMessage(err?.response?.data?.message ?? 'Gagal menyimpan lowongan.')
       setStep('form')
     } finally {
       setIsSaving(false)
@@ -588,6 +595,34 @@ const Company_TambahLowongan = () => {
             </button>
           </div>
         </>
+      )}
+
+      {showVerifikasiPopup && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 px-4">
+          <div className="bg-white rounded-[20px] p-6 w-full max-w-md shadow-xl flex flex-col gap-4 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-[#fffbeb] text-[#f59e0b] rounded-full flex items-center justify-center mx-auto mb-1">
+              <ShieldAlert size={32} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-[#111827]">Akun Belum Terverifikasi</h3>
+              <p className="text-sm text-[#5b6170] mt-2 leading-relaxed">{pesanVerifikasi}</p>
+            </div>
+            <div className="flex flex-col gap-2.5 mt-4">
+              <button
+                onClick={() => navigate('/company/profil-perusahaan')}
+                className="py-2.5 text-sm font-bold text-white bg-[#0f5ce0] rounded-xl hover:bg-[#0d4ebf] shadow-sm transition active:scale-95"
+              >
+                Lihat Status Verifikasi
+              </button>
+              <button
+                onClick={() => setShowVerifikasiPopup(false)}
+                className="py-2.5 text-sm font-bold text-[#5b6170] bg-white border border-[#e4e9f4] rounded-xl hover:bg-gray-50 transition active:scale-95"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
