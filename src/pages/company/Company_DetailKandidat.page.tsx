@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { GraduationCap, Briefcase, X, Check, ChevronDown, ChevronUp, ExternalLink, User, Award } from 'lucide-react'
+import { GraduationCap, Briefcase, X, Check, ChevronDown, ChevronUp, ExternalLink, User, Award, Target } from 'lucide-react'
 import { CompanyService, rejectRecommendation, acceptRecommendationAsApplicant, type Recommendation, type CandidateAcademicDetail } from './CompanyData'
 
 const toTitleCase = (value: string): string => {
@@ -19,19 +19,30 @@ const Company_DetailKandidat = () => {
   const [detail, setDetail] = useState<CandidateAcademicDetail | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Kunci item tanggung jawab yang sedang terbuka, berformat
+  // "groupId-tjId" agar unik lintas semua card kompetensi.
+  const [openKeys, setOpenKeys] = useState<string[]>([])
+
   useEffect(() => {
     setLoading(true)
     CompanyService.getCandidateDetailById(Number(id)).then(result => {
       setKandidat(result ? result.kandidat : null)
       setDetail(result ? result.detail : null)
       setLoading(false)
+
+      // Default: buka tanggung jawab pertama pada setiap card kompetensi
+      if (result) {
+        const defaultOpen = result.detail.kompetensiGroups
+          .filter(group => group.tanggungJawabList.length > 0)
+          .map(group => `${group.id}-${group.tanggungJawabList[0].id}`)
+        setOpenKeys(defaultOpen)
+      }
     })
   }, [id])
 
-  const [openIds, setOpenIds] = useState<number[]>([1, 2, 3])
-
-  const toggleItem = (itemId: number) => {
-    setOpenIds(prev => prev.includes(itemId) ? prev.filter(i => i !== itemId) : [...prev, itemId])
+  const toggleItem = (groupId: number, tjId: number) => {
+    const key = `${groupId}-${tjId}`
+    setOpenKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
   }
 
   const inisial = useMemo(() => {
@@ -102,6 +113,7 @@ const Company_DetailKandidat = () => {
 
       <div className="bg-white rounded-2xl border border-[#e4e9f4] p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4 min-w-0">
+          {/* Box inisial: biru, selaras dengan warna aksen web (bukan hijau) */}
           <div className="w-[60px] h-[60px] rounded-2xl bg-[#eef4ff] border border-[#d0e0ff] text-[#0f5ce0] flex items-center justify-center shrink-0 shadow-sm font-bold text-lg">
             {inisial}
           </div>
@@ -189,57 +201,68 @@ const Company_DetailKandidat = () => {
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e4e9f4] shadow-sm flex flex-col">
-          <div className="flex items-center justify-between p-6 border-b border-[#f1f4f9]">
-            <h2 className="text-sm font-bold text-[#111827] uppercase tracking-wide">Analisis Kesesuaian CLO</h2>
-            <span className="px-3 py-1.5 bg-[#111827] text-white text-xs font-bold rounded-lg">
-              MATCH SCORE: {kandidat.matchScore}%
-            </span>
-          </div>
+        {/* Kolom kanan: 1 card = 1 lowongan (kategori) yang sedang Aktif */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {detail.kompetensiGroups.map(group => (
+            <div key={group.id} className="bg-white rounded-2xl border border-[#e4e9f4] shadow-sm flex flex-col">
+              <div className="flex items-center justify-between gap-4 p-6 border-b border-[#f1f4f9]">
+                <h2 className="text-sm font-bold text-[#111827] flex items-center gap-2 leading-snug">
+                  <span className="w-7 h-7 rounded-lg bg-[#eef4ff] text-[#0f5ce0] flex items-center justify-center shrink-0">
+                    <Target size={14} />
+                  </span>
+                  <span>Analisis Kompetensi: {group.kategori}</span>
+                </h2>
+                <span className="px-3 py-1.5 bg-white border border-[#d0e0ff] text-[#0f5ce0] text-xs font-bold rounded-full shrink-0 whitespace-nowrap">
+                  Match Score: {group.matchScore}%
+                </span>
+              </div>
 
-          <div className="flex flex-col divide-y divide-[#f1f4f9]">
-            {detail.cloAnalysis.map((item, idx) => {
-              const isOpen = openIds.includes(item.id)
-              return (
-                <div key={item.id} className="p-6">
-                  <button
-                    onClick={() => toggleItem(item.id)}
-                    className="w-full flex items-center justify-between gap-4 text-left"
-                  >
-                    <h3 className="text-sm font-bold text-[#111827]">{idx + 1}. {item.matkul}</h3>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="px-2.5 py-1 bg-[#eef4ff] text-[#0f5ce0] text-xs font-bold rounded-lg">
-                        {item.skor}%
-                      </span>
-                      {isOpen ? <ChevronUp size={18} className="text-[#7b8191]" /> : <ChevronDown size={18} className="text-[#7b8191]" />}
-                    </div>
-                  </button>
+              <div className="flex flex-col divide-y divide-[#f1f4f9]">
+                {group.tanggungJawabList.map((tj, idx) => {
+                  const key = `${group.id}-${tj.id}`
+                  const isOpen = openKeys.includes(key)
+                  return (
+                    <div key={tj.id} className="p-6">
+                      <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider mb-1.5">
+                        Tanggung Jawab {idx + 1}
+                      </div>
+                      <button
+                        onClick={() => toggleItem(group.id, tj.id)}
+                        className="w-full flex items-center justify-between gap-4 text-left"
+                      >
+                        <h3 className="text-base font-bold text-[#111827] leading-snug">{tj.deskripsi}</h3>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="px-2.5 py-1 bg-[#eef4ff] text-[#0f5ce0] text-xs font-bold rounded-lg whitespace-nowrap">
+                            {tj.matchScore}% Match
+                          </span>
+                          {isOpen ? <ChevronUp size={18} className="text-[#7b8191]" /> : <ChevronDown size={18} className="text-[#7b8191]" />}
+                        </div>
+                      </button>
 
-                  {isOpen && (
-                    <div className="mt-4 bg-[#f8faff] border border-[#e4e9f4] rounded-xl p-4 flex flex-col gap-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">Matkul</div>
-                          <div className="text-sm font-bold text-[#111827] mt-1">{item.matkul}</div>
+                      {isOpen && (
+                        <div className="mt-4 flex flex-col gap-3">
+                          {tj.cloItems.map(item => (
+                            <div key={item.id} className="bg-[#f8faff] border border-[#e4e9f4] rounded-xl p-4 flex flex-col gap-2">
+                              <p className="text-sm font-bold text-[#111827] leading-relaxed">
+                                {item.kode} — {item.deskripsi}
+                              </p>
+                              <p className="text-xs text-[#7b8191]">
+                                Mata Kuliah : {item.matkul}
+                              </p>
+                              <div className="flex items-center justify-between pt-1">
+                                <span className="text-sm font-bold text-[#111827]">Nilai : {item.nilai}</span>
+                                <span className="text-xs font-bold text-[#0f5ce0]">{item.kontribusi}% kontribusi</span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div>
-                          <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">Nilai</div>
-                          <div className="text-sm font-bold text-[#111827] mt-1">{item.nilai}</div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-bold text-[#a0a6b5] uppercase tracking-wider">{item.kode}</div>
-                        <p className="text-sm text-[#5b6170] mt-1 leading-relaxed">{item.deskripsi}</p>
-                      </div>
-                      <p className="text-xs text-[#7b8191] italic">
-                        Kontribusi {item.skor}% x nilai {item.nilai} = {item.skor}% kontribusi
-                      </p>
+                      )}
                     </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
       </div>
