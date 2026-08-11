@@ -1,8 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Search, Download, BookOpen, Briefcase } from 'lucide-react'
-import { dummyMasterCourses, dummyMasterIndustries, masterDataTabOptions } from './AdminData'
-import type { MasterCourse, MasterIndustry } from './AdminData'
+import { adminAnalyticsApi, getInitialsOf, formatDateID } from '../../services/admin.service'
+import type { MasterCourseRow, MasterIndustryRow } from '../../services/admin.service'
 import Toast from './components/Toast'
+
+const masterDataTabOptions = [
+  { label: 'Mata Kuliah', value: 'course' },
+  { label: 'Kebutuhan Industri', value: 'industry' },
+]
 
 const AdminMasterData = () => {
   const [activeTab, setActiveTab] = useState<'course' | 'industry'>('course')
@@ -10,7 +15,29 @@ const AdminMasterData = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
+  const [courses, setCourses] = useState<MasterCourseRow[]>([])
+  const [industries, setIndustries] = useState<MasterIndustryRow[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'warning' } | null>(null)
+
+  // Ambil kedua dataset sekali di awal
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([
+      adminAnalyticsApi.masterCourses({ limit: 100 }),
+      adminAnalyticsApi.masterIndustries({ limit: 100 }),
+    ])
+      .then(([c, i]) => {
+        if (cancelled) return
+        setCourses(c.courses)
+        setIndustries(i.industries)
+      })
+      .catch(() => { if (!cancelled) setLoadError('Gagal memuat master data.') })
+      .finally(() => { if (!cancelled) setIsLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   // Reset pagination saat pindah tab atau search
   useEffect(() => {
@@ -27,17 +54,16 @@ const AdminMasterData = () => {
     const query = searchQuery.toLowerCase()
 
     if (activeTab === 'course') {
-      return dummyMasterCourses.filter(course =>
+      return courses.filter(course =>
         course.courseName.toLowerCase().includes(query) ||
-        course.univName.toLowerCase().includes(query)
-      )
-    } else {
-      return dummyMasterIndustries.filter(industry =>
-        industry.companyName.toLowerCase().includes(query) ||
-        industry.position.toLowerCase().includes(query)
+        (course.universityName ?? '').toLowerCase().includes(query)
       )
     }
-  }, [activeTab, searchQuery])
+    return industries.filter(industry =>
+      industry.companyName.toLowerCase().includes(query) ||
+      industry.position.toLowerCase().includes(query)
+    )
+  }, [activeTab, searchQuery, courses, industries])
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE)
@@ -70,14 +96,20 @@ const AdminMasterData = () => {
     let csvRows: string[][] = []
 
     if (activeTab === 'course') {
-      headers = ['Nama Mata Kuliah', 'Kode & Kategori', 'Universitas', 'Jumlah CLO', 'Terakhir Diperbarui', 'Diperbarui Oleh']
-      csvRows = (filteredData as MasterCourse[]).map(c => [
-        c.courseName, `${c.courseCode} - ${c.category}`, c.univName, c.cloCount.toString(), c.lastUpdatedDate, c.lastUpdatedBy
+      headers = ['Nama Mata Kuliah', 'Kode', 'SKS', 'Universitas', 'Jumlah CLO', 'Rincian CLO', 'Terakhir Diperbarui']
+      csvRows = (filteredData as MasterCourseRow[]).map(c => [
+        c.courseName,
+        c.courseCode ?? '-',
+        c.sks != null ? String(c.sks) : '-',
+        c.universityName ?? '-',
+        c.cloCount.toString(),
+        c.clos.map(clo => `${clo.name}: ${clo.skills.join(' | ')}`).join(' ; '),
+        formatDateID(c.updatedAt),
       ])
     } else {
       headers = ['Nama Perusahaan', 'Industri', 'Posisi Pekerjaan', 'Tanggung Jawab', 'Skill', 'Terakhir Diperbarui']
-      csvRows = (filteredData as MasterIndustry[]).map(i => [
-        i.companyName, i.industry, i.position, i.responsibility, i.skills.join(', '), i.lastUpdatedDate
+      csvRows = (filteredData as MasterIndustryRow[]).map(i => [
+        i.companyName, i.industry ?? '-', i.position, i.responsibility ?? '-', i.skills.join(', '), formatDateID(i.updatedAt)
       ])
     }
 
@@ -119,19 +151,19 @@ const AdminMasterData = () => {
         </button>
       </div>
 
-      {/* Summary Cards - dihitung langsung dari data terpusat, bukan angka statis */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
         <div className="bg-white p-6 rounded-[16px] border border-[#e4e9f4] shadow-sm flex items-start justify-between">
           <div>
             <p className="text-[12px] font-extrabold text-[#7b8191] uppercase tracking-widest mb-2">Total Mata Kuliah</p>
-            <p className="text-[32px] font-black text-[#111827]">{dummyMasterCourses.length}</p>
+            <p className="text-[32px] font-black text-[#111827]">{courses.length}</p>
           </div>
           <div className="w-12 h-12 rounded-[12px] bg-[#f4f7ff] text-[#0f5ce0] border border-[#eef2ff] flex items-center justify-center"><BookOpen size={24} strokeWidth={2} /></div>
         </div>
         <div className="bg-white p-6 rounded-[16px] border border-[#e4e9f4] shadow-sm flex items-start justify-between">
           <div>
             <p className="text-[12px] font-extrabold text-[#7b8191] uppercase tracking-widest mb-2">Total Kebutuhan Industri</p>
-            <p className="text-[32px] font-black text-[#111827]">{dummyMasterIndustries.length}</p>
+            <p className="text-[32px] font-black text-[#111827]">{industries.length}</p>
           </div>
           <div className="w-12 h-12 rounded-[12px] bg-[#f4f7ff] text-[#0f5ce0] border border-[#eef2ff] flex items-center justify-center"><Briefcase size={24} strokeWidth={2} /></div>
         </div>
@@ -169,7 +201,15 @@ const AdminMasterData = () => {
 
         {/* Tabel Data */}
         <div className="overflow-x-auto min-h-[400px]">
-          {paginatedData.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-24 text-[#7b8191]">
+              <p className="text-[15px] font-bold text-[#5b6170]">Memuat master data...</p>
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-24 text-[#ef4444]">
+              <p className="text-[15px] font-bold">{loadError}</p>
+            </div>
+          ) : paginatedData.length > 0 ? (
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-[#f8faff] border-y border-[#e4e9f4] text-[10px] font-extrabold text-[#7b8191] tracking-widest uppercase">
@@ -195,14 +235,16 @@ const AdminMasterData = () => {
               </thead>
               <tbody className="divide-y divide-[#f1f4f9]">
 
-                {activeTab === 'course' && (paginatedData as MasterCourse[]).map((course) => (
+                {activeTab === 'course' && (paginatedData as MasterCourseRow[]).map((course) => (
                   <tr key={course.id} className="hover:bg-[#fafbfe] transition-colors group align-top">
                     <td className="px-6 py-5">
                       <p className="text-[14px] font-bold text-[#0f5ce0] mb-1">{course.courseName}</p>
-                      <p className="text-[12px] text-[#7b8191]">{course.courseCode} • {course.category}</p>
+                      <p className="text-[12px] text-[#7b8191]">
+                        {course.courseCode ?? '-'}{course.sks != null ? ` • ${course.sks} SKS` : ''}{course.semester != null ? ` • Semester ${course.semester}` : ''}
+                      </p>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="text-[13px] font-bold text-[#111827]">{course.univName}</span>
+                      <span className="text-[13px] font-bold text-[#111827]">{course.universityName ?? '-'}</span>
                     </td>
                     <td className="px-6 py-5 text-center">
                       <div className="mx-auto w-12 h-12 rounded-[10px] bg-[#eef4ff] text-[#0f5ce0] flex flex-col items-center justify-center font-bold shadow-sm">
@@ -212,37 +254,43 @@ const AdminMasterData = () => {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col gap-4">
+                        {course.clos.length === 0 && (
+                          <span className="text-[12px] text-[#a0a6b5]">Belum ada CLO terdaftar</span>
+                        )}
                         {course.clos.map((clo, idx) => (
                           <div key={idx} className="flex flex-col gap-1.5">
                             <p className="text-[12px] font-bold text-[#111827]">{clo.name}</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {clo.skills.map((skill, sIdx) => (
-                                <span key={sIdx} className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white text-[#5b6170] border border-[#e4e9f4]">
-                                  {skill}
-                                </span>
-                              ))}
-                            </div>
+                            {clo.skills.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {clo.skills.map((skill, sIdx) => (
+                                  <span key={sIdx} className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white text-[#5b6170] border border-[#e4e9f4]">
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[11px] text-[#7b8191] line-clamp-1">{clo.text}</p>
+                            )}
                           </div>
                         ))}
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <p className="text-[13px] font-bold text-[#111827] leading-tight">{course.lastUpdatedDate}</p>
-                      <p className="text-[11px] text-[#7b8191] mt-1">Oleh:<br />{course.lastUpdatedBy}</p>
+                      <p className="text-[13px] font-bold text-[#111827] leading-tight">{formatDateID(course.updatedAt)}</p>
                     </td>
                   </tr>
                 ))}
 
-                {activeTab === 'industry' && (paginatedData as MasterIndustry[]).map((industry) => (
+                {activeTab === 'industry' && (paginatedData as MasterIndustryRow[]).map((industry) => (
                   <tr key={industry.id} className="hover:bg-[#fafbfe] transition-colors group align-top">
                     <td className="px-6 py-5">
                       <div className="flex items-start gap-3.5">
                         <div className="w-10 h-10 rounded-[10px] bg-white text-[#5b6170] flex items-center justify-center font-black text-[14px] shrink-0 border border-[#e4e9f4] shadow-sm mt-0.5">
-                          {industry.companyInitials}
+                          {getInitialsOf(industry.companyName)}
                         </div>
                         <div>
                           <p className="text-[14px] font-bold text-[#111827]">{industry.companyName}</p>
-                          <p className="text-[12px] text-[#7b8191] mt-0.5">{industry.industry}</p>
+                          <p className="text-[12px] text-[#7b8191] mt-0.5">{industry.industry ?? '-'}</p>
                         </div>
                       </div>
                     </td>
@@ -253,21 +301,22 @@ const AdminMasterData = () => {
                     </td>
                     <td className="px-6 py-5">
                       <p className="text-[13px] text-[#5b6170] leading-relaxed line-clamp-2 pr-4">
-                        {industry.responsibility}
+                        {industry.responsibility ?? '-'}
                       </p>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-wrap gap-1.5">
+                        {industry.skills.length === 0 && <span className="text-[12px] text-[#a0a6b5]">-</span>}
                         {industry.skills.map((skill, sIdx) => (
                           <span key={sIdx} className="px-2 py-1 rounded bg-[#eef4ff] text-[#0f5ce0] text-[10px] font-bold tracking-wide">
-                            {skill}
+                            {skill.toUpperCase()}
                           </span>
                         ))}
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       <p className="text-[13px] font-bold text-[#111827]">
-                        {industry.lastUpdatedDate}
+                        {formatDateID(industry.updatedAt)}
                       </p>
                     </td>
                   </tr>
@@ -285,7 +334,7 @@ const AdminMasterData = () => {
         </div>
 
         {/* Paginasi Footer */}
-        {filteredData.length > 0 && (
+        {!isLoading && !loadError && filteredData.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white gap-4 rounded-b-[16px]">
             <div className="text-[13px] text-[#7b8191] font-medium text-center sm:text-left">
               Menampilkan <span className="font-bold text-[#111827]">{startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredData.length)}</span> dari <span className="font-bold text-[#111827]">{filteredData.length}</span> data

@@ -1,16 +1,82 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Search, Users, UserX, GraduationCap, Building2, ChevronDown, CheckCircle2, X, Eye, Edit, Trash2, User, RotateCcw } from 'lucide-react'
-import { dummyStudentUsers, dummyUnivAdminUsers, dummyCompanyAdminUsers, userStatusFilterOptions, userStatusFormOptions } from './AdminData'
-import type { StudentUser, UnivAdminUser, CompanyAdminUser } from './AdminData'
+import { adminUserApi, getInitialsOf, USER_STATUS_LABEL } from '../../services/admin.service'
+import type { AdminUser } from '../../services/admin.service'
 import Toast from './components/Toast'
 import ConfirmModal from './components/ConfirmModal'
 import StatusBadge from './components/StatusBadge'
 
-type ManagedUser = StudentUser | UnivAdminUser | CompanyAdminUser
+type TabKey = 'mahasiswa' | 'universitas' | 'perusahaan'
+
+// tab UI -> role di backend
+const TAB_ROLE: Record<TabKey, string> = {
+  mahasiswa: 'student',
+  universitas: 'university',
+  perusahaan: 'company',
+}
+
+// opsi filter status memakai nilai backend, label bahasa Indonesia
+const userStatusFilterOptions = [
+  { label: 'Semua Status', value: 'all' },
+  { label: 'Aktif', value: 'active' },
+  { label: 'Ditangguhkan', value: 'suspended' },
+  { label: 'Dihapus', value: 'deleted' },
+]
+
+const userStatusFormOptions = [
+  { label: 'Aktif', value: 'active' },
+  { label: 'Ditangguhkan', value: 'suspended' },
+  { label: 'Dihapus', value: 'deleted' },
+]
+
+// baris tampilan yang sudah dipipihkan dari AdminUser
+interface UserRow {
+  id: string
+  name: string
+  email: string
+  orgName: string   // universitas / perusahaan
+  extra: string     // jurusan (mahasiswa) atau NIP (admin)
+  status: string    // nilai backend
+}
+
+const toRow = (u: AdminUser, tab: TabKey): UserRow => {
+  if (tab === 'mahasiswa') {
+    return {
+      id: u.id,
+      name: u.name ?? '-',
+      email: u.email,
+      orgName: u.student?.university?.name ?? '-',
+      extra: u.student?.major ?? '-',
+      status: u.status,
+    }
+  }
+  if (tab === 'universitas') {
+    return {
+      id: u.id,
+      name: u.name ?? '-',
+      email: u.email,
+      orgName: u.universityMember?.university?.name ?? '-',
+      extra: u.universityMember?.nip ?? '-',
+      status: u.status,
+    }
+  }
+  return {
+    id: u.id,
+    name: u.name ?? '-',
+    email: u.email,
+    orgName: u.companyMember?.company?.name ?? '-',
+    extra: u.companyMember?.nip ?? '-',
+    status: u.status,
+  }
+}
 
 const AdminManajemenPengguna = () => {
-  const [activeTab, setActiveTab] = useState<'mahasiswa' | 'universitas' | 'perusahaan'>('mahasiswa')
+  const [activeTab, setActiveTab] = useState<TabKey>('mahasiswa')
   const [searchQuery, setSearchQuery] = useState('')
+
+  const [users, setUsers] = useState<UserRow[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   // Custom Filter Dropdown State
   const [filterStatus, setFilterStatus] = useState('all')
@@ -22,23 +88,34 @@ const AdminManajemenPengguna = () => {
 
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'warning' } | null>(null)
 
-  // Menandai kapan data dummy berubah (CRUD) agar tabel ikut re-render
-  const [dataVersion, setDataVersion] = useState(0)
-
   // Modal State untuk Edit Status & Data
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null)
+  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null)
 
   // Form State untuk menampung data yang sedang diedit
-  const [editFormData, setEditFormData] = useState<Record<string, string>>({})
+  const [editFormData, setEditFormData] = useState({ name: '', email: '', status: 'active', extra: '' })
 
-  // Reset pagination dan filter saat pindah tab
+  const loadUsers = async (tab: TabKey) => {
+    setIsLoading(true)
+    try {
+      const { users: list } = await adminUserApi.list({ role: TAB_ROLE[tab], limit: 100 })
+      setUsers(list.map((u) => toRow(u, tab)))
+      setLoadError('')
+    } catch {
+      setLoadError('Gagal memuat daftar pengguna.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Muat data + reset filter saat pindah tab
   useEffect(() => {
     setCurrentPage(1)
     setSearchQuery('')
     setFilterStatus('all')
     setIsFilterOpen(false)
+    loadUsers(activeTab)
   }, [activeTab])
 
   // Reset page ke 1 saat pencarian atau filter diubah
@@ -60,25 +137,13 @@ const AdminManajemenPengguna = () => {
   // Logic Filtering Data
   const filteredData = useMemo(() => {
     const query = searchQuery.toLowerCase()
-
-    if (activeTab === 'mahasiswa') {
-      return dummyStudentUsers.filter(user =>
-        (user.name.toLowerCase().includes(query) || user.univ.toLowerCase().includes(query)) &&
-        (filterStatus === 'all' || user.status === filterStatus)
-      )
-    } else if (activeTab === 'universitas') {
-      return dummyUnivAdminUsers.filter(user =>
-        (user.name.toLowerCase().includes(query) || user.univ.toLowerCase().includes(query) || user.nip.toLowerCase().includes(query)) &&
-        (filterStatus === 'all' || user.status === filterStatus)
-      )
-    } else {
-      return dummyCompanyAdminUsers.filter(user =>
-        (user.name.toLowerCase().includes(query) || user.company.toLowerCase().includes(query) || user.nip.toLowerCase().includes(query)) &&
-        (filterStatus === 'all' || user.status === filterStatus)
-      )
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, searchQuery, filterStatus, dataVersion])
+    return users.filter(user =>
+      (user.name.toLowerCase().includes(query) ||
+        user.orgName.toLowerCase().includes(query) ||
+        user.extra.toLowerCase().includes(query)) &&
+      (filterStatus === 'all' || user.status === filterStatus)
+    )
+  }, [users, searchQuery, filterStatus])
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE)
@@ -105,63 +170,63 @@ const AdminManajemenPengguna = () => {
     setFilterStatus('all')
   }
 
-  // Badge status entitas menggunakan komponen terpusat (konsisten dengan halaman lain)
+  // Badge status entitas (label dipetakan dari istilah backend)
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Aktif': return <StatusBadge label="Aktif" tone="success" width={120} />
-      case 'Ditangguhkan': return <StatusBadge label="Ditangguhkan" tone="warning" width={120} />
-      case 'Dihapus': return <StatusBadge label="Dihapus" tone="danger" width={120} />
-      default: return <StatusBadge label={status} tone="neutral" width={120} />
+      case 'active': return <StatusBadge label="Aktif" tone="success" width={120} />
+      case 'suspended': return <StatusBadge label="Ditangguhkan" tone="warning" width={120} />
+      case 'deleted': return <StatusBadge label="Dihapus" tone="danger" width={120} />
+      default: return <StatusBadge label={USER_STATUS_LABEL[status] ?? status} tone="neutral" width={120} />
     }
   }
 
   // Avatar Style Helper
   const getAvatarStyle = (status: string) => {
     switch (status) {
-      case 'Aktif': return 'bg-[#f8faff] text-[#0f5ce0] border border-[#e4e9f4]'
-      case 'Ditangguhkan': return 'bg-[#fffbeb] text-[#f59e0b] border border-[#fde68a]'
-      case 'Dihapus': return 'bg-[#fef2f2] text-[#ef4444] border border-[#fecaca]'
+      case 'active': return 'bg-[#f8faff] text-[#0f5ce0] border border-[#e4e9f4]'
+      case 'suspended': return 'bg-[#fffbeb] text-[#f59e0b] border border-[#fde68a]'
+      case 'deleted': return 'bg-[#fef2f2] text-[#ef4444] border border-[#fecaca]'
       default: return 'bg-[#f1f4f9] text-[#7b8191] border border-[#e4e9f4]'
     }
   }
 
-  const currentMetrics = useMemo(() => {
-    const source: { status: string }[] =
-      activeTab === 'mahasiswa' ? dummyStudentUsers :
-      activeTab === 'universitas' ? dummyUnivAdminUsers :
-      dummyCompanyAdminUsers
+  const currentMetrics = useMemo(() => ({
+    totalUser: users.length,
+    userAktif: users.filter(u => u.status === 'active').length,
+    akunDitangguhkan: users.filter(u => u.status === 'suspended').length,
+  }), [users])
 
-    return {
-      totalUser: source.length,
-      userAktif: source.filter(u => u.status === 'Aktif').length,
-      akunDitangguhkan: source.filter(u => u.status === 'Ditangguhkan').length,
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, dataVersion])
   const activeFilterLabel = userStatusFilterOptions.find(opt => opt.value === filterStatus)?.label || 'Semua Status'
 
   // Modal Actions
-  const handleOpenDetail = (user: ManagedUser) => {
+  const handleOpenDetail = (user: UserRow) => {
     setSelectedUser(user)
-    setEditFormData({ ...user } as unknown as Record<string, string>)
+    setEditFormData({
+      name: user.name === '-' ? '' : user.name,
+      email: user.email,
+      status: user.status,
+      extra: user.extra === '-' ? '' : user.extra,
+    })
     setIsDetailOpen(true)
   }
 
-  const handleSimpanEdit = () => {
-    if (activeTab === 'mahasiswa') {
-      const idx = dummyStudentUsers.findIndex(u => u.id === selectedUser?.id)
-      if (idx !== -1) dummyStudentUsers[idx] = { ...dummyStudentUsers[idx], ...editFormData } as StudentUser
-    } else if (activeTab === 'universitas') {
-      const idx = dummyUnivAdminUsers.findIndex(u => u.id === selectedUser?.id)
-      if (idx !== -1) dummyUnivAdminUsers[idx] = { ...dummyUnivAdminUsers[idx], ...editFormData } as UnivAdminUser
-    } else {
-      const idx = dummyCompanyAdminUsers.findIndex(u => u.id === selectedUser?.id)
-      if (idx !== -1) dummyCompanyAdminUsers[idx] = { ...dummyCompanyAdminUsers[idx], ...editFormData } as CompanyAdminUser
+  const handleSimpanEdit = async () => {
+    if (!selectedUser) return
+    try {
+      await adminUserApi.update(selectedUser.id, {
+        name: editFormData.name || undefined,
+        email: editFormData.email || undefined,
+        status: editFormData.status as 'active' | 'suspended' | 'deleted',
+        ...(activeTab === 'mahasiswa'
+          ? { major: editFormData.extra || undefined }
+          : { nip: editFormData.extra || undefined }),
+      })
+      setIsDetailOpen(false)
+      await loadUsers(activeTab)
+      showNotification('Data pengguna berhasil diperbarui.', 'success')
+    } catch (err: any) {
+      showNotification(err?.response?.data?.message || 'Gagal menyimpan perubahan.', 'warning')
     }
-
-    setDataVersion(v => v + 1)
-    setIsDetailOpen(false)
-    showNotification('Data pengguna berhasil diperbarui.', 'success')
   }
 
   const triggerDeleteConfirm = () => {
@@ -169,23 +234,20 @@ const AdminManajemenPengguna = () => {
     setIsDeleteConfirmOpen(true)
   }
 
-  const executeDeleteUser = () => {
-    if (activeTab === 'mahasiswa') {
-      const idx = dummyStudentUsers.findIndex(u => u.id === selectedUser?.id)
-      if (idx !== -1) dummyStudentUsers[idx].status = 'Dihapus'
-    } else if (activeTab === 'universitas') {
-      const idx = dummyUnivAdminUsers.findIndex(u => u.id === selectedUser?.id)
-      if (idx !== -1) dummyUnivAdminUsers[idx].status = 'Dihapus'
-    } else {
-      const idx = dummyCompanyAdminUsers.findIndex(u => u.id === selectedUser?.id)
-      if (idx !== -1) dummyCompanyAdminUsers[idx].status = 'Dihapus'
+  const executeDeleteUser = async () => {
+    if (!selectedUser) return
+    try {
+      await adminUserApi.remove(selectedUser.id)
+      setIsDeleteConfirmOpen(false)
+      await loadUsers(activeTab)
+      showNotification('Pengguna berhasil dihapus dari sistem.', 'success')
+    } catch (err: any) {
+      setIsDeleteConfirmOpen(false)
+      showNotification(err?.response?.data?.message || 'Gagal menghapus pengguna.', 'warning')
     }
-    setDataVersion(v => v + 1)
-    setIsDeleteConfirmOpen(false)
-    showNotification('Pengguna berhasil dihapus secara permanen dari sistem.', 'success')
   }
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: 'name' | 'email' | 'status' | 'extra', value: string) => {
     setEditFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -317,7 +379,7 @@ const AdminManajemenPengguna = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Cari nama${activeTab === 'mahasiswa' ? ', atau universitas..' : activeTab === 'universitas' ? ', kota, atau ID..' : ' admin perusahaan..'}`}
+              placeholder={`Cari nama${activeTab === 'mahasiswa' ? ', atau universitas..' : activeTab === 'universitas' ? ', universitas, atau NIP..' : ' admin perusahaan..'}`}
               className="w-full pl-10 pr-4 py-2.5 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] focus:outline-none focus:border-[#0f5ce0] transition shadow-sm placeholder:text-[#a0a6b5]"
             />
           </div>
@@ -325,47 +387,32 @@ const AdminManajemenPengguna = () => {
 
         {/* Tabel Data */}
         <div className="overflow-x-auto min-h-[400px]">
-          {paginatedData.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-24 text-[#7b8191]">
+              <p className="text-[15px] font-bold text-[#5b6170]">Memuat data pengguna...</p>
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-24 text-[#ef4444]">
+              <p className="text-[15px] font-bold">{loadError}</p>
+            </div>
+          ) : paginatedData.length > 0 ? (
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-[#f8faff] border-y border-[#e4e9f4] text-[10px] font-extrabold text-[#7b8191] tracking-widest uppercase">
-                  {activeTab === 'mahasiswa' && (
-                    <>
-                      <th className="px-6 py-4 w-[30%]">Mahasiswa</th>
-                      <th className="px-6 py-4 w-[25%]">Universitas</th>
-                      <th className="px-6 py-4 w-[20%]">Jurusan</th>
-                      <th className="px-6 py-4 w-[15%]">Status</th>
-                      <th className="px-6 py-4 w-[10%] text-right">Aksi</th>
-                    </>
-                  )}
-                  {activeTab === 'universitas' && (
-                    <>
-                      <th className="px-6 py-4 w-[30%]">Admin</th>
-                      <th className="px-6 py-4 w-[25%]">Universitas</th>
-                      <th className="px-6 py-4 w-[20%]">NIP / ID Pegawai</th>
-                      <th className="px-6 py-4 w-[15%]">Status</th>
-                      <th className="px-6 py-4 w-[10%] text-right">Aksi</th>
-                    </>
-                  )}
-                  {activeTab === 'perusahaan' && (
-                    <>
-                      <th className="px-6 py-4 w-[30%]">Admin</th>
-                      <th className="px-6 py-4 w-[25%]">Perusahaan</th>
-                      <th className="px-6 py-4 w-[20%]">NIP / ID Pegawai</th>
-                      <th className="px-6 py-4 w-[15%]">Status</th>
-                      <th className="px-6 py-4 w-[10%] text-right">Aksi</th>
-                    </>
-                  )}
+                  <th className="px-6 py-4 w-[30%]">{activeTab === 'mahasiswa' ? 'Mahasiswa' : 'Admin'}</th>
+                  <th className="px-6 py-4 w-[25%]">{activeTab === 'perusahaan' ? 'Perusahaan' : 'Universitas'}</th>
+                  <th className="px-6 py-4 w-[20%]">{activeTab === 'mahasiswa' ? 'Jurusan' : 'NIP / ID Pegawai'}</th>
+                  <th className="px-6 py-4 w-[15%]">Status</th>
+                  <th className="px-6 py-4 w-[10%] text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f1f4f9]">
-
-                {activeTab === 'mahasiswa' && (paginatedData as StudentUser[]).map((user) => (
+                {paginatedData.map((user) => (
                   <tr key={user.id} className="hover:bg-[#fafbfe] transition-colors group align-middle">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center font-black text-[13px] shrink-0 ${getAvatarStyle(user.status)}`}>
-                          {user.initials}
+                          {getInitialsOf(user.name)}
                         </div>
                         <div>
                           <p className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{user.name}</p>
@@ -374,10 +421,10 @@ const AdminManajemenPengguna = () => {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <p className="text-[13.5px] text-[#5b6170] font-medium">{user.univ}</p>
+                      <p className="text-[13.5px] text-[#5b6170] font-medium">{user.orgName}</p>
                     </td>
                     <td className="px-6 py-5">
-                      <p className="text-[13.5px] text-[#5b6170] font-medium">{user.major}</p>
+                      <p className="text-[13.5px] text-[#5b6170] font-medium">{user.extra}</p>
                     </td>
                     <td className="px-6 py-5">
                       {getStatusBadge(user.status)}
@@ -392,73 +439,6 @@ const AdminManajemenPengguna = () => {
                     </td>
                   </tr>
                 ))}
-
-                {activeTab === 'universitas' && (paginatedData as UnivAdminUser[]).map((user) => (
-                  <tr key={user.id} className="hover:bg-[#fafbfe] transition-colors group align-middle">
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center font-black text-[13px] shrink-0 ${getAvatarStyle(user.status)}`}>
-                          {user.initials}
-                        </div>
-                        <div>
-                          <p className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{user.name}</p>
-                          <p className="text-[12px] text-[#7b8191] mt-0.5">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <p className="text-[13.5px] text-[#5b6170] font-medium">{user.univ}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-[13.5px] text-[#5b6170] font-medium">{user.nip}</span>
-                    </td>
-                    <td className="px-6 py-5">
-                      {getStatusBadge(user.status)}
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        onClick={() => handleOpenDetail(user)}
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[#0f5ce0] hover:text-[#0d4ebf] hover:bg-[#eef4ff] rounded-lg transition text-[13px] font-bold"
-                      >
-                        <Eye size={16} /> Detail
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-
-                {activeTab === 'perusahaan' && (paginatedData as CompanyAdminUser[]).map((user) => (
-                  <tr key={user.id} className="hover:bg-[#fafbfe] transition-colors group align-middle">
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center font-black text-[13px] shrink-0 ${getAvatarStyle(user.status)}`}>
-                          {user.initials}
-                        </div>
-                        <div>
-                          <p className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{user.name}</p>
-                          <p className="text-[12px] text-[#7b8191] mt-0.5">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <p className="text-[13.5px] text-[#5b6170] font-medium">{user.company}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-[13.5px] text-[#5b6170] font-medium">{user.nip}</span>
-                    </td>
-                    <td className="px-6 py-5">
-                      {getStatusBadge(user.status)}
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        onClick={() => handleOpenDetail(user)}
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[#0f5ce0] hover:text-[#0d4ebf] hover:bg-[#eef4ff] rounded-lg transition text-[13px] font-bold"
-                      >
-                        <Eye size={16} /> Detail
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-
               </tbody>
             </table>
           ) : (
@@ -471,7 +451,7 @@ const AdminManajemenPengguna = () => {
         </div>
 
         {/* Paginasi Footer */}
-        {filteredData.length > 0 && (
+        {!isLoading && !loadError && filteredData.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white gap-4 rounded-b-[16px]">
             <div className="text-[13px] text-[#7b8191] font-medium text-center sm:text-left">
               Menampilkan <span className="font-bold text-[#111827]">{startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredData.length)}</span> dari <span className="font-bold text-[#111827]">{filteredData.length}</span> {activeTab === 'mahasiswa' ? 'mahasiswa' : 'admin'}
@@ -532,7 +512,7 @@ const AdminManajemenPengguna = () => {
               {/* Header Info Singkat (Avatar) */}
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#f1f4f9]">
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center font-black text-[20px] shrink-0 ${getAvatarStyle(editFormData.status)}`}>
-                  {editFormData.initials}
+                  {getInitialsOf(editFormData.name)}
                 </div>
                 <div>
                   <h3 className="text-[16px] font-bold text-[#111827]">{editFormData.name}</h3>
@@ -547,7 +527,7 @@ const AdminManajemenPengguna = () => {
                     <label className="block text-[13px] font-bold text-[#111827] mb-2">Nama Lengkap</label>
                     <input
                       type="text"
-                      value={editFormData.name || ''}
+                      value={editFormData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       className="w-full h-11 px-4 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] font-medium text-[#111827] outline-none focus:border-[#0f5ce0] transition shadow-sm"
                     />
@@ -556,7 +536,7 @@ const AdminManajemenPengguna = () => {
                     <label className="block text-[13px] font-bold text-[#111827] mb-2">Email</label>
                     <input
                       type="email"
-                      value={editFormData.email || ''}
+                      value={editFormData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       className="w-full h-11 px-4 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] font-medium text-[#111827] outline-none focus:border-[#0f5ce0] transition shadow-sm"
                     />
@@ -567,7 +547,7 @@ const AdminManajemenPengguna = () => {
                   <div>
                     <label className="block text-[13px] font-bold text-[#111827] mb-2">Status Akun</label>
                     <select
-                      value={editFormData.status || ''}
+                      value={editFormData.status}
                       onChange={(e) => handleInputChange('status', e.target.value)}
                       className="w-full h-11 px-4 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] font-medium text-[#111827] outline-none focus:border-[#0f5ce0] transition shadow-sm cursor-pointer appearance-none"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6170' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
@@ -581,11 +561,12 @@ const AdminManajemenPengguna = () => {
                     <label className="block text-[13px] font-bold text-[#111827] mb-2">
                       {activeTab === 'perusahaan' ? 'Nama Perusahaan' : 'Universitas'}
                     </label>
+                    {/* keanggotaan organisasi tidak diedit dari sini */}
                     <input
                       type="text"
-                      value={(activeTab === 'perusahaan' ? editFormData.company : editFormData.univ) || ''}
-                      onChange={(e) => handleInputChange(activeTab === 'perusahaan' ? 'company' : 'univ', e.target.value)}
-                      className="w-full h-11 px-4 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] font-medium text-[#111827] outline-none focus:border-[#0f5ce0] transition shadow-sm"
+                      value={selectedUser.orgName}
+                      disabled
+                      className="w-full h-11 px-4 bg-[#f1f4f9] border border-[#e4e9f4] rounded-lg text-[13px] font-medium text-[#7b8191] outline-none shadow-sm cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -596,8 +577,8 @@ const AdminManajemenPengguna = () => {
                   </label>
                   <input
                     type="text"
-                    value={(activeTab === 'mahasiswa' ? editFormData.major : editFormData.nip) || ''}
-                    onChange={(e) => handleInputChange(activeTab === 'mahasiswa' ? 'major' : 'nip', e.target.value)}
+                    value={editFormData.extra}
+                    onChange={(e) => handleInputChange('extra', e.target.value)}
                     className="w-full h-11 px-4 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] font-medium text-[#111827] outline-none focus:border-[#0f5ce0] transition shadow-sm"
                   />
                 </div>
@@ -609,7 +590,7 @@ const AdminManajemenPengguna = () => {
                 onClick={triggerDeleteConfirm}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#ef4444] text-[13px] font-bold rounded-lg border border-[#fecaca] hover:bg-[#fef2f2] transition-colors shadow-sm"
               >
-                <Trash2 size={16} /> Hapus Permanen
+                <Trash2 size={16} /> Hapus Akun
               </button>
               <button
                 onClick={handleSimpanEdit}
@@ -627,8 +608,8 @@ const AdminManajemenPengguna = () => {
         isOpen={isDeleteConfirmOpen}
         icon={Trash2}
         title="Hapus Data Pengguna?"
-        message={<>Tindakan ini tidak dapat dibatalkan. Semua data terkait <strong className="text-[#111827]">{selectedUser?.name}</strong> akan dihapus secara permanen dari sistem.</>}
-        confirmLabel="Ya, Hapus Data"
+        message={<>Akun <strong className="text-[#111827]">{selectedUser?.name}</strong> akan dinonaktifkan (soft-delete) dan tidak bisa lagi masuk ke sistem.</>}
+        confirmLabel="Ya, Hapus Akun"
         tone="danger"
         onConfirm={executeDeleteUser}
         onCancel={() => {

@@ -1,34 +1,94 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Search, User, GraduationCap, Building2, Play, Eye, Bookmark, FileText, Filter, ChevronDown, RotateCcw } from 'lucide-react'
-import { dummyStudentLogs, dummyUnivLogs, dummyCompanyLogs, activityLogFilterOptions } from './AdminData'
-import type { StudentLog, UnivAdminLog, CompanyAdminLog } from './AdminData'
+import { adminAnalyticsApi, getInitialsOf } from '../../services/admin.service'
+import type { AdminActivityLog } from '../../services/admin.service'
 import Toast from './components/Toast'
 
+type TabKey = 'mahasiswa' | 'universitas' | 'perusahaan'
+
+// tab UI -> group di backend
+const TAB_GROUP: Record<TabKey, 'student' | 'university' | 'company'> = {
+  mahasiswa: 'student',
+  universitas: 'university',
+  perusahaan: 'company',
+}
+
+// Opsi filter per tab — nilainya sama dengan nama aktivitas dari backend
+const activityLogFilterOptions: Record<TabKey, { label: string; value: string }[]> = {
+  mahasiswa: [
+    { label: 'Semua Aktivitas', value: 'all' },
+    { label: 'Apply Job', value: 'Apply Job' },
+    { label: 'Save Job', value: 'Save Job' },
+    { label: 'View Job', value: 'View Job' },
+  ],
+  universitas: [
+    { label: 'Semua Aktivitas', value: 'all' },
+    { label: 'Verifikasi Berkas', value: 'VERIFIKASI BERKAS' },
+    { label: 'Tambah Mahasiswa', value: 'TAMBAH MAHASISWA' },
+  ],
+  perusahaan: [
+    { label: 'Semua Aktivitas', value: 'all' },
+    { label: 'Post Lowongan', value: 'Post Lowongan' },
+    { label: 'Kirim Undangan', value: 'Kirim Undangan' },
+  ],
+}
+
+// "2026-08-12T07:15:00Z" -> { time: "14:15:00", date: "12 Ags 2026" }
+const splitDateTime = (iso: string) => {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return { time: '-', date: '-' }
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des']
+  return {
+    time: d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    date: `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`,
+  }
+}
+
+const formatDuration = (ms?: number | null) => {
+  if (!ms || ms <= 0) return null
+  const totalSec = Math.round(ms / 1000)
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  return `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
+}
+
 const LogAktifitasPengguna = () => {
-  const [activeTab, setActiveTab] = useState<'mahasiswa' | 'universitas' | 'perusahaan'>('mahasiswa')
+  const [activeTab, setActiveTab] = useState<TabKey>('mahasiswa')
   const [searchQuery, setSearchQuery] = useState('')
-  
+
+  const [logs, setLogs] = useState<AdminActivityLog[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
   // State untuk Filter Value
   const [filterActivity, setFilterActivity] = useState('all')
-  
+
   // State untuk Buka/Tutup Custom Dropdown
   const [isActivityOpen, setIsActivityOpen] = useState(false)
   const activityDropdownRef = useRef<HTMLDivElement>(null)
-  
+
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
-  
+
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'warning'} | null>(null)
 
-  // Opsi Filter Dinamis menyesuaikan Tab Aktif (bersumber dari AdminData terpusat)
   const filterOptions = activityLogFilterOptions
 
-  // Reset filter dan page setiap kali pindah tab
+  // Ambil log dari backend setiap pindah tab
   useEffect(() => {
     setCurrentPage(1)
     setFilterActivity('all')
     setSearchQuery('')
     setIsActivityOpen(false)
+
+    let cancelled = false
+    setIsLoading(true)
+    adminAnalyticsApi
+      .activityLogs({ group: TAB_GROUP[activeTab], limit: 100 })
+      .then(({ logs: list }) => { if (!cancelled) { setLogs(list); setLoadError('') } })
+      .catch(() => { if (!cancelled) setLoadError('Gagal memuat log aktivitas.') })
+      .finally(() => { if (!cancelled) setIsLoading(false) })
+    return () => { cancelled = true }
   }, [activeTab])
 
   // Reset page ke 1 jika filter atau pencarian diubah
@@ -46,12 +106,6 @@ const LogAktifitasPengguna = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  // Helper mendapatkan inisial dari nama
-  const getInitials = (name: string) => {
-    if (!name) return 'NA'
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-  }
 
   // Helper Warna & Render Badge Aktivitas (Fix Width & Center)
   const renderActivityBadge = (activity: string, tab: string) => {
@@ -75,7 +129,7 @@ const LogAktifitasPengguna = () => {
 
     return (
       <div className="flex justify-center">
-        <span className={`inline-flex items-center justify-center gap-1.5 w-[140px] px-3 py-1.5 rounded-full text-[12px] font-bold ${theme}`}>
+        <span className={`inline-flex items-center justify-center gap-1.5 min-w-[140px] px-3 py-1.5 rounded-full text-[12px] font-bold ${theme}`}>
           {Icon}
           {activity}
         </span>
@@ -83,28 +137,17 @@ const LogAktifitasPengguna = () => {
     )
   }
 
-  // Logic Filtering Utama
+  // Logic Filtering Utama (client-side di atas data yang sudah diambil)
   const filteredData = useMemo(() => {
     const query = searchQuery.toLowerCase()
-    
-    switch (activeTab) {
-      case 'mahasiswa':
-        return dummyStudentLogs.filter(log => 
-          (log.name.toLowerCase().includes(query) || log.company.toLowerCase().includes(query) || log.role.toLowerCase().includes(query)) &&
-          (filterActivity === 'all' || log.activity === filterActivity)
-        )
-      case 'universitas':
-        return dummyUnivLogs.filter(log => 
-          (log.name.toLowerCase().includes(query) || log.univ.toLowerCase().includes(query) || log.detail.toLowerCase().includes(query)) &&
-          (filterActivity === 'all' || log.activity === filterActivity)
-        )
-      case 'perusahaan':
-        return dummyCompanyLogs.filter(log => 
-          (log.name.toLowerCase().includes(query) || log.company.toLowerCase().includes(query) || log.detail.toLowerCase().includes(query)) &&
-          (filterActivity === 'all' || log.activity === filterActivity)
-        )
-    }
-  }, [activeTab, searchQuery, filterActivity])
+    return logs.filter(log =>
+      ((log.actorName ?? '').toLowerCase().includes(query) ||
+        (log.orgName ?? '').toLowerCase().includes(query) ||
+        (log.detail ?? '').toLowerCase().includes(query) ||
+        (log.subDetail ?? '').toLowerCase().includes(query)) &&
+      (filterActivity === 'all' || log.activity === filterActivity)
+    )
+  }, [logs, searchQuery, filterActivity])
 
   // Paginasi
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE)
@@ -140,25 +183,11 @@ const LogAktifitasPengguna = () => {
       return
     }
 
-    let headers: string[] = []
-    let csvRows: string[][] = []
-
-    if (activeTab === 'mahasiswa') {
-      headers = ['Waktu', 'Durasi', 'Nama Mahasiswa', 'Aktivitas', 'Peran', 'Perusahaan']
-      csvRows = (filteredData as StudentLog[]).map(log => [
-        log.time, log.duration.replace('\n', ' '), log.name, log.activity, log.role, log.company
-      ])
-    } else if (activeTab === 'universitas') {
-      headers = ['Waktu', 'Tanggal', 'Nama Admin', 'Universitas', 'Aktivitas', 'Detail Utama', 'Sub Detail']
-      csvRows = (filteredData as UnivAdminLog[]).map(log => [
-        log.time, log.date, log.name, log.univ, log.activity, log.detail, log.subDetail
-      ])
-    } else {
-      headers = ['Waktu', 'Tanggal', 'Nama Admin', 'Perusahaan', 'Aktivitas', 'Detail']
-      csvRows = (filteredData as CompanyAdminLog[]).map(log => [
-        log.time, log.date, log.name, log.company, log.activity, log.detail
-      ])
-    }
+    const headers = ['Waktu', 'Tanggal', 'Nama', activeTab === 'perusahaan' ? 'Perusahaan' : 'Universitas', 'Aktivitas', 'Detail', 'Sub Detail']
+    const csvRows = filteredData.map(log => {
+      const dt = splitDateTime(log.time)
+      return [dt.time, dt.date, log.actorName ?? '-', log.orgName ?? '-', log.activity, log.detail ?? '-', log.subDetail ?? '-']
+    })
 
     const csvContent = [headers.join(','), ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -178,7 +207,7 @@ const LogAktifitasPengguna = () => {
 
   return (
     <div className="w-full pb-10 animate-in fade-in duration-300">
-      
+
       <Toast notification={notification} onClose={() => setNotification(null)} />
 
       {/* Header */}
@@ -187,8 +216,8 @@ const LogAktifitasPengguna = () => {
           <h1 className="text-[24px] font-bold text-[#111827]">Log Aktivitas Pengguna</h1>
           <p className="text-[14px] text-[#5b6170] mt-1">Pantau dan ekspor riwayat aktivitas mahasiswa, universitas, dan perusahaan.</p>
         </div>
-        
-        <button 
+
+        <button
           type="button"
           onClick={handleExportCSV}
           className="flex items-center gap-2 px-6 py-2.5 bg-[#052960] rounded-xl text-[13px] font-bold text-white hover:bg-[#031635] transition-all duration-200 active:scale-95 shadow-sm w-full sm:w-auto justify-center"
@@ -213,15 +242,15 @@ const LogAktifitasPengguna = () => {
 
       {/* Main Container */}
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm flex flex-col overflow-visible">
-        
+
         {/* Filter & Search Bar */}
         <div className="p-5 border-b border-[#e4e9f4] flex flex-col md:flex-row justify-between items-center gap-4 bg-white rounded-t-[16px]">
-          
+
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-            
+
             {/* Custom Dropdown Filter Aktivitas */}
             <div className="relative w-full sm:w-[220px]" ref={activityDropdownRef}>
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsActivityOpen(!isActivityOpen)}
                 className="w-full flex items-center justify-between px-4 py-2.5 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] font-semibold text-[#111827] hover:bg-gray-50 focus:outline-none transition-all shadow-sm"
@@ -245,8 +274,8 @@ const LogAktifitasPengguna = () => {
                         setCurrentPage(1)
                       }}
                       className={`w-full text-left px-4 py-2.5 text-[13px] transition-colors ${
-                        filterActivity === opt.value 
-                          ? 'bg-[#eef4ff] text-[#0f5ce0] font-bold' 
+                        filterActivity === opt.value
+                          ? 'bg-[#eef4ff] text-[#0f5ce0] font-bold'
                           : 'text-[#5b6170] hover:bg-[#f8faff] hover:text-[#111827] font-medium'
                       }`}
                     >
@@ -259,8 +288,8 @@ const LogAktifitasPengguna = () => {
 
             {/* Tombol Reset Filter */}
             {(filterActivity !== 'all' || searchQuery !== '') && (
-              <button 
-                onClick={handleResetFilter} 
+              <button
+                onClick={handleResetFilter}
                 className="flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-bold text-[#7b8191] hover:text-[#111827] hover:bg-[#f1f4f9] rounded-lg transition-colors border border-transparent w-full sm:w-auto justify-center"
               >
                 <RotateCcw size={16} strokeWidth={2.5} /> Reset
@@ -271,8 +300,8 @@ const LogAktifitasPengguna = () => {
 
           <div className="relative w-full md:w-[350px]">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a0a6b5]" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari nama atau aktivitas..."
@@ -283,7 +312,15 @@ const LogAktifitasPengguna = () => {
 
         {/* Tabel Data */}
         <div className="overflow-x-auto min-h-[400px]">
-          {paginatedData.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-24 text-[#7b8191]">
+              <p className="text-[15px] font-bold text-[#5b6170]">Memuat log aktivitas...</p>
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-24 text-[#ef4444]">
+              <p className="text-[15px] font-bold">{loadError}</p>
+            </div>
+          ) : paginatedData.length > 0 ? (
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-[#f8faff] border-y border-[#e4e9f4] text-[10px] font-extrabold text-[#7b8191] tracking-widest uppercase">
@@ -319,94 +356,104 @@ const LogAktifitasPengguna = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f1f4f9]">
-                
+
                 {/* --- MAHASISWA --- */}
-                {activeTab === 'mahasiswa' && (paginatedData as StudentLog[]).map((log) => (
-                  <tr key={log.id} className="hover:bg-[#fafbfe] transition-colors group">
-                    <td className="px-6 py-5">
-                      <p className="text-[13px] text-[#111827] font-bold leading-tight">{log.time}</p>
-                      <p className="text-[12px] text-[#7b8191] mt-0.5">{log.duration}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#0f5ce0] flex items-center justify-center font-black text-[13px] shrink-0 border border-[#e4e9f4]">
-                          {log.initials}
+                {activeTab === 'mahasiswa' && paginatedData.map((log) => {
+                  const dt = splitDateTime(log.time)
+                  const duration = formatDuration(log.durationMs)
+                  return (
+                    <tr key={log.id} className="hover:bg-[#fafbfe] transition-colors group">
+                      <td className="px-6 py-5">
+                        <p className="text-[13px] text-[#111827] font-bold leading-tight">{dt.time}</p>
+                        <p className="text-[12px] text-[#7b8191] mt-0.5">{duration ?? dt.date}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#0f5ce0] flex items-center justify-center font-black text-[13px] shrink-0 border border-[#e4e9f4]">
+                            {getInitialsOf(log.actorName)}
+                          </div>
+                          <span className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{log.actorName ?? '-'}</span>
                         </div>
-                        <span className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{log.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      {renderActivityBadge(log.activity, activeTab)}
-                    </td>
-                    <td className="px-6 py-5">
-                      <div>
-                        <p className="text-[14px] font-bold text-[#111827] line-clamp-1">{log.role}</p>
-                        <p className="text-[12px] text-[#7b8191] mt-1 flex items-center gap-1.5 font-medium">
-                          <Building2 size={13} className="shrink-0 text-[#a0a6b5]" /> {log.company}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-5">
+                        {renderActivityBadge(log.activity, activeTab)}
+                      </td>
+                      <td className="px-6 py-5">
+                        <div>
+                          <p className="text-[14px] font-bold text-[#111827] line-clamp-1">{log.detail ?? '-'}</p>
+                          <p className="text-[12px] text-[#7b8191] mt-1 flex items-center gap-1.5 font-medium">
+                            <Building2 size={13} className="shrink-0 text-[#a0a6b5]" /> {log.subDetail ?? '-'}
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
 
                 {/* --- UNIVERSITAS --- */}
-                {activeTab === 'universitas' && (paginatedData as UnivAdminLog[]).map((log) => (
-                  <tr key={log.id} className="hover:bg-[#fafbfe] transition-colors group">
-                    <td className="px-6 py-5">
-                      <p className="text-[13px] font-bold text-[#111827] leading-tight">{log.time}</p>
-                      <p className="text-[12px] text-[#7b8191] mt-0.5">{log.date}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#0f5ce0] flex items-center justify-center font-black text-[13px] shrink-0 border border-[#e4e9f4]">
-                           {getInitials(log.name)}
-                         </div>
-                        <span className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{log.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-[13.5px] text-[#5b6170] font-medium">
-                      {log.univ}
-                    </td>
-                    <td className="px-6 py-5">
-                      {renderActivityBadge(log.activity, activeTab)}
-                    </td>
-                    <td className="px-6 py-5">
-                      <div>
-                        <p className="text-[14px] font-bold text-[#111827] leading-tight line-clamp-1">{log.detail}</p>
-                        <p className="text-[12px] text-[#7b8191] mt-1 flex items-center gap-1.5 font-medium">
-                          <FileText size={13} className="shrink-0 text-[#a0a6b5]" /> {log.subDetail}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {activeTab === 'universitas' && paginatedData.map((log) => {
+                  const dt = splitDateTime(log.time)
+                  return (
+                    <tr key={log.id} className="hover:bg-[#fafbfe] transition-colors group">
+                      <td className="px-6 py-5">
+                        <p className="text-[13px] font-bold text-[#111827] leading-tight">{dt.time}</p>
+                        <p className="text-[12px] text-[#7b8191] mt-0.5">{dt.date}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#0f5ce0] flex items-center justify-center font-black text-[13px] shrink-0 border border-[#e4e9f4]">
+                             {getInitialsOf(log.actorName ?? log.orgName)}
+                           </div>
+                          <span className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{log.actorName ?? 'Sistem Kampus'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-[13.5px] text-[#5b6170] font-medium">
+                        {log.orgName ?? '-'}
+                      </td>
+                      <td className="px-6 py-5">
+                        {renderActivityBadge(log.activity, activeTab)}
+                      </td>
+                      <td className="px-6 py-5">
+                        <div>
+                          <p className="text-[14px] font-bold text-[#111827] leading-tight line-clamp-1">{log.detail ?? '-'}</p>
+                          <p className="text-[12px] text-[#7b8191] mt-1 flex items-center gap-1.5 font-medium">
+                            <FileText size={13} className="shrink-0 text-[#a0a6b5]" /> {log.subDetail ?? '-'}
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
 
                 {/* --- PERUSAHAAN --- */}
-                {activeTab === 'perusahaan' && (paginatedData as CompanyAdminLog[]).map((log) => (
-                  <tr key={log.id} className="hover:bg-[#fafbfe] transition-colors group">
-                    <td className="px-6 py-5">
-                      <p className="text-[13px] font-bold text-[#111827] leading-tight">{log.time}</p>
-                      <p className="text-[12px] text-[#7b8191] mt-0.5">{log.date}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#0f5ce0] flex items-center justify-center font-black text-[13px] shrink-0 border border-[#e4e9f4]">
-                           {getInitials(log.name)}
-                         </div>
-                        <span className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{log.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-[13.5px] text-[#5b6170] font-medium">
-                      {log.company}
-                    </td>
-                    <td className="px-6 py-5">
-                       {renderActivityBadge(log.activity, activeTab)}
-                    </td>
-                    <td className="px-6 py-5 text-[14px] font-bold text-[#111827] line-clamp-2">
-                      {log.detail}
-                    </td>
-                  </tr>
-                ))}
+                {activeTab === 'perusahaan' && paginatedData.map((log) => {
+                  const dt = splitDateTime(log.time)
+                  return (
+                    <tr key={log.id} className="hover:bg-[#fafbfe] transition-colors group">
+                      <td className="px-6 py-5">
+                        <p className="text-[13px] font-bold text-[#111827] leading-tight">{dt.time}</p>
+                        <p className="text-[12px] text-[#7b8191] mt-0.5">{dt.date}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#0f5ce0] flex items-center justify-center font-black text-[13px] shrink-0 border border-[#e4e9f4]">
+                             {getInitialsOf(log.actorName ?? log.orgName)}
+                           </div>
+                          <span className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{log.actorName ?? '-'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-[13.5px] text-[#5b6170] font-medium">
+                        {log.orgName ?? '-'}
+                      </td>
+                      <td className="px-6 py-5">
+                         {renderActivityBadge(log.activity, activeTab)}
+                      </td>
+                      <td className="px-6 py-5 text-[14px] font-bold text-[#111827] line-clamp-2">
+                        {log.detail ?? '-'}
+                      </td>
+                    </tr>
+                  )
+                })}
 
               </tbody>
             </table>
@@ -420,14 +467,14 @@ const LogAktifitasPengguna = () => {
         </div>
 
         {/* Paginasi Footer */}
-        {filteredData.length > 0 && (
+        {!isLoading && !loadError && filteredData.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white gap-4 rounded-b-[16px]">
             <div className="text-[13px] text-[#7b8191] font-medium text-center sm:text-left">
               Menampilkan <span className="font-bold text-[#111827]">{startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredData.length)}</span> dari <span className="font-bold text-[#111827]">{filteredData.length}</span> data
             </div>
-            
+
             <div className="flex items-center gap-1">
-              <button 
+              <button
                 type="button"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
@@ -435,15 +482,15 @@ const LogAktifitasPengguna = () => {
               >
                 Sebelumnya
               </button>
-              
+
               {getPaginationGroup().map((pageNum) => (
                 <button
                   key={pageNum}
                   type="button"
                   onClick={() => setCurrentPage(pageNum)}
                   className={`w-8 h-8 rounded-lg font-bold text-[13px] flex items-center justify-center transition-all ${
-                    currentPage === pageNum 
-                      ? 'bg-[#0f5ce0] text-white shadow-sm' 
+                    currentPage === pageNum
+                      ? 'bg-[#0f5ce0] text-white shadow-sm'
                       : 'text-[#5b6170] hover:bg-[#f8faff] border border-transparent'
                   }`}
                 >
@@ -451,7 +498,7 @@ const LogAktifitasPengguna = () => {
                 </button>
               ))}
 
-              <button 
+              <button
                 type="button"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || totalPages === 0}

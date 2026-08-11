@@ -1,34 +1,80 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, GraduationCap, Users, Plus, CheckCircle2, Clock, Trash2, Edit, X } from 'lucide-react'
-import { dummyUniversityList, deleteUniversityData, updateUniversityData, universityStatusFilterOptions, universityStatusFormOptions } from './AdminData'
-import type { UniversityData } from './AdminData'
+import { adminUniversityApi, getInitialsOf, formatDateID } from '../../services/admin.service'
+import type { AdminUniversity } from '../../services/admin.service'
 import Toast from './components/Toast'
 import ConfirmModal from './components/ConfirmModal'
 import StatusBadge from './components/StatusBadge'
+
+// baris tabel: bentuk turunan dari AdminUniversity agar mudah dirender
+interface UniversityRow {
+  id: string
+  name: string
+  location: string
+  adminName: string
+  adminEmail: string
+  status: 'AKTIF' | 'PENDING'
+  lastActive: string
+}
+
+const universityStatusFilterOptions = [
+  { label: 'Semua Status', value: 'all' },
+  { label: 'Aktif', value: 'AKTIF' },
+  { label: 'Pending', value: 'PENDING' },
+]
+
+const universityStatusFormOptions = [
+  { label: 'Aktif', value: 'AKTIF' },
+  { label: 'Pending', value: 'PENDING' },
+]
+
+const toRow = (u: AdminUniversity): UniversityRow => ({
+  id: u.id,
+  name: u.name,
+  location: u.city ?? '-',
+  adminName: u.admin?.name ?? '-',
+  adminEmail: u.admin?.email ?? '-',
+  status: u.admin?.status === 'active' ? 'AKTIF' : 'PENDING',
+  lastActive: u.admin?.lastLoginAt ? formatDateID(u.admin.lastLoginAt, true) : '-',
+})
 
 const AdminKelolaUniversitas = () => {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
-  const [universities, setUniversities] = useState<UniversityData[]>([])
-  
+  const [universities, setUniversities] = useState<UniversityRow[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [editData, setEditData] = useState<UniversityData | null>(null)
-  
+  const [editData, setEditData] = useState<UniversityRow | null>(null)
+
   // Delete Modal State
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   // Notification State
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'warning'} | null>(null)
 
+  const loadUniversities = async () => {
+    try {
+      const { universities: list } = await adminUniversityApi.list({ limit: 100 })
+      setUniversities(list.map(toRow))
+      setLoadError('')
+    } catch {
+      setLoadError('Gagal memuat daftar universitas.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
-    setUniversities([...dummyUniversityList])
+    loadUniversities()
   }, [])
 
   const universityMetrics = useMemo(() => ({
@@ -38,7 +84,7 @@ const AdminKelolaUniversitas = () => {
 
   const filteredData = useMemo(() => {
     return universities.filter((univ) => {
-      const matchSearch = univ.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchSearch = univ.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           univ.adminName.toLowerCase().includes(searchQuery.toLowerCase())
       const matchStatus = filterStatus === 'all' || univ.status === filterStatus
       return matchSearch && matchStatus
@@ -62,10 +108,6 @@ const AdminKelolaUniversitas = () => {
     return pages
   }
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-  }
-
   const showNotification = (msg: string, type: 'success' | 'warning') => {
     setNotification({ message: msg, type })
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -73,51 +115,65 @@ const AdminKelolaUniversitas = () => {
   }
 
   // --- CRUD Logic ---
-  const handleDeleteConfirm = () => {
-    if (deleteId) {
-      deleteUniversityData(deleteId)
-      setUniversities([...dummyUniversityList])
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return
+    try {
+      await adminUniversityApi.remove(deleteId)
       setDeleteId(null)
+      await loadUniversities()
       showNotification('Universitas berhasil dihapus.', 'success')
-      
+
       // Handle edge case where deleting the last item on a page leaves the page empty
       if (paginatedData.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1)
       }
+    } catch {
+      setDeleteId(null)
+      showNotification('Gagal menghapus universitas.', 'warning')
     }
   }
 
-  const handleOpenEdit = (univ: UniversityData) => {
+  const handleOpenEdit = (univ: UniversityRow) => {
     setEditData({ ...univ })
     setIsEditModalOpen(true)
   }
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editData) {
-      // Cek apakah ada perubahan
-      const originalData = universities.find(u => u.id === editData.id)
-      const isChanged = originalData && (
-        originalData.name !== editData.name ||
-        originalData.location !== editData.location ||
-        originalData.adminName !== editData.adminName ||
-        originalData.status !== editData.status
-      )
+    if (!editData) return
 
-      if (isChanged) {
-        updateUniversityData(editData.id, editData)
-        setUniversities([...dummyUniversityList])
-        setIsEditModalOpen(false)
-        showNotification('Perubahan data universitas berhasil disimpan.', 'success')
-      } else {
-        setIsEditModalOpen(false)
-        showNotification('Tidak ada perubahan data yang dilakukan.', 'warning')
-      }
+    // Cek apakah ada perubahan
+    const originalData = universities.find(u => u.id === editData.id)
+    const isChanged = originalData && (
+      originalData.name !== editData.name ||
+      originalData.location !== editData.location ||
+      originalData.adminName !== editData.adminName ||
+      originalData.status !== editData.status
+    )
+
+    if (!isChanged) {
+      setIsEditModalOpen(false)
+      showNotification('Tidak ada perubahan data yang dilakukan.', 'warning')
+      return
+    }
+
+    try {
+      await adminUniversityApi.update(editData.id, {
+        name: editData.name,
+        city: editData.location,
+        adminName: editData.adminName !== '-' ? editData.adminName : undefined,
+        adminStatus: editData.status === 'AKTIF' ? 'active' : 'pending',
+      })
+      setIsEditModalOpen(false)
+      await loadUniversities()
+      showNotification('Perubahan data universitas berhasil disimpan.', 'success')
+    } catch {
+      showNotification('Gagal menyimpan perubahan.', 'warning')
     }
   }
 
   const formatLastActive = (dateString: string) => {
-    if (!dateString) return { date: '-', time: '' }
+    if (!dateString || dateString === '-') return { date: '-', time: '' }
     const parts = dateString.split(', ')
     if (parts.length === 2) {
       return { date: parts[0], time: parts[1] }
@@ -127,7 +183,7 @@ const AdminKelolaUniversitas = () => {
 
   return (
     <div className="w-full pb-10 animate-in fade-in duration-300">
-      
+
       <Toast notification={notification} onClose={() => setNotification(null)} />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -135,7 +191,7 @@ const AdminKelolaUniversitas = () => {
           <h1 className="text-[24px] font-bold text-[#111827]">Kelola Admin Universitas</h1>
           <p className="text-[14px] text-[#5b6170] mt-1">Manajemen akun administrator dan status integrasi data universitas.</p>
         </div>
-        <button 
+        <button
           onClick={() => navigate('/admin/kelola-universitas/tambah')}
           className="flex items-center gap-2 px-6 py-3 bg-[#0f5ce0] rounded-xl text-[14px] font-bold text-white hover:bg-[#0d4ebf] transition-all duration-200 active:scale-95 shadow-sm w-full sm:w-auto justify-center"
         >
@@ -154,7 +210,7 @@ const AdminKelolaUniversitas = () => {
             <p className="text-[32px] font-black text-[#111827] leading-none">{universityMetrics.total}</p>
           </div>
         </div>
-        
+
         <div className="bg-white p-6 rounded-[16px] border border-[#e4e9f4] shadow-sm flex items-start gap-5">
           <div className="w-14 h-14 rounded-[12px] bg-[#f8faff] text-[#7b8191] border border-[#e4e9f4] flex items-center justify-center shrink-0">
             <Users size={28} strokeWidth={2} />
@@ -167,10 +223,10 @@ const AdminKelolaUniversitas = () => {
       </div>
 
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] shadow-sm flex flex-col overflow-hidden">
-        
+
         <div className="p-5 border-b border-[#e4e9f4] flex flex-col lg:flex-row justify-between items-center gap-4 relative z-10">
           <div className="flex items-center gap-3 w-full lg:w-auto relative">
-             <select 
+             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-4 py-2.5 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] font-medium text-[#111827] focus:outline-none focus:border-[#0f5ce0] transition shadow-sm w-full sm:w-[150px] appearance-none"
@@ -181,21 +237,29 @@ const AdminKelolaUniversitas = () => {
               ))}
             </select>
           </div>
-          
+
           <div className="relative w-full lg:w-[350px]">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a0a6b5]" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama universitas atau admin..." 
+              placeholder="Cari nama universitas atau admin..."
               className="w-full pl-10 pr-4 py-2.5 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] focus:outline-none focus:border-[#0f5ce0] transition shadow-sm"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto min-h-[300px]">
-          {paginatedData.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#7b8191]">
+              <p className="text-[14px] font-bold">Memuat daftar universitas...</p>
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#ef4444]">
+              <p className="text-[14px] font-bold">{loadError}</p>
+            </div>
+          ) : paginatedData.length > 0 ? (
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-[#f8faff] border-y border-[#e4e9f4] text-[10px] font-extrabold text-[#7b8191] tracking-widest uppercase">
@@ -214,7 +278,7 @@ const AdminKelolaUniversitas = () => {
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#a0a6b5] border border-[#e4e9f4] flex items-center justify-center font-black text-[13px] shrink-0">
-                            {getInitials(univ.name)}
+                            {getInitialsOf(univ.name)}
                           </div>
                           <div>
                             <h4 className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{univ.name}</h4>
@@ -248,14 +312,14 @@ const AdminKelolaUniversitas = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center justify-end gap-2">
-                          <button 
+                          <button
                             onClick={() => handleOpenEdit(univ)}
                             className="w-8 h-8 flex items-center justify-center text-[#7b8191] hover:text-[#0f5ce0] hover:bg-[#eef4ff] rounded-[8px] transition"
                             title="Edit"
                           >
                             <Edit size={16} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => setDeleteId(univ.id)}
                             className="w-8 h-8 flex items-center justify-center text-[#7b8191] hover:text-[#ef4444] hover:bg-[#fee2e2] rounded-[8px] transition"
                             title="Hapus"
@@ -278,28 +342,28 @@ const AdminKelolaUniversitas = () => {
         </div>
 
         {/* Paginasi Footer */}
-        {filteredData.length > 0 && (
+        {!isLoading && !loadError && filteredData.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm gap-4">
             <div className="text-[13px] text-[#7b8191] font-medium text-center sm:text-left">
               Menampilkan <span className="text-[#111827] font-bold">{startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredData.length)}</span> dari <span className="text-[#111827] font-bold">{filteredData.length}</span>
             </div>
-            
+
             <div className="flex items-center gap-1">
-              <button 
+              <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
                 className="text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#a0a6b5] disabled:opacity-50 transition mr-2"
               >
                 Sebelumnya
               </button>
-              
+
               {getPaginationGroup().map((pageNum) => (
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
                   className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                    currentPage === pageNum 
-                      ? 'bg-[#0f5ce0] text-white shadow-sm' 
+                    currentPage === pageNum
+                      ? 'bg-[#0f5ce0] text-white shadow-sm'
                       : 'text-[#5b6170] hover:bg-[#f8faff] border border-transparent'
                   }`}
                 >
@@ -307,7 +371,7 @@ const AdminKelolaUniversitas = () => {
                 </button>
               ))}
 
-              <button 
+              <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || totalPages === 0}
                 className="text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#a0a6b5] disabled:opacity-50 transition ml-2"
@@ -346,9 +410,9 @@ const AdminKelolaUniversitas = () => {
                   </div>
                   <div>
                     <label className="block text-[13px] font-bold text-[#111827] mb-2">Status Akun</label>
-                    <select 
-                      value={editData.status} 
-                      onChange={e => setEditData({...editData, status: e.target.value as 'AKTIF'|'PENDING'})} 
+                    <select
+                      value={editData.status}
+                      onChange={e => setEditData({...editData, status: e.target.value as 'AKTIF'|'PENDING'})}
                       className="w-full h-11 px-4 bg-[#f8faff] border border-[#e4e9f4] rounded-lg text-[13px] font-medium text-[#111827] outline-none focus:border-[#0f5ce0] transition shadow-sm cursor-pointer appearance-none"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6170' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
                     >

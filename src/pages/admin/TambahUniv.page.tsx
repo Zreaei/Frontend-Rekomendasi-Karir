@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronRight, Building2, User, Eye, EyeOff } from 'lucide-react'
-import { addUniversityData } from './AdminData'
+import { adminUniversityApi } from '../../services/admin.service'
 import Toast from './components/Toast'
 
 const AdminTambahUniv = () => {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'warning'} | null>(null)
 
   // Form States
@@ -33,7 +34,7 @@ const AdminTambahUniv = () => {
     }
   }
 
-  const handleSimpanData = (e: React.FormEvent) => {
+  const handleSimpanData = async (e: React.FormEvent) => {
     e.preventDefault()
     let newErrors: Record<string, string> = {}
 
@@ -69,21 +70,34 @@ const AdminTambahUniv = () => {
       return
     }
 
-    // Jika validasi lulus, tambahkan ke data memory
-    addUniversityData({
-      name: formData.name,
-      location: formData.location, 
-      adminName: formData.adminName,
-      adminEmail: formData.email,
-      status: 'AKTIF'
-    })
+    // Validasi lulus -> kirim ke backend (buat universitas + akun Admin Kampus)
+    setIsSubmitting(true)
+    try {
+      await adminUniversityApi.create({
+        name: formData.name,
+        city: formData.location,
+        address: formData.address,
+        website: formData.website,
+        admin: {
+          name: formData.adminName,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+          nip: formData.nip,
+        },
+      })
 
-    showNotification('Universitas berhasil didaftarkan!', 'success')
-    
-    // Tunggu 2 detik agar user lihat notifikasi, lalu kembali ke daftar
-    setTimeout(() => {
-      navigate('/admin/kelola-universitas')
-    }, 2000)
+      showNotification('Universitas berhasil didaftarkan!', 'success')
+
+      // Tunggu 2 detik agar user lihat notifikasi, lalu kembali ke daftar
+      setTimeout(() => {
+        navigate('/admin/kelola-universitas')
+      }, 2000)
+    } catch (err: any) {
+      setIsSubmitting(false)
+      const apiMsg = err?.response?.data?.message
+      showNotification(apiMsg || 'Gagal mendaftarkan universitas. Coba lagi.', 'warning')
+    }
   }
 
   return (
@@ -257,12 +271,13 @@ const AdminTambahUniv = () => {
           >
             Batal
           </button>
-          <button 
+          <button
             type="button"
+            disabled={isSubmitting}
             onClick={handleSimpanData}
-            className="px-8 py-3 bg-[#052960] text-white text-[13px] font-bold rounded-lg hover:bg-[#031635] transition shadow-sm flex items-center gap-2"
+            className="px-8 py-3 bg-[#052960] text-white text-[13px] font-bold rounded-lg hover:bg-[#031635] disabled:opacity-60 transition shadow-sm flex items-center gap-2"
           >
-            <User size={16} strokeWidth={2.5} /> Simpan Data
+            <User size={16} strokeWidth={2.5} /> {isSubmitting ? 'Menyimpan...' : 'Simpan Data'}
           </button>
         </div>
 

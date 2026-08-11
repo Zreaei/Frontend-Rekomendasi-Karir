@@ -1,9 +1,17 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Info, Search, Building2, FileText, Mail, Phone, MapPin, X, CheckCircle2, ClipboardList, RotateCcw } from 'lucide-react'
-import { dummyCompanyList, companyStatusFilterOptions } from './AdminData'
-import type { CompanyVerificationData } from './AdminData'
+import { adminCompanyApi, getInitialsOf, formatDateID } from '../../services/admin.service'
+import type { AdminCompany } from '../../services/admin.service'
 import StatusBadge from './components/StatusBadge'
+
+// Opsi filter status mengikuti istilah backend (pending/verified/rejected)
+const companyStatusFilterOptions = [
+  { label: 'Semua Status', value: 'all' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Terverifikasi', value: 'verified' },
+  { label: 'Ditolak', value: 'rejected' },
+]
 
 const KelolaPerusahaan = () => {
   const navigate = useNavigate()
@@ -11,26 +19,34 @@ const KelolaPerusahaan = () => {
   const [showInfoModal, setShowInfoModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
-  const [companies, setCompanies] = useState<CompanyVerificationData[]>([])
-  
+  const [companies, setCompanies] = useState<AdminCompany[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
   // State untuk Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
   useEffect(() => {
-    setCompanies([...dummyCompanyList])
-
     const preset = (location.state as { presetFilter?: string } | null)?.presetFilter
     if (preset && companyStatusFilterOptions.some(opt => opt.value === preset)) {
       setFilterStatus(preset)
     }
+
+    let cancelled = false
+    adminCompanyApi
+      .list({ limit: 100 })
+      .then(({ companies }) => { if (!cancelled) setCompanies(companies) })
+      .catch(() => { if (!cancelled) setLoadError('Gagal memuat daftar perusahaan.') })
+      .finally(() => { if (!cancelled) setIsLoading(false) })
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const companyMetrics = useMemo(() => ({
     total: companies.length,
     pending: companies.filter(c => c.status === 'pending').length,
-    verified: companies.filter(c => c.status === 'terverifikasi').length,
+    verified: companies.filter(c => c.status === 'verified').length,
   }), [companies])
 
   const filteredData = useMemo(() => {
@@ -68,17 +84,22 @@ const KelolaPerusahaan = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending': return <StatusBadge label="Pending" tone="warning" />
-      case 'terverifikasi': return <StatusBadge label="Terverifikasi" tone="success" />
-      case 'ditolak': return <StatusBadge label="Ditolak" tone="danger" />
+      case 'verified': return <StatusBadge label="Terverifikasi" tone="success" />
+      case 'rejected': return <StatusBadge label="Ditolak" tone="danger" />
       default: return <StatusBadge label={status} tone="neutral" />
     }
   }
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+  // daftar nama dokumen yang tersedia untuk kolom "Dokumen"
+  const getDocumentLabels = (company: AdminCompany) => {
+    const docs: string[] = []
+    if (company.nib) docs.push('NIB')
+    if (company.izinUsahaUrl) docs.push('Izin Usaha')
+    if (company.suratResmiUrl) docs.push('Surat Resmi')
+    return docs
   }
 
-  const handleRowClick = (company: CompanyVerificationData) => {
+  const handleRowClick = (company: AdminCompany) => {
     if (company.status === 'pending') {
       navigate(`/admin/kelola-perusahaan/detail/${company.id}`)
     } else {
@@ -88,7 +109,7 @@ const KelolaPerusahaan = () => {
 
   return (
     <div className="w-full pb-10 animate-in fade-in duration-300">
-      
+
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-[22px] font-bold text-[#111827]">Verifikasi Pendaftaran Perusahaan</h1>
         <button onClick={() => setShowInfoModal(true)} className="text-[#0f5ce0] hover:bg-[#f4f7ff] p-1.5 rounded-full transition-colors flex items-center justify-center">
@@ -141,7 +162,15 @@ const KelolaPerusahaan = () => {
         </div>
 
         <div className="overflow-x-auto min-h-[300px]">
-          {paginatedData.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#7b8191]">
+              <p className="text-[14px] font-bold">Memuat daftar perusahaan...</p>
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#ef4444]">
+              <p className="text-[14px] font-bold">{loadError}</p>
+            </div>
+          ) : paginatedData.length > 0 ? (
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-[#f8faff] border-y border-[#e4e9f4] text-[10px] font-extrabold text-[#7b8191] uppercase tracking-widest">
@@ -153,39 +182,44 @@ const KelolaPerusahaan = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f1f4f9]">
-                {paginatedData.map((company) => (
-                  <tr key={company.id} onClick={() => handleRowClick(company)} className="hover:bg-[#fafbfe] cursor-pointer transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#0f5ce0] border border-[#e4e9f4] flex items-center justify-center font-black text-[13px]">
-                          {getInitials(company.name)}
-                        </div>
-                        <div>
-                          <h4 className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{company.name}</h4>
-                          <p className="text-[12px] text-[#7b8191] mt-0.5">{company.industry}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1.5 text-[12px] font-medium text-[#5b6170]">
-                        <div className="flex items-center gap-2"><Mail size={14} className="text-[#a0a6b5] shrink-0" /> {company.email}</div>
-                        <div className="flex items-center gap-2"><Phone size={14} className="text-[#a0a6b5] shrink-0" /> {company.phone}</div>
-                        <div className="flex items-center gap-2"><MapPin size={14} className="text-[#a0a6b5] shrink-0" /> {company.location}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-2 text-[12px] font-bold text-[#0f5ce0]">
-                        {company.documents.map((doc, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 hover:underline cursor-pointer w-fit">
-                            <FileText size={14} strokeWidth={2.5} /> {doc}
+                {paginatedData.map((company) => {
+                  const contact = company.members?.[0]?.user
+                  const documents = getDocumentLabels(company)
+                  return (
+                    <tr key={company.id} onClick={() => handleRowClick(company)} className="hover:bg-[#fafbfe] cursor-pointer transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-[10px] bg-[#f8faff] text-[#0f5ce0] border border-[#e4e9f4] flex items-center justify-center font-black text-[13px]">
+                            {getInitialsOf(company.name)}
                           </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-[13px] text-[#111827] font-semibold">{company.date}</td>
-                    <td className="px-6 py-4 text-center">{getStatusBadge(company.status)}</td>
-                  </tr>
-                ))}
+                          <div>
+                            <h4 className="text-[14px] font-bold text-[#111827] group-hover:text-[#0f5ce0] transition-colors">{company.name}</h4>
+                            <p className="text-[12px] text-[#7b8191] mt-0.5">{company.industry ?? '-'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1.5 text-[12px] font-medium text-[#5b6170]">
+                          <div className="flex items-center gap-2"><Mail size={14} className="text-[#a0a6b5] shrink-0" /> {contact?.email ?? '-'}</div>
+                          <div className="flex items-center gap-2"><Phone size={14} className="text-[#a0a6b5] shrink-0" /> {contact?.phone ?? '-'}</div>
+                          <div className="flex items-center gap-2"><MapPin size={14} className="text-[#a0a6b5] shrink-0" /> {company.address ?? '-'}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-2 text-[12px] font-bold text-[#0f5ce0]">
+                          {documents.length === 0 && <span className="text-[#a0a6b5] font-medium">Belum ada dokumen</span>}
+                          {documents.map((doc, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5 w-fit">
+                              <FileText size={14} strokeWidth={2.5} /> {doc}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-[13px] text-[#111827] font-semibold">{formatDateID(company.created_at)}</td>
+                      <td className="px-6 py-4 text-center">{getStatusBadge(company.status)}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           ) : (
@@ -197,28 +231,28 @@ const KelolaPerusahaan = () => {
         </div>
 
         {/* Paginasi Footer */}
-        {filteredData.length > 0 && (
+        {!isLoading && !loadError && filteredData.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-[#f1f4f9] bg-white text-sm gap-4">
             <div className="text-[13px] text-[#7b8191] font-medium text-center sm:text-left">
               Menampilkan <span className="text-[#111827] font-bold">{startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredData.length)}</span> dari <span className="text-[#111827] font-bold">{filteredData.length}</span>
             </div>
-            
+
             <div className="flex items-center gap-1">
-              <button 
+              <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
                 className="text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#a0a6b5] disabled:opacity-50 transition mr-2"
               >
                 Sebelumnya
               </button>
-              
+
               {getPaginationGroup().map((pageNum) => (
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
                   className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition ${
-                    currentPage === pageNum 
-                      ? 'bg-[#0f5ce0] text-white shadow-sm' 
+                    currentPage === pageNum
+                      ? 'bg-[#0f5ce0] text-white shadow-sm'
                       : 'text-[#5b6170] hover:bg-[#f8faff] border border-transparent'
                   }`}
                 >
@@ -226,7 +260,7 @@ const KelolaPerusahaan = () => {
                 </button>
               ))}
 
-              <button 
+              <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || totalPages === 0}
                 className="text-[13px] font-bold text-[#0f5ce0] hover:text-[#0d4ebf] disabled:text-[#a0a6b5] disabled:opacity-50 transition ml-2"
