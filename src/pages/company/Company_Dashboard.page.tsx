@@ -92,14 +92,13 @@ const CompanyDashboard = () => {
       const list = applications ?? []
       setTotalPelamar(summary?.total ?? list.length)
 
-      // Pelamar teratas = yang belum diputuskan (belum diterima/ditolak),
-      // supaya kartu ini jadi antrean kerja HRD, bukan sekadar riwayat.
-      const belumDiputuskan = list.filter(
-        (app: any) => app.status !== 'accepted' && app.status !== 'rejected',
-      )
+      // Pelamar teratas = lamaran yang SEDANG DIPROSES. Kartu ini adalah
+      // antrean kerja HRD yang sudah berjalan: yang baru terkirim belum ditinjau,
+      // sedangkan yang sudah diterima/ditolak tidak perlu tindakan lagi.
+      const sedangDiproses = list.filter((app: any) => app.status === 'processing')
 
       setTopCandidates(
-        belumDiputuskan
+        sedangDiproses
           .map((app: any) => ({
             applicationId: app.id,
             studentId: app?.student?.id ?? '',
@@ -193,7 +192,10 @@ const CompanyDashboard = () => {
 
       <div className="bg-white rounded-[16px] border border-[#e4e9f4] overflow-hidden shadow-sm">
         <div className="flex justify-between items-center px-6 py-4 border-b border-[#f1f4f9]">
-          <h2 className="text-[16px] font-bold text-[#111827]">Pelamar Teratas (5 Tertinggi)</h2>
+          <div>
+            <h2 className="text-[16px] font-bold text-[#111827]">Pelamar Teratas (5 Tertinggi)</h2>
+            <p className="text-[12px] text-[#7b8191] mt-0.5">Lamaran berstatus Diproses, diurutkan dari kecocokan tertinggi.</p>
+          </div>
           <button
             onClick={() => navigate('/company/daftar-pelamar')}
             className="text-sm text-[#0f5ce0] hover:underline font-semibold"
@@ -204,9 +206,9 @@ const CompanyDashboard = () => {
 
         {topCandidates.length === 0 ? (
           <div className="px-6 py-16 text-center">
-            <p className="text-sm font-semibold text-[#5b6170]">Belum ada pelamar</p>
+            <p className="text-sm font-semibold text-[#5b6170]">Belum ada pelamar yang diproses</p>
             <p className="text-xs text-[#7b8191] mt-1">
-              Pelamar akan muncul di sini setelah mahasiswa melamar lowongan Anda.
+              Ubah status lamaran menjadi "Diproses" di halaman Daftar Pelamar agar kandidatnya muncul di sini.
             </p>
           </div>
         ) : (
