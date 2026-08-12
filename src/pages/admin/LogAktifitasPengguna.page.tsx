@@ -44,12 +44,10 @@ const splitDateTime = (iso: string) => {
   }
 }
 
+// Lama mahasiswa berada di halaman detail lowongan, dalam satuan detik.
 const formatDuration = (ms?: number | null) => {
-  if (!ms || ms <= 0) return null
-  const totalSec = Math.round(ms / 1000)
-  const m = Math.floor(totalSec / 60)
-  const s = totalSec % 60
-  return `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
+  if (ms == null || ms <= 0) return null
+  return `${Math.round(ms / 1000)} detik`
 }
 
 const LogAktifitasPengguna = () => {
@@ -328,9 +326,10 @@ const LogAktifitasPengguna = () => {
                   {activeTab === 'mahasiswa' && (
                     <>
                       <th className="px-6 py-4 w-[15%]">Waktu & Tanggal</th>
-                      <th className="px-6 py-4 w-[30%]">Nama Mahasiswa</th>
-                      <th className="px-6 py-4 w-[20%] text-center">Aktivitas</th>
-                      <th className="px-6 py-4 w-[35%]">Detail Aktivitas</th>
+                      <th className="px-6 py-4 w-[25%]">Nama Mahasiswa</th>
+                      <th className="px-6 py-4 w-[15%] text-center">Aktivitas</th>
+                      <th className="px-6 py-4 w-[12%] text-center">Durasi</th>
+                      <th className="px-6 py-4 w-[33%]">Detail Aktivitas</th>
                     </>
                   )}
                   {/* Kolom Universitas */}
@@ -365,7 +364,7 @@ const LogAktifitasPengguna = () => {
                     <tr key={log.id} className="hover:bg-[#fafbfe] transition-colors group">
                       <td className="px-6 py-5">
                         <p className="text-[13px] text-[#111827] font-bold leading-tight">{dt.time}</p>
-                        <p className="text-[12px] text-[#7b8191] mt-0.5">{duration ?? dt.date}</p>
+                        <p className="text-[12px] text-[#7b8191] mt-0.5">{dt.date}</p>
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
@@ -377,6 +376,13 @@ const LogAktifitasPengguna = () => {
                       </td>
                       <td className="px-6 py-5">
                         {renderActivityBadge(log.activity, activeTab)}
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        {duration ? (
+                          <span className="text-[13px] font-bold text-[#111827]">{duration}</span>
+                        ) : (
+                          <span className="text-[13px] text-[#a0a6b5]">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-5">
                         <div>
