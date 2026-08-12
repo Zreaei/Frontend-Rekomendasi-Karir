@@ -15,8 +15,8 @@ import UniversityLayout from '../layouts/UniversityLayout'
 // ADMIN PAGES
 import AdminDashboard from '../pages/admin/Dashboard.page'
 import AdminKelolaPerusahaan from '../pages/admin/KelolaPerusahaan.page'
-import AdminDetailVerifikasiPerusahaan from '../pages/admin/DetailVerifikasiPerusahaan.page' 
-import AdminPerusahaanDiterimaDitolak from '../pages/admin/PerusahaanDiterima-Ditolak.page' 
+import AdminDetailVerifikasiPerusahaan from '../pages/admin/DetailVerifikasiPerusahaan.page'
+import AdminPerusahaanDiterimaDitolak from '../pages/admin/PerusahaanDiterima-Ditolak.page'
 import AdminKelolaUniversitas from '../pages/admin/KelolaUniversitas.page'
 import AdminTambahUniv from '../pages/admin/TambahUniv.page' // <-- IMPORT BARU
 import AdminLogAktifitas from '../pages/admin/LogAktifitasPengguna.page'
@@ -25,9 +25,17 @@ import AdminMasterData from '../pages/admin/MasterData.page'
 
 // STUDENT PAGES
 import StudentDashboard from '../pages/student/StudentDashboard.page'
-import StudentJobMatching from '../pages/student/StudentJobMatching.page'
+import StudentJobRecommendation from '../pages/student/StudentJobRecommendation.page'
+import StudentJobDetail from '../pages/student/StudentJobDetail.page'
+import StudentCompanyDetail from '../pages/student/StudentCompanyDetail.page'
 import StudentJobApply from '../pages/student/StudentJobApply.page'
+import StudentInvitation from '../pages/student/StudentInvitation.page'
 import StudentCompetencyProfile from '../pages/student/StudentCompetencyProfile.page'
+import StudentCertification from '../pages/student/StudentCertification.page'
+import StudentCertificationUpload from '../pages/student/StudentCertificationUpload.page'
+import StudentCertificationDetail from '../pages/student/StudentCertificationDetail.page'
+import StudentCertificationDenied from '../pages/student/StudentCertificationDenied.page'
+import StudentJobBookmark from '../pages/student/StudentJobBookmark.page'
 import StudentNotification from '../pages/student/StudentNotification.page'
 import StudentHelp from '../pages/student/StudentHelp.page'
 
@@ -48,7 +56,7 @@ import UniversityManajemenMahasiswa from '../pages/university/UniversityManajeme
 import EditMahasiswa from '../pages/university/EditMahasiswa.page'
 import DetailMahasiswa from '../pages/university/DetailMahasiswa.page'
 import UniversityManajemenCLO from '../pages/university/UniversityManajemenCLO.page'
-import UniversityDetailCLO from '../pages/university/UniversityDetailCLO.page'       
+import UniversityDetailCLO from '../pages/university/UniversityDetailCLO.page'
 import UniversityManajemenNilai from '../pages/university/UniversityManejemenNilai.page'
 import UniversityKelolaNilai from '../pages/university/UniversityKelolaNilai.page'
 import UniversityVerifikasiSertifikat from '../pages/university/UniversityVerifikasiSertifikat.page'
@@ -69,7 +77,7 @@ const AppRouter = () => {
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="kelola-perusahaan" element={<AdminKelolaPerusahaan />} />
-        <Route path="kelola-perusahaan/detail/:id" element={<AdminDetailVerifikasiPerusahaan />} /> 
+        <Route path="kelola-perusahaan/detail/:id" element={<AdminDetailVerifikasiPerusahaan />} />
         <Route path="kelola-perusahaan/status/:id" element={<AdminPerusahaanDiterimaDitolak />} />
         <Route path="kelola-universitas" element={<AdminKelolaUniversitas />} />
         <Route path="kelola-universitas/tambah" element={<AdminTambahUniv />} /> {/* <-- ROUTE BARU */}
@@ -88,7 +96,7 @@ const AppRouter = () => {
         <Route path="edit-mahasiswa/:id" element={<EditMahasiswa />} />
         <Route path="detail-mahasiswa/:id" element={<DetailMahasiswa />} />
         <Route path="manajemen-clo" element={<UniversityManajemenCLO />} />
-        <Route path="detail-clo/:id" element={<UniversityDetailCLO />} />      
+        <Route path="detail-clo/:id" element={<UniversityDetailCLO />} />
         <Route path="manajemen-nilai" element={<UniversityManajemenNilai />} />
         <Route path="kelola-nilai/:id" element={<UniversityKelolaNilai />} />
         <Route path="verifikasi-sertifikat" element={<UniversityVerifikasiSertifikat />} />
@@ -111,16 +119,24 @@ const AppRouter = () => {
 
         <Route path="*" element={<Navigate to="/company" replace />} />
       </Route>
-         
+
       {/* ===== STAFF ROUTES ===== */}
       <Route path="/university-staff" element={<ProtectedRoute allowedRoles={['university_staff']}><UniversityStaffDashboard /></ProtectedRoute>} />
       <Route path="/company-staff" element={<ProtectedRoute allowedRoles={['company_staff']}><CompanyStaffDashboard /></ProtectedRoute>} />
 
       {/* ===== STUDENT ROUTES ===== */}
       <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
-      <Route path="/student/job-matching" element={<ProtectedRoute allowedRoles={['student']}><StudentJobMatching /></ProtectedRoute>} />
+      <Route path="/student/job-matching" element={<ProtectedRoute allowedRoles={['student']}><StudentJobRecommendation /></ProtectedRoute>} />
+      <Route path="/student/job-matching/:jobId" element={<ProtectedRoute allowedRoles={['student']}><StudentJobDetail /></ProtectedRoute>} />
+      <Route path="/student/company/:companyId" element={<ProtectedRoute allowedRoles={['student']}><StudentCompanyDetail /></ProtectedRoute>} />
       <Route path="/student/job-apply" element={<ProtectedRoute allowedRoles={['student']}><StudentJobApply /></ProtectedRoute>} />
+      <Route path="/student/invitation" element={<ProtectedRoute allowedRoles={['student']}><StudentInvitation /></ProtectedRoute>} />
       <Route path="/student/competency-profile" element={<ProtectedRoute allowedRoles={['student']}><StudentCompetencyProfile /></ProtectedRoute>} />
+      <Route path="/student/certification" element={<ProtectedRoute allowedRoles={['student']}><StudentCertification /></ProtectedRoute>} />
+      <Route path="/student/certification/upload" element={<ProtectedRoute allowedRoles={['student']}><StudentCertificationUpload /></ProtectedRoute>} />
+      <Route path="/student/certification/:certId" element={<ProtectedRoute allowedRoles={['student']}><StudentCertificationDetail /></ProtectedRoute>} />
+      <Route path="/student/certification/:certId/denied" element={<ProtectedRoute allowedRoles={['student']}><StudentCertificationDenied /></ProtectedRoute>} />
+      <Route path="/student/saved-jobs" element={<ProtectedRoute allowedRoles={['student']}><StudentJobBookmark /></ProtectedRoute>} />
       <Route path="/student/notification" element={<ProtectedRoute allowedRoles={['student']}><StudentNotification /></ProtectedRoute>} />
       <Route path="/student/help" element={<ProtectedRoute allowedRoles={['student']}><StudentHelp /></ProtectedRoute>} />
 
@@ -128,7 +144,7 @@ const AppRouter = () => {
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
       <Route path="/reset-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
       <Route path="/verify-recovery-email" element={<PublicRoute><VerifyRecoveryEmailPage /></PublicRoute>} />
-      
+
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/student" replace />} />
     </Routes>
