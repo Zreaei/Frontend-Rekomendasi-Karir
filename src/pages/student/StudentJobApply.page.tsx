@@ -41,16 +41,6 @@ const StudentJobApply = () => {
     return () => { aktif = false }
   }, [])
 
-  const withdraw = async (app: MyApplication) => {
-    if (!confirm(`Tarik lamaran untuk "${app.job?.title ?? 'lowongan ini'}"?`)) return
-    try {
-      await studentApplicationApi.withdraw(app.id)
-      setApplications((prev) => prev.filter((a) => a.id !== app.id))
-    } catch (err: any) {
-      alert(err?.response?.data?.message ?? 'Gagal menarik lamaran.')
-    }
-  }
-
   const total = applications.length
   const accepted = applications.filter((a) => a.status === 'accepted').length
   const waiting = applications.filter((a) => a.status === 'pending' || a.status === 'processing').length
@@ -110,7 +100,6 @@ const StudentJobApply = () => {
               ) : (
                 applications.map((item) => {
                   const view = STATUS_VIEW[item.status] ?? { label: item.statusLabel ?? item.status, tone: 'warning' as const }
-                  const canWithdraw = item.status === 'pending' || item.status === 'processing'
                   return (
                     <div
                       key={item.id}
@@ -138,15 +127,6 @@ const StudentJobApply = () => {
                               Detail
                             </Button>
                           </Link>
-                        ) : null}
-                        {canWithdraw ? (
-                          <button
-                            className="text-[12px] font-semibold text-[#d92d20] hover:underline"
-                            type="button"
-                            onClick={() => withdraw(item)}
-                          >
-                            Tarik
-                          </button>
                         ) : null}
                       </div>
                     </div>
