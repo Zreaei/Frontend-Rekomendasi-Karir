@@ -306,6 +306,25 @@ export const studentFavoriteApi = {
 }
 
 // ============================================================
+// PENCATATAN KUNJUNGAN LOWONGAN
+// Dipakai sebagai sinyal perilaku untuk pemeringkatan sekaligus
+// bahan tren aktivitas pada dashboard Super Admin.
+// ============================================================
+export type ViewSource = 'detail' | 'list' | 'search' | 'recommendation'
+
+export const studentViewApi = {
+  // POST /interactions/views -> kembalikan id log agar durasinya bisa dilengkapi
+  record: async (jobId: string, source: ViewSource = 'detail'): Promise<string | null> => {
+    const data = unwrap(await api.post('/interactions/views', { jobId, source }))
+    return data?.id ?? null
+  },
+
+  // PATCH /interactions/views/:id/duration -> lama mahasiswa membaca lowongan
+  updateDuration: async (viewId: string, durationMs: number) =>
+    unwrap(await api.patch(`/interactions/views/${viewId}/duration`, { durationMs })),
+}
+
+// ============================================================
 // SERTIFIKAT
 // ============================================================
 export const studentCertificateApi = {

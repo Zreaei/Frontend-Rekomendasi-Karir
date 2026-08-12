@@ -123,8 +123,8 @@ export interface MasterIndustryRow {
   companyName: string
   industry?: string | null
   position: string
-  responsibility?: string | null
-  skills: string[]
+  /** Tiap tanggung jawab beserta keahlian yang dibutuhkannya. */
+  responsibilities: { requirement: string; skills: string[] }[]
   updatedAt: string
 }
 

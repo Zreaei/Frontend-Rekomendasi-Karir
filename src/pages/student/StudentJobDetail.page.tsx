@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import StudentLayout from '../../layouts/StudentLayout'
 import Card from '../../components/common/Card'
@@ -21,8 +21,12 @@ import {
   studentJobApi,
   studentApplicationApi,
   studentFavoriteApi,
+  studentViewApi,
   type JobMatchDetail,
 } from '../../services/student.service'
+
+// Durasi dibatasi 1 jam, sama dengan batas yang diterima backend.
+const MAKS_DURASI_MS = 3_600_000
 
 const StudentJobDetail = () => {
   const { jobId = '' } = useParams()
@@ -37,6 +41,42 @@ const StudentJobDetail = () => {
   const [hasApplied, setHasApplied] = useState(false)
   const [applying, setApplying] = useState(false)
   const [konfirmasiLamar, setKonfirmasiLamar] = useState(false)
+
+  const viewIdRef = useRef<string | null>(null)
+  const viewMulaiRef = useRef(0)
+  const jobTercatatRef = useRef<string | null>(null)
+
+  // Catat kunjungan lowongan, lalu lengkapi durasinya saat halaman
+  // ditinggalkan. Menjadi sinyal perilaku sekaligus sumber tren aktivitas
+  // pada dashboard Super Admin.
+  useEffect(() => {
+    if (!jobId) return
+    viewMulaiRef.current = Date.now()
+
+    // StrictMode menjalankan efek dua kali saat pengembangan; penjaga ini
+    // memastikan satu kunjungan hanya menghasilkan satu catatan.
+    if (jobTercatatRef.current !== jobId) {
+      jobTercatatRef.current = jobId
+      studentViewApi
+        .record(jobId, 'detail')
+        .then((id) => { viewIdRef.current = id })
+        .catch(() => { /* pencatatan gagal tidak boleh mengganggu halaman */ })
+    }
+
+    const kirimDurasi = () => {
+      const id = viewIdRef.current
+      if (!id) return
+      viewIdRef.current = null // cegah pengiriman ganda
+      const durasi = Math.min(Date.now() - viewMulaiRef.current, MAKS_DURASI_MS)
+      studentViewApi.updateDuration(id, durasi).catch(() => { /* diabaikan */ })
+    }
+
+    window.addEventListener('pagehide', kirimDurasi)
+    return () => {
+      window.removeEventListener('pagehide', kirimDurasi)
+      kirimDurasi()
+    }
+  }, [jobId])
 
   useEffect(() => {
     if (!jobId) return

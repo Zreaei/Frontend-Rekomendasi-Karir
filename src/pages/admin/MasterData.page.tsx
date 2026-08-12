@@ -96,24 +96,47 @@ const AdminMasterData = () => {
     let csvRows: string[][] = []
 
     if (activeTab === 'course') {
-      headers = ['Nama Mata Kuliah', 'Kode', 'SKS', 'Universitas', 'Jumlah CLO', 'Rincian CLO', 'Terakhir Diperbarui']
-      csvRows = (filteredData as MasterCourseRow[]).map(c => [
-        c.courseName,
-        c.courseCode ?? '-',
-        c.sks != null ? String(c.sks) : '-',
-        c.universityName ?? '-',
-        c.cloCount.toString(),
-        c.clos.map(clo => `${clo.name}: ${clo.skills.join(' | ')}`).join(' ; '),
-        formatDateID(c.updatedAt),
-      ])
+      headers = ['Nama Mata Kuliah', 'Kode', 'SKS', 'Universitas', 'Jumlah CLO', 'Rincian CLO', 'Skill', 'Terakhir Diperbarui']
+      // Satu baris per CLO: kolom identitas mata kuliah diulang, sementara
+      // rincian CLO dan skill berbeda di tiap baris.
+      csvRows = (filteredData as MasterCourseRow[]).flatMap(c => {
+        const identitas = [
+          c.courseName,
+          c.courseCode ?? '-',
+          c.sks != null ? String(c.sks) : '-',
+          c.universityName ?? '-',
+          String(c.cloCount),
+        ]
+        if (c.clos.length === 0) {
+          return [[...identitas, '-', '-', formatDateID(c.updatedAt)]]
+        }
+        return c.clos.map(clo => [
+          ...identitas,
+          `${clo.name}: ${clo.text}`,
+          clo.skills.length > 0 ? clo.skills.join(' | ') : '-',
+          formatDateID(c.updatedAt),
+        ])
+      })
     } else {
       headers = ['Nama Perusahaan', 'Industri', 'Posisi Pekerjaan', 'Tanggung Jawab', 'Skill', 'Terakhir Diperbarui']
-      csvRows = (filteredData as MasterIndustryRow[]).map(i => [
-        i.companyName, i.industry ?? '-', i.position, i.responsibility ?? '-', i.skills.join(', '), formatDateID(i.updatedAt)
-      ])
+      // Satu baris per tanggung jawab, skill dipisah delimiter "|".
+      csvRows = (filteredData as MasterIndustryRow[]).flatMap(i => {
+        const identitas = [i.companyName, i.industry ?? '-', i.position]
+        if (i.responsibilities.length === 0) {
+          return [[...identitas, '-', '-', formatDateID(i.updatedAt)]]
+        }
+        return i.responsibilities.map(r => [
+          ...identitas,
+          r.requirement,
+          r.skills.length > 0 ? r.skills.join(' | ') : '-',
+          formatDateID(i.updatedAt),
+        ])
+      })
     }
 
-    const csvContent = [headers.join(','), ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
+    // Tanda kutip di dalam sel digandakan sesuai aturan CSV.
+    const escapeCell = (cell: string) => `"${String(cell ?? '').replace(/"/g, '""')}"`
+    const csvContent = [headers.join(','), ...csvRows.map(row => row.map(escapeCell).join(','))].join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
@@ -300,17 +323,35 @@ const AdminMasterData = () => {
                       </span>
                     </td>
                     <td className="px-6 py-5">
-                      <p className="text-[13px] text-[#5b6170] leading-relaxed line-clamp-2 pr-4">
-                        {industry.responsibility ?? '-'}
-                      </p>
+                      <div className="flex flex-col gap-4">
+                        {industry.responsibilities.length === 0 && (
+                          <span className="text-[12px] text-[#a0a6b5]">-</span>
+                        )}
+                        {industry.responsibilities.map((r, rIdx) => (
+                          <p key={rIdx} className="text-[13px] text-[#5b6170] leading-relaxed pr-4">
+                            {r.requirement}
+                          </p>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-6 py-5">
-                      <div className="flex flex-wrap gap-1.5">
-                        {industry.skills.length === 0 && <span className="text-[12px] text-[#a0a6b5]">-</span>}
-                        {industry.skills.map((skill, sIdx) => (
-                          <span key={sIdx} className="px-2 py-1 rounded bg-[#eef4ff] text-[#0f5ce0] text-[10px] font-bold tracking-wide">
-                            {skill.toUpperCase()}
-                          </span>
+                      {/* Sejajar dengan kolom tanggung jawab: satu blok skill per tanggung jawab. */}
+                      <div className="flex flex-col gap-4">
+                        {industry.responsibilities.length === 0 && (
+                          <span className="text-[12px] text-[#a0a6b5]">-</span>
+                        )}
+                        {industry.responsibilities.map((r, rIdx) => (
+                          <div key={rIdx} className="flex flex-wrap gap-1.5">
+                            {r.skills.length === 0 ? (
+                              <span className="text-[12px] text-[#a0a6b5]">-</span>
+                            ) : (
+                              r.skills.map((skill, sIdx) => (
+                                <span key={sIdx} className="px-2 py-1 rounded bg-[#eef4ff] text-[#0f5ce0] text-[10px] font-bold tracking-wide">
+                                  {skill.toUpperCase()}
+                                </span>
+                              ))
+                            )}
+                          </div>
                         ))}
                       </div>
                     </td>
