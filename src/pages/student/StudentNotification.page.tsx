@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell } from 'lucide-react'
+import { Bell } from 'lucide-react'
+import StudentLayout from '../../layouts/StudentLayout'
 import { studentNotificationApi, type NotificationItem } from '../../services/student.service'
 
 const formatDate = (value?: string | null) => {
@@ -15,7 +15,6 @@ const formatDate = (value?: string | null) => {
 }
 
 const StudentNotification = () => {
-  const navigate = useNavigate()
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
@@ -29,14 +28,6 @@ const StudentNotification = () => {
       .finally(() => { if (aktif) setLoading(false) })
     return () => { aktif = false }
   }, [])
-
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1)
-      return
-    }
-    navigate('/student')
-  }
 
   const markAllRead = async () => {
     try {
@@ -61,15 +52,7 @@ const StudentNotification = () => {
   const visible = filter === 'all' ? notifications : notifications.filter((n) => !n.isRead)
 
   return (
-    <main className="min-h-screen bg-gray-200 px-6 py-8">
-      <button
-        className="flex fixed top-8 left-8 py-2 items-center gap-2 rounded-md border border-[#d9dce5] bg-white px-3 text-[14px] font-semibold text-[#232342] shadow-sm transition-colors hover:bg-[#f4f6fb]"
-        type="button"
-        onClick={handleBack}
-      >
-        <ArrowLeft size={18} strokeWidth={2} aria-hidden="true" />
-      </button>
-
+    <StudentLayout>
       <section className="mx-auto w-full max-w-132">
         <div className="mb-9">
           <h1 className="text-[30px] font-bold leading-tight text-[#050505]">Notifikasi</h1>
@@ -155,7 +138,7 @@ const StudentNotification = () => {
           )}
         </div>
       </section>
-    </main>
+    </StudentLayout>
   )
 }
 
