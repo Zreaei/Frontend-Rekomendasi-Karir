@@ -81,7 +81,9 @@ const UniversityManajemenCLO = () => {
       const matchSks = sksFilter === 'Filter SKS' || subject.sks.toString() === sksFilter
       
       const searchLower = searchQuery.toLowerCase()
-      const matchSearch = subject.name.toLowerCase().includes(searchLower) || subject.code.toLowerCase().includes(searchLower)
+      const matchSearch =
+        subject.name.toLowerCase().includes(searchLower) ||
+        (subject.code ?? '').toLowerCase().includes(searchLower)
       
       return matchSemester && matchSks && matchSearch
     })

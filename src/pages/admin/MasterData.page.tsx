@@ -92,6 +92,10 @@ const AdminMasterData = () => {
       return
     }
 
+    // Teks CLO dan tanggung jawab sering memuat baris baru (mis. salinan RPS).
+    // Diratakan jadi satu baris supaya satu record CSV = satu baris berkas.
+    const satuBaris = (teks: string) => String(teks ?? '').replace(/\s+/g, ' ').trim()
+
     let headers: string[] = []
     let csvRows: string[][] = []
 
@@ -112,7 +116,7 @@ const AdminMasterData = () => {
         }
         return c.clos.map(clo => [
           ...identitas,
-          `${clo.name}: ${clo.text}`,
+          satuBaris(`${clo.name}: ${clo.text}`),
           clo.skills.length > 0 ? clo.skills.join(' | ') : '-',
           formatDateID(c.updatedAt),
         ])
@@ -127,7 +131,7 @@ const AdminMasterData = () => {
         }
         return i.responsibilities.map(r => [
           ...identitas,
-          r.requirement,
+          satuBaris(r.requirement),
           r.skills.length > 0 ? r.skills.join(' | ') : '-',
           formatDateID(i.updatedAt),
         ])

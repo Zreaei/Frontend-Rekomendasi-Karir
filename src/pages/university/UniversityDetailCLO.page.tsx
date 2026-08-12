@@ -91,9 +91,11 @@ const UniversityDetailCLO = () => {
     return () => { aktif = false }
   }, [id, navigate, loadClos])
 
-  const filteredClos = clos.filter(clo => 
-    clo.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    clo.description.toLowerCase().includes(searchQuery.toLowerCase())
+  // Kode dan deskripsi CLO bisa kosong di database, keduanya dijaga agar
+  // pencarian tidak menghentikan render.
+  const filteredClos = clos.filter(clo =>
+    (clo.code ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (clo.description ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const handleOpenAdd = () => {

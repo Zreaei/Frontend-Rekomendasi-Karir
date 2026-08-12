@@ -18,7 +18,8 @@ const unwrapList = (res: any, ...keys: string[]): any[] => {
 // ============================================================
 export interface Subject {
   id: string
-  code: string
+  // Kode matkul boleh kosong di database, jadi harus selalu dijaga saat dipakai.
+  code?: string | null
   name: string
   sks: number
   semester?: number | null

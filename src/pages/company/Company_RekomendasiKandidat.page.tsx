@@ -82,9 +82,13 @@ const Company_RekomendasiKandidat = () => {
   }, [])
 
 const filteredCandidates = useMemo(() => {
-    // "Semua Kandidat" = yang belum diputuskan; yang sudah diterima/ditolak
-    // punya tabnya sendiri.
-    const filtered = recommendations.filter((cand) => cand.status === activeFilter)
+    // Tab "Semua Kandidat" memuat seluruh mahasiswa aktif, termasuk yang
+    // lamarannya sudah diterima atau ditolak. Tab Diterima dan Ditolak hanya
+    // mempersempit daftar yang sama.
+    const filtered =
+      activeFilter === 'Pending'
+        ? recommendations
+        : recommendations.filter((cand) => cand.status === activeFilter)
     return [...filtered].sort((a, b) =>
       sortOrder === 'Tertinggi' ? b.matchScore - a.matchScore : a.matchScore - b.matchScore,
     )

@@ -81,7 +81,9 @@ const UniversityManajemenNilai = () => {
       const matchStatus = statusFilter === 'Semua Status' || subject.gradingStatus === statusFilter
       
       const searchLower = searchQuery.toLowerCase()
-      const matchSearch = subject.name.toLowerCase().includes(searchLower) || subject.code.toLowerCase().includes(searchLower)
+      const matchSearch =
+        subject.name.toLowerCase().includes(searchLower) ||
+        (subject.code ?? '').toLowerCase().includes(searchLower)
       
       return matchSemester && matchStatus && matchSearch
     })
