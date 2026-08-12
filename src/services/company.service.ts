@@ -54,7 +54,6 @@ export interface Job {
   id: string
   title: string
   department?: string | null
-  description?: string | null
   location?: string | null
   type: string
   status: string
@@ -74,7 +73,6 @@ export interface CreateJobPayload {
   department: string
   type: string
   location: string
-  description?: string
   salaryMin?: number
   salaryMax?: number
   status?: string          // 'active' | 'draft'

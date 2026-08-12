@@ -18,6 +18,8 @@ const formatDate = (value?: string | null) => {
 	return new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+const isUrl = (value: string) => /^https?:\/\//i.test(value)
+
 const StudentCertificationDetail = () => {
 	const { certId = '' } = useParams()
 	const [certification, setCertification] = useState<MyCertificate | null>(null)
@@ -108,6 +110,29 @@ const StudentCertificationDetail = () => {
 							<div className="flex items-center justify-between border-b border-[#d9dce2] pb-3">
 								<span>Lembaga Penerbit</span>
 								<strong className="text-[#1f2a44]">{certification.issuer ?? '-'}</strong>
+							</div>
+							<div className="flex items-center justify-between border-b border-[#d9dce2] pb-3">
+								<span>Tanggal Terbit</span>
+								<strong className="text-[#1f2a44]">{formatDate(certification.issuedAt)}</strong>
+							</div>
+							<div className="flex items-center justify-between gap-4 border-b border-[#d9dce2] pb-3">
+								<span className="shrink-0">ID Kredensial</span>
+								{certification.credentialId ? (
+									isUrl(certification.credentialId) ? (
+										<a
+											className="truncate text-right font-bold text-[#0d6efd]!"
+											href={certification.credentialId}
+											target="_blank"
+											rel="noreferrer"
+										>
+											{certification.credentialId}
+										</a>
+									) : (
+										<strong className="truncate text-right text-[#1f2a44]">{certification.credentialId}</strong>
+									)
+								) : (
+									<strong className="text-[#1f2a44]">-</strong>
+								)}
 							</div>
 							<div className="flex items-center justify-between border-b border-[#d9dce2] pb-3">
 								<span>Tanggal Unggah</span>

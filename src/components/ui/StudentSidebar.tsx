@@ -1,96 +1,118 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  Award,
-  Bookmark,
-  Briefcase,
-  CircleUserRound,
-  FileText,
-  LineSquiggle,
+  GraduationCap,
   LayoutDashboard,
+  Award,
+  Briefcase,
+  FileText,
   Mail,
+  Bookmark,
+  CircleUserRound,
   LogOut,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/auth.store'
+import SidebarUserCard from './SidebarUserCard'
 
-const StudentSidebar = () => {
+interface StudentSidebarProps {
+  collapsed: boolean
+  onToggle: () => void
+}
+
+const NAV_ITEMS = [
+  { to: '/student', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/student/certification', label: 'Sertifikat', icon: Award },
+  { to: '/student/job-matching', label: 'Rekomendasi Pekerjaan', icon: Briefcase },
+  { to: '/student/job-apply', label: 'Riwayat Lamaran', icon: FileText },
+  { to: '/student/invitation', label: 'Undangan', icon: Mail },
+  { to: '/student/saved-jobs', label: 'Pekerjaan Tersimpan', icon: Bookmark },
+  { to: '/student/competency-profile', label: 'Profile Mahasiswa', icon: CircleUserRound },
+]
+
+const StudentSidebar = ({ collapsed, onToggle }: StudentSidebarProps) => {
   const navigate = useNavigate()
-  const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+
+  const navBase =
+    `group grid h-11 min-h-11 w-full grid-cols-[44px_minmax(0,1fr)] items-center overflow-hidden rounded-lg px-0 text-[14px] font-medium leading-none transition-all duration-300 ease-in-out hover:bg-[#eef4ff]`
+  const navActive = 'bg-[#dfe9ff]'
+
+  const labelClass = `whitespace-nowrap text-left transition-[max-width,opacity,transform] duration-300 ease-in-out ${
+    collapsed ? 'max-w-0 opacity-0 translate-x-0' : 'max-w-[180px] opacity-100 translate-x-0'
+  }`
 
   const handleLogout = () => {
     logout()
     navigate('/login', { replace: true })
   }
 
-  const navBase =
-    'group flex h-14 w-full items-center gap-3 border-l-[3px] border-transparent px-5 text-[13px] leading-none font-semibold text-[#4a5160] transition-colors hover:bg-[#f5f7fd] hover:text-[#1a5ec8]'
-  const navActive = 'border-l-[#0f5ec7] bg-[#e5ecff] !text-[#004395]'
-  const iconClass = 'h-5 w-5 shrink-0 stroke-[2.1px]'
-
   return (
-    <aside className="flex h-full w-70.5 shrink-0 flex-col border-r border-[#d8dde8] bg-white">
-      <div className="px-6 pt-8 pb-7">
-        <div className="flex items-start gap-3">
-          <LineSquiggle className="h-13 w-13 text-[#0f5ec7]" strokeWidth={2.1} aria-hidden="true" />
-          <div>
-            <p className="text-3xl leading-none font-bold text-[#162a4b]">Talentry</p>
-            <p className="mt-2 text-[12px] leading-none font-medium text-[#505866]">Mahasiswa</p>
+    <aside
+      className={`sticky top-0 left-0 flex h-screen shrink-0 flex-col overflow-hidden bg-white border-r border-[#d7dbe3] transition-[width] duration-300 ease-in-out ${
+        collapsed ? 'w-19' : 'w-60'
+      }`}
+    >
+      {!collapsed ? (
+        <button
+          className="absolute right-4 top-6 z-10 grid h-8 w-8 place-items-center rounded-lg text-[#6d7480] border border-transparent transition-colors hover:bg-[#eef4ff] hover:text-[#0d6efd]"
+          type="button"
+          aria-label="Collapse sidebar"
+          onClick={onToggle}
+        >
+          <ChevronLeft size={20} strokeWidth={2} />
+        </button>
+      ) : null}
+
+      <div className="flex h-20 w-full shrink-0 items-center border-b border-[#d7dbe3] px-4">
+        <div className="flex w-full items-center gap-3 overflow-hidden">
+          <div className="group/brand relative flex h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-xl bg-[#0d6efd] text-white">
+            <GraduationCap size={20} strokeWidth={2} />
+            {collapsed ? (
+              <button
+                className="absolute inset-0 grid place-items-center rounded-xl bg-[#0d6efd] opacity-0 transition-opacity group-hover/brand:opacity-100"
+                type="button"
+                aria-label="Expand sidebar"
+                onClick={onToggle}
+              >
+                <ChevronRight size={20} strokeWidth={2.5} />
+              </button>
+            ) : null}
+          </div>
+          <div className={labelClass}>
+            <p className="text-[18px] font-semibold text-[#0f1728]">Talentry</p>
+            <p className="mt-0.5 text-[14px] text-[#6d7480]">Mahasiswa</p>
           </div>
         </div>
       </div>
 
-      <nav className="flex flex-col" aria-label="Student navigation">
-        <NavLink to="/student" end className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <LayoutDashboard className={iconClass} aria-hidden="true" />
-          <span>Dashboard</span>
-        </NavLink>
-        <NavLink to="/student/job-matching" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <Briefcase className={iconClass} aria-hidden="true" />
-          <span>Rekomendasi Pekerjaan</span>
-        </NavLink>
-        <NavLink to="/student/job-apply" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <FileText className={iconClass} aria-hidden="true" />
-          <span>Lamaran Pekerjaan</span>
-        </NavLink>
-        <NavLink to="/student/invitation" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <Mail className={iconClass} aria-hidden="true" />
-          <span>Undangan</span>
-        </NavLink>
-        <NavLink to="/student/certification" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <Award className={iconClass} aria-hidden="true" />
-          <span>Sertifikasi</span>
-        </NavLink>
-        <NavLink to="/student/saved-jobs" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <Bookmark className={iconClass} aria-hidden="true" />
-          <span>Pekerjaan Tersimpan</span>
-        </NavLink>
-        <NavLink to="/student/competency-profile" className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
-          <CircleUserRound className={iconClass} aria-hidden="true" />
-          <span>Profil Kompetensi</span>
-        </NavLink>
+      <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden px-4 pt-6" aria-label="Student navigation">
+        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+          <NavLink key={to} to={to} end={end} className={({ isActive }) => `${navBase} ${isActive ? navActive : ''}`}>
+            {({ isActive }) => (
+              <>
+                <span className={`grid h-full w-11 flex-none place-items-center transition-colors ${isActive ? 'text-[#0d6efd]' : 'text-[#6d7480] group-hover:text-[#0d6efd]'}`} aria-hidden="true">
+                  <Icon size={18} strokeWidth={2} />
+                </span>
+                <span className={`${labelClass} ${isActive ? 'text-[#0d6efd]' : 'text-[#2a2f39] group-hover:text-[#0d6efd]'}`}>{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
       </nav>
 
-      <div className="mt-auto border-t border-[#d8dde8] px-4 pt-5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-[#90cb58] bg-[radial-gradient(circle_at_35%_30%,#ffd66f_2px,#83b65a_48%,#4f7f3f_100%)]">
-            <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none" aria-hidden="true">
-              <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
-              <path d="M6.5 19c.8-2.9 2.8-4.3 5.5-4.3s4.7 1.4 5.5 4.3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] leading-none font-semibold text-[#18263f]">{user?.name ?? 'Mahasiswa'}</p>
-            <p className="mt-1 truncate text-[13px] leading-none font-medium text-[#4f5664]">{user?.email ?? ''}</p>
-          </div>
-        </div>
+      <div className="shrink-0 border-t border-[#d7dbe3] p-4">
+        <SidebarUserCard collapsed={collapsed} />
 
         <button
-          className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#145bc6] text-[13px] leading-none font-semibold text-white transition-colors hover:bg-[#0f4fab]"
           type="button"
           onClick={handleLogout}
+          className={`flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0d6efd] text-[13px] font-semibold text-white transition-colors hover:bg-[#0b5ed7] ${collapsed ? 'px-0' : 'px-4'}`}
         >
-          <LogOut className="h-4 w-4" strokeWidth={2.2} aria-hidden="true" />
-          Logout
+          <LogOut size={16} strokeWidth={2} aria-hidden="true" />
+          <span className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${collapsed ? 'max-w-0 opacity-0' : 'max-w-[100px] opacity-100'}`}>
+            Logout
+          </span>
         </button>
       </div>
     </aside>

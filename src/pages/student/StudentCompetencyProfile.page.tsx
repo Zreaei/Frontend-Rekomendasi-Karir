@@ -1,165 +1,254 @@
 import { useEffect, useMemo, useState } from 'react'
 import StudentLayout from '../../layouts/StudentLayout'
-import StatCard from '../../components/common/StatCard'
-import { FileText, GraduationCap, Star, User } from 'lucide-react'
-import SectionHeader from '../../components/common/SectionHeader'
-import {
-  studentProfileApi,
-  type StudentProfile,
-  type StudentCompetency,
-} from '../../services/student.service'
+import Card from '../../components/common/Card'
+import { ChevronDown, ChevronUp, GraduationCap, Mail, BarChart3 } from 'lucide-react'
+import { studentProfileApi, type AcademicTranscript } from '../../services/student.service'
+
+type SortKey = 'newest' | 'oldest'
+
+const initialFromName = (name: string) =>
+  name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?'
 
 const StudentCompetencyProfile = () => {
-  const [profile, setProfile] = useState<StudentProfile | null>(null)
-  const [competency, setCompetency] = useState<StudentCompetency | null>(null)
+  const [data, setData] = useState<AcademicTranscript | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [semesterFilter, setSemesterFilter] = useState<number | 'all'>('all')
+  const [sortKey, setSortKey] = useState<SortKey>('newest')
+  const [openIds, setOpenIds] = useState<string[]>([])
 
   useEffect(() => {
     let aktif = true
-    Promise.allSettled([studentProfileApi.getProfile(), studentProfileApi.getCompetency()]).then(
-      ([p, c]) => {
+    studentProfileApi
+      .getAcademic()
+      .then((res) => {
         if (!aktif) return
-        if (p.status === 'fulfilled') setProfile(p.value)
-        if (c.status === 'fulfilled') setCompetency(c.value)
-        setLoading(false)
-      },
-    )
+        setData(res)
+        // Dua mata kuliah teratas terbuka, seperti pada desain.
+        setOpenIds(res.courses.slice(0, 2).map((c) => c.id))
+      })
+      .catch(() => { if (aktif) setError('Gagal memuat data akademik.') })
+      .finally(() => { if (aktif) setLoading(false) })
     return () => { aktif = false }
   }, [])
 
-  const subjects = profile?.subjectsTaken ?? []
+  const courses = data?.courses ?? []
 
   const semesters = useMemo(() => {
-    const unik = Array.from(new Set(subjects.map((s) => s.semester).filter((s): s is number => s != null)))
-    return unik.sort((a, b) => a - b)
-  }, [subjects])
+    const unik = Array.from(new Set(courses.map((c) => c.semester).filter((s): s is number => s != null)))
+    return unik.sort((a, b) => b - a)
+  }, [courses])
 
-  const visibleSubjects =
-    semesterFilter === 'all' ? subjects : subjects.filter((s) => s.semester === semesterFilter)
+  const visibleCourses = useMemo(() => {
+    const filtered =
+      semesterFilter === 'all' ? courses : courses.filter((c) => c.semester === semesterFilter)
+    return [...filtered].sort((a, b) =>
+      sortKey === 'newest'
+        ? (b.semester ?? 0) - (a.semester ?? 0)
+        : (a.semester ?? 0) - (b.semester ?? 0),
+    )
+  }, [courses, semesterFilter, sortKey])
 
-  const totalSks = subjects.reduce((sum, s) => sum + (s.subject?.sks ?? 0), 0)
-  const avgScore = subjects.length
-    ? Math.round(subjects.reduce((sum, s) => sum + (Number(s.score) || 0), 0) / subjects.length)
-    : 0
+  const toggleCourse = (id: string) => {
+    setOpenIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
 
-  const profileFields = [
-    { label: 'NAMA LENGKAP', value: profile?.user?.name ?? '-' },
-    { label: 'NIM', value: profile?.nim ?? '-' },
-    { label: 'IPK', value: profile?.gpa != null ? Number(profile.gpa).toFixed(2) : '-' },
-    { label: 'FAKULTAS', value: profile?.faculty ?? profile?.university?.name ?? '-' },
-    { label: 'EMAIL', value: profile?.user?.email ?? '-' },
-    { label: 'SEMESTER', value: profile?.semester != null ? String(profile.semester) : '-' },
-    { label: 'PROGRAM STUDI', value: profile?.major ?? '-' },
-    { label: 'ANGKATAN', value: profile?.entryYear != null ? String(profile.entryYear) : '-' },
-  ]
+  if (loading) {
+    return (
+      <StudentLayout>
+        <Card className="p-6 text-[14px] text-[#5c6577] shadow-sm">Memuat profil mahasiswa...</Card>
+      </StudentLayout>
+    )
+  }
 
-  const stats = [
-    { title: 'Mata Kuliah', value: String(subjects.length), icon: <Star size={18} strokeWidth={2} /> },
-    { title: 'Total Keahlian', value: String(competency?.totalSkills ?? 0), icon: <GraduationCap size={18} strokeWidth={2} /> },
-    { title: 'Rata-rata Nilai', value: String(avgScore), icon: <FileText size={18} strokeWidth={2} /> },
-    { title: 'Total SKS', value: String(totalSks), icon: <FileText size={18} strokeWidth={2} /> },
+  if (error || !data) {
+    return (
+      <StudentLayout>
+        <Card className="p-6 text-[14px] text-[#d92d20] shadow-sm">{error ?? 'Data tidak tersedia.'}</Card>
+      </StudentLayout>
+    )
+  }
+
+  const { student, stats } = data
+  const nama = student.user?.name ?? 'Mahasiswa'
+  const jurusan = [student.faculty, student.major].filter(Boolean).join(' / ') || '-'
+
+  const tiles = [
+    { label: 'IPK', value: stats.gpa != null ? Number(stats.gpa).toFixed(2) : '-', accent: true },
+    { label: 'Total SKS', value: String(stats.totalSks) },
+    { label: 'Total CLO', value: String(stats.totalClo) },
+    { label: 'Mata Kuliah', value: String(stats.totalCourses) },
   ]
 
   return (
     <StudentLayout>
-      <SectionHeader
-        title="Profil Kompetensi Pengguna"
-        description="Informasi pengguna, data akademik, dan capaian pembelajaran mata kuliah"
-      />
-      <div className="space-y-10">
-        <section className="grid bg-white p-6 rounded-xl shadow-sm grid-cols-[170px_minmax(0,1fr)] items-start gap-8 max-[960px]:grid-cols-1">
-          <div className="flex h-42.5 w-42.5 items-center justify-center rounded-sm bg-[#0d6efd] text-white">
-            <User size={50} strokeWidth={2} />
+      {/* ===== Kartu identitas + ringkasan angka ===== */}
+      <Card className="p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="flex min-w-0 items-start gap-5">
+            <div className="grid h-24 w-24 shrink-0 place-items-center rounded-xl bg-[#d4f542] text-[34px] font-bold text-[#1f2a44]">
+              {initialFromName(nama)}
+            </div>
+
+            <div className="min-w-0">
+              <h1 className="text-[26px] font-bold leading-tight text-[#111827]">{nama}</h1>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-[#4f5a6d]">
+                <span className="rounded-md bg-[#f0f3f9] px-2 py-1 font-semibold">
+                  NIM: {student.nim ?? '-'}
+                </span>
+                <span aria-hidden="true">•</span>
+                <span>Angkatan {student.entryYear ?? '-'}</span>
+              </div>
+
+              <div className="mt-3 grid gap-2 text-[13px] text-[#4f5a6d]">
+                <div className="flex items-center gap-2">
+                  <Mail size={15} strokeWidth={2} className="text-[#0d6efd]" aria-hidden="true" />
+                  {student.user?.email ?? '-'}
+                </div>
+                <div className="flex items-start gap-2">
+                  <GraduationCap size={15} strokeWidth={2} className="mt-0.5 text-[#0d6efd]" aria-hidden="true" />
+                  {jurusan}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-x-10 gap-y-8 max-[960px]:grid-cols-2 max-sm:grid-cols-1">
-            {profileFields.map((field) => (
-              <div key={field.label} className="space-y-1.5">
-                <p className="text-[13px] font-medium uppercase text-[#1f1f1f]">{field.label}</p>
-                <p className="text-[16px] font-semibold leading-tight text-[#050505]">
-                  {loading ? '...' : field.value}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {tiles.map((tile) => (
+              <div key={tile.label} className="min-w-[104px] rounded-xl bg-[#eef4ff] px-4 py-4 text-center">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#5c6577]">{tile.label}</p>
+                <p className={`mt-2 text-[24px] font-bold leading-none ${tile.accent ? 'text-[#0d6efd]' : 'text-[#111827]'}`}>
+                  {tile.value}
                 </p>
               </div>
             ))}
           </div>
-        </section>
-
-        <div className="grid grid-cols-4 gap-4 max-[960px]:grid-cols-2">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} title={stat.title} value={loading ? '...' : stat.value} icon={stat.icon} />
-          ))}
         </div>
+      </Card>
 
-        {competency && competency.skills.length > 0 ? (
-          <section className="space-y-4 bg-white p-6 rounded-xl shadow-sm">
-            <h2 className="text-[18px] font-bold text-[#050505]">Keahlian ({competency.totalSkills})</h2>
-            <div className="flex flex-wrap gap-2.5">
-              {competency.skills.map((skill) => (
-                <span
-                  key={skill.id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#eef5ff] px-3 py-1.5 text-[12px] font-semibold text-[#0d6efd]"
-                  title={`Sumber: ${skill.source}`}
-                >
-                  {skill.name}
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : null}
+      {/* ===== Filter semester & urutan ===== */}
+      <div className="flex flex-wrap items-center gap-3">
+        <select
+          className="h-10 rounded-lg border border-[#d9dce2] bg-white px-3 text-[13px] font-semibold text-[#1f2a44] outline-none focus:border-[#0d6efd]"
+          value={semesterFilter === 'all' ? 'all' : String(semesterFilter)}
+          onChange={(e) => setSemesterFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+        >
+          <option value="all">Semua Semester</option>
+          {semesters.map((s) => (
+            <option key={s} value={s}>Semester {s}</option>
+          ))}
+        </select>
 
-        <section className="space-y-6 bg-white p-6 rounded-xl shadow-sm">
-          <div className="flex items-center gap-8 overflow-x-auto border-b border-[#0d6efd] pb-4 text-[15px] text-[#050505]">
-            <button
-              className={`whitespace-nowrap border-none bg-transparent px-0 py-0 ${semesterFilter === 'all' ? 'font-semibold text-[#0d6efd]' : 'font-normal'}`}
-              type="button"
-              onClick={() => setSemesterFilter('all')}
-            >
-              Semua
-            </button>
-            {semesters.map((semester) => (
-              <button
-                key={semester}
-                className={`whitespace-nowrap border-none bg-transparent px-0 py-0 ${semesterFilter === semester ? 'font-semibold text-[#0d6efd]' : 'font-normal'}`}
-                type="button"
-                onClick={() => setSemesterFilter(semester)}
-              >
-                Semester {semester}
-              </button>
-            ))}
-          </div>
+        <select
+          className="h-10 rounded-lg border border-[#d9dce2] bg-white px-3 text-[13px] font-semibold text-[#1f2a44] outline-none focus:border-[#0d6efd]"
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value as SortKey)}
+        >
+          <option value="newest">Terbaru (semester tertinggi)</option>
+          <option value="oldest">Terlama (semester terendah)</option>
+        </select>
+      </div>
 
-          <div className="grid gap-5">
-            <div className="grid grid-cols-[100px_minmax(0,1.8fr)_0.8fr_0.55fr_1fr] gap-6 text-[14px] font-bold uppercase text-[#050505] max-lg:grid-cols-2 max-sm:grid-cols-1">
-              <span>Kode</span>
-              <span>Mata Kuliah</span>
-              <span>Semester</span>
-              <span>SKS</span>
-              <span>Nilai</span>
-            </div>
+      {/* ===== Daftar mata kuliah + CLO ===== */}
+      <div className="grid gap-4">
+        {visibleCourses.length === 0 ? (
+          <Card className="p-6 text-[14px] text-[#5c6577] shadow-sm">
+            Belum ada data mata kuliah untuk filter ini.
+          </Card>
+        ) : (
+          visibleCourses.map((course) => {
+            const isOpen = openIds.includes(course.id)
+            const nilai = course.score != null ? Math.round(Number(course.score)) : null
+            return (
+              <Card key={course.id} className="p-0 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-5">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-md bg-[#f0f3f9] px-2 py-1 text-[11px] font-semibold text-[#4f5a6d]">
+                        Semester {course.semester ?? '-'}
+                      </span>
+                      <span className="rounded-md bg-[#eef4ff] px-2 py-1 text-[11px] font-semibold text-[#0d6efd]">
+                        {course.sks ?? '-'} SKS
+                      </span>
+                    </div>
+                    <h2 className="mt-2 text-[20px] font-bold leading-tight text-[#111827]">
+                      {course.code ? `${course.code} - ` : ''}{course.name}
+                    </h2>
+                  </div>
 
-            {loading ? (
-              <p className="text-[13px] text-[#5c6577]">Memuat data akademik...</p>
-            ) : visibleSubjects.length === 0 ? (
-              <p className="text-[13px] text-[#5c6577]">Belum ada data mata kuliah.</p>
-            ) : (
-              visibleSubjects.map((course, index) => (
-                <div
-                  key={`${course.subject?.id ?? index}`}
-                  className="grid grid-cols-[100px_minmax(0,1.8fr)_0.8fr_0.55fr_1fr] items-start gap-6 text-[13px] text-[#050505] max-lg:grid-cols-2 max-sm:grid-cols-1"
-                >
-                  <span className="font-semibold">{course.subject?.code ?? '-'}</span>
-                  <span>{course.subject?.name ?? '-'}</span>
-                  <span>{course.semester ?? '-'}</span>
-                  <span>{course.subject?.sks ?? '-'}</span>
-                  <span className="font-semibold">
-                    {course.grade ?? (course.score != null ? String(course.score) : '-')}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {course.clos.length > 0 ? (
+                      <button
+                        className="inline-flex items-center gap-1.5 rounded-md border border-[#0d6efd] px-3 py-1.5 text-[12px] font-semibold text-[#0d6efd] transition-colors hover:bg-[#eef4ff]"
+                        type="button"
+                        onClick={() => toggleCourse(course.id)}
+                      >
+                        {isOpen ? (
+                          <>
+                            <ChevronUp size={14} strokeWidth={2.2} aria-hidden="true" />
+                            Tutup Detail CLO
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown size={14} strokeWidth={2.2} aria-hidden="true" />
+                            Lihat Detail CLO
+                          </>
+                        )}
+                      </button>
+                    ) : null}
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] text-[#4f5a6d]">Nilai</span>
+                      <span className="rounded-md bg-[#f0f3f9] px-3 py-1.5 text-[20px] font-bold leading-none text-[#111827]">
+                        {nilai ?? course.grade ?? '-'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
-        </section>
+
+                {isOpen && course.clos.length > 0 ? (
+                  <div className="border-t border-[#e6eaf2] px-6 py-5">
+                    <p className="flex items-center gap-2 text-[13px] font-bold text-[#1f2a44]">
+                      <BarChart3 size={15} strokeWidth={2.2} className="text-[#0d6efd]" aria-hidden="true" />
+                      Course Learning Outcomes (CLO) &amp; Skills
+                    </p>
+
+                    <div className="mt-3 grid gap-3">
+                      {course.clos.map((clo) => (
+                        <div key={clo.id} className="flex items-start justify-between gap-4 rounded-lg bg-[#f5f8ff] px-4 py-4">
+                          <div className="min-w-0">
+                            <p className="text-[13px] leading-relaxed text-[#23324a]">
+                              {clo.code}: {clo.description}
+                            </p>
+                            {clo.skills.length > 0 ? (
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <span className="text-[11px] font-semibold text-[#5c6577]">Skills:</span>
+                                {clo.skills.map((skill) => (
+                                  <span
+                                    key={skill}
+                                    className="rounded bg-[#dbe7ff] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#0d5bd7]"
+                                  >
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <span className="shrink-0 text-[20px] font-bold leading-none text-[#0d6efd]">
+                            {clo.score != null ? Math.round(Number(clo.score)) : '-'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </Card>
+            )
+          })
+        )}
       </div>
     </StudentLayout>
   )

@@ -1,20 +1,28 @@
-import StudentHeader from '../components/ui/StudentHeader'
-import StudentSidebar from '../components/ui/StudentSidebar'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
+import StudentSidebar from '../components/ui/StudentSidebar'
+import Header from '../components/ui/Header'
 
 interface StudentLayoutProps {
   children: ReactNode
 }
 
 const StudentLayout = ({ children }: StudentLayoutProps) => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => !prev)
+  }
+
   return (
-    <div className="h-screen overflow-hidden bg-[#edf0f5] p-0.5">
-      <div className="flex h-full min-h-0 w-full overflow-hidden rounded-none bg-[#edf0f5]">
-        <StudentSidebar />
-        <main className="relative min-h-0 w-full overflow-y-auto no-scrollbar bg-[#edf0f5]">
-          <StudentHeader />
-          <div className="px-6 py-6 lg:px-8 lg:py-7">
-            <div className="grid min-w-0 gap-6">{children}</div>
+    <div className="flex h-screen w-full overflow-hidden bg-[#f2f6fb]">
+      <StudentSidebar collapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto py-8 px-10 bg-[#f2f6fb]">
+          <div className="max-w-[1280px] w-full mx-auto flex flex-col gap-6">
+            {children}
           </div>
         </main>
       </div>

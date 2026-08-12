@@ -8,12 +8,19 @@ import { studentCertificateApi } from '../../services/student.service'
 
 const MAX_SIZE = 5 * 1024 * 1024
 
+const fieldClass =
+	'mt-2 h-10 w-full rounded-md border border-[#d9dce2] bg-white px-3 py-2 text-[13px] text-[#1f2a44] outline-none transition-colors focus:border-[#0d6efd]'
+
 const StudentCertificationUpload = () => {
 	const navigate = useNavigate()
 	const fileInputRef = useRef<HTMLInputElement>(null)
 
 	const [title, setTitle] = useState('')
 	const [issuer, setIssuer] = useState('')
+	const [issuedAt, setIssuedAt] = useState('')
+	const [credentialId, setCredentialId] = useState('')
+	const [skills, setSkills] = useState<string[]>([])
+	const [skillInput, setSkillInput] = useState('')
 	const [file, setFile] = useState<File | null>(null)
 	const [submitting, setSubmitting] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -28,6 +35,19 @@ const StudentCertificationUpload = () => {
 		setFile(picked)
 	}
 
+	const addSkill = () => {
+		const nama = skillInput.trim()
+		if (!nama) return
+		if (!skills.some((s) => s.toLowerCase() === nama.toLowerCase())) {
+			setSkills((prev) => [...prev, nama])
+		}
+		setSkillInput('')
+	}
+
+	const removeSkill = (nama: string) => {
+		setSkills((prev) => prev.filter((s) => s !== nama))
+	}
+
 	const submit = async () => {
 		if (!title.trim()) {
 			setError('Nama sertifikat wajib diisi.')
@@ -39,6 +59,9 @@ const StudentCertificationUpload = () => {
 			await studentCertificateApi.upload({
 				title: title.trim(),
 				issuer: issuer.trim() || undefined,
+				issuedAt: issuedAt || undefined,
+				credentialId: credentialId.trim() || undefined,
+				skills,
 				file: file ?? undefined,
 			})
 			navigate('/student/certification')
@@ -101,7 +124,7 @@ const StudentCertificationUpload = () => {
 								<label className="text-[12px] font-medium text-[#5c6577]" htmlFor="cert-title">Nama Sertifikat</label>
 								<input
 									id="cert-title"
-									className="mt-2 h-10 w-full rounded-md border border-[#d9dce2] bg-white px-3 py-2 text-[13px] text-[#1f2a44] outline-none focus:border-[#0d6efd]"
+									className={fieldClass}
 									placeholder="contoh: Python Tingkat Lanjut..."
 									value={title}
 									onChange={(e) => setTitle(e.target.value)}
@@ -111,11 +134,67 @@ const StudentCertificationUpload = () => {
 								<label className="text-[12px] font-medium text-[#5c6577]" htmlFor="cert-issuer">Organisasi/Lembaga Penerbit</label>
 								<input
 									id="cert-issuer"
-									className="mt-2 h-10 w-full rounded-md border border-[#d9dce2] bg-white px-3 py-2 text-[13px] text-[#1f2a44] outline-none focus:border-[#0d6efd]"
+									className={fieldClass}
 									placeholder="contoh: Coursera / Google"
 									value={issuer}
 									onChange={(e) => setIssuer(e.target.value)}
 								/>
+							</div>
+							<div>
+								<label className="text-[12px] font-medium text-[#5c6577]" htmlFor="cert-issued">Tanggal Terbit</label>
+								<input
+									id="cert-issued"
+									type="date"
+									className={fieldClass}
+									value={issuedAt}
+									onChange={(e) => setIssuedAt(e.target.value)}
+								/>
+							</div>
+							<div>
+								<label className="text-[12px] font-medium text-[#5c6577]" htmlFor="cert-credential">ID Kredensial / Tautan Sertifikat</label>
+								<input
+									id="cert-credential"
+									className={fieldClass}
+									placeholder="https://..."
+									value={credentialId}
+									onChange={(e) => setCredentialId(e.target.value)}
+								/>
+							</div>
+						</div>
+					</Card>
+
+					<Card className="p-0 shadow-sm">
+						<div className="border-b border-[#d9dce2] bg-[#eef5ff] px-5 py-4 text-[14px] font-bold text-[#1f2a44]">Keahlian Terkait</div>
+						<div className="p-5">
+							<p className="text-[13px] text-[#5c6577]">Pilih atau tandai kompetensi utama yang divalidasi oleh sertifikat ini.</p>
+							<div className="mt-4 flex flex-wrap items-center gap-2.5">
+								{skills.map((skill) => (
+									<span key={skill} className="inline-flex h-6 items-center gap-1 rounded-full border border-[#0d6efd] px-2.5 text-[12px] font-semibold text-[#0d6efd]">
+										{skill}
+										<button type="button" aria-label={`Hapus ${skill}`} onClick={() => removeSkill(skill)}>
+											×
+										</button>
+									</span>
+								))}
+								<input
+									className="h-6 min-w-40 rounded-full border border-[#d9dce2] px-2.5 text-[12px] text-[#1f2a44] outline-none focus:border-[#0d6efd]"
+									placeholder="Ketik keahlian lalu Enter"
+									value={skillInput}
+									onChange={(e) => setSkillInput(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter') {
+											e.preventDefault()
+											addSkill()
+										}
+									}}
+								/>
+								<button
+									className="inline-flex h-6 items-center rounded-full border border-[#0d6efd] px-2.5 text-[12px] font-semibold text-[#0d6efd]"
+									type="button"
+									onClick={addSkill}
+								>
+									+ Add Skill
+								</button>
 							</div>
 						</div>
 					</Card>

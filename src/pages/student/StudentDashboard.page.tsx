@@ -166,7 +166,7 @@ const StudentDashboard = () => {
             <SectionHeader
               title="Verifikasi Terbaru"
               action={
-                <Link to="/student/certification" className="border-none bg-transparent text-[13px] font-semibold text-[#0d6efd]">
+                <Link to="/student/certification" className="border-none bg-transparent text-[13px] font-semibold text-[#0d6efd]!">
                   Lihat Semua
                 </Link>
               }
@@ -212,7 +212,7 @@ const StudentDashboard = () => {
       <SectionHeader
         title="Top Job Matches"
         action={
-          <Link to="/student/job-matching" className="text-[13px] font-semibold text-[#0d6efd]">
+          <Link to="/student/job-matching" className="text-[13px] font-semibold text-[#0d6efd]!">
             Lihat Semua
           </Link>
         }

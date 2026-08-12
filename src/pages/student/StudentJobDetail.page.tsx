@@ -30,7 +30,7 @@ const StudentJobDetail = () => {
   const [jobInfo, setJobInfo] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({ 0: true })
+  const [openIds, setOpenIds] = useState<string[]>([])
   const [isFavorite, setIsFavorite] = useState(false)
   const [hasApplied, setHasApplied] = useState(false)
   const [applying, setApplying] = useState(false)
@@ -45,8 +45,14 @@ const StudentJobDetail = () => {
       studentMatchingApi.listJobs(),
     ]).then(([d, j, list]) => {
       if (!aktif) return
-      if (d.status === 'fulfilled') setDetail(d.value)
-      else setError('Gagal memuat detail lowongan.')
+      if (d.status === 'fulfilled') {
+        setDetail(d.value)
+        // buka persyaratan pertama secara default, seperti desain awal
+        const first = d.value.requirementAnalysis?.[0]
+        if (first) setOpenIds([first.id])
+      } else {
+        setError('Gagal memuat detail lowongan.')
+      }
       if (j.status === 'fulfilled') setJobInfo(j.value)
       if (list.status === 'fulfilled') {
         const match = list.value.find((item) => item.id === jobId)
@@ -59,6 +65,10 @@ const StudentJobDetail = () => {
     })
     return () => { aktif = false }
   }, [jobId])
+
+  const toggleOpen = (id: string) => {
+    setOpenIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
 
   const toggleFavorite = async () => {
     const next = !isFavorite
@@ -105,8 +115,7 @@ const StudentJobDetail = () => {
   const matchLabel = `${Math.round(detail.matchScore)}%`
   const location = jobInfo?.location ?? '-'
   const jobType = jobInfo?.type ?? '-'
-  const description = job.description ?? jobInfo?.description ?? ''
-  const breakdown = detail.requirementBreakdown ?? []
+  const analysis = detail.requirementAnalysis ?? []
 
   return (
     <StudentLayout>
@@ -120,7 +129,7 @@ const StudentJobDetail = () => {
             <div className="min-w-0">
               <h1 className="text-[24px] font-bold leading-tight text-[#111827] md:text-[29px]">{job.title}</h1>
               {job.company ? (
-                <Link className="mt-1 inline-flex text-[14px] font-medium text-[#0d5bd7] hover:underline md:text-[15px]" to={`/student/company/${job.company.id}`}>
+                <Link className="mt-1 inline-flex text-[14px] font-medium text-[#0d5bd7]! hover:underline md:text-[15px]" to={`/student/company/${job.company.id}`}>
                   {job.company.name}
                 </Link>
               ) : null}
@@ -165,31 +174,31 @@ const StudentJobDetail = () => {
           </div>
 
           <div className="px-5 py-4">
-            <p className="text-[12px] font-semibold uppercase tracking-wide text-[#5c6577]">
-              {breakdown.length > 0 ? 'Capaian Pembelajaran (CLO)' : 'Kesesuaian Keahlian'}
-            </p>
+            <p className="text-[12px] font-semibold uppercase tracking-wide text-[#5c6577]">Capaian Pembelajaran (CLO)</p>
 
             <div className="mt-3 grid gap-4">
-              {breakdown.length > 0 ? (
-                breakdown.map((section: any, index) => {
-                  const isOpen = !!expanded[index]
-                  const score = section.score ?? section.similarity
+              {analysis.length === 0 ? (
+                <div className="rounded-[14px] border border-[#d9dce2] bg-white px-4 py-5 text-[13px] text-[#5c6577]">
+                  Analisis kompetensi belum tersedia untuk lowongan ini. Pastikan nilai dan CLO
+                  Anda sudah diinput oleh kampus.
+                </div>
+              ) : (
+                analysis.map((section, index) => {
+                  const isOpen = openIds.includes(section.id)
                   return (
-                    <div key={index} className="overflow-hidden rounded-[14px] border border-[#d9dce2] bg-white">
+                    <div key={section.id} className="overflow-hidden rounded-[14px] border border-[#d9dce2] bg-white">
                       <button
                         className="flex w-full items-center justify-between gap-3 border-b border-[#d9dce2] px-4 py-3 text-left"
                         type="button"
-                        onClick={() => setExpanded((prev) => ({ ...prev, [index]: !prev[index] }))}
+                        onClick={() => toggleOpen(section.id)}
                       >
                         <h2 className="text-[13px] font-semibold text-[#23324a] md:text-[14px]">
-                          {index + 1}. {section.requirement ?? 'Persyaratan'}
+                          {index + 1}. {section.deskripsi}
                         </h2>
                         <div className="flex items-center gap-2">
-                          {score != null ? (
-                            <span className="inline-flex items-center rounded-md bg-[#dbe5f8] px-2.5 py-1 text-[12px] font-semibold text-[#0d5bd7]">
-                              {Math.round(Number(score))}%
-                            </span>
-                          ) : null}
+                          <span className="inline-flex items-center rounded-md bg-[#dbe5f8] px-2.5 py-1 text-[12px] font-semibold text-[#0d5bd7]">
+                            {section.matchScore}%
+                          </span>
                           {isOpen ? (
                             <ChevronUp size={16} strokeWidth={2} className="text-[#6a7280]" aria-hidden="true" />
                           ) : (
@@ -199,49 +208,39 @@ const StudentJobDetail = () => {
                       </button>
 
                       {isOpen ? (
-                        <div className="grid gap-5 px-4 py-5 md:grid-cols-3">
-                          <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5c6577]">Matkul</p>
-                            <p className="mt-1 text-[13px] text-[#111827] md:text-[14px]">{section.bestSubject ?? section.subject ?? '-'}</p>
+                        section.cloItems.length === 0 ? (
+                          <div className="px-4 py-4 text-[13px] text-[#5c6577]">
+                            Belum ada capaian pembelajaran Anda yang cocok dengan persyaratan ini.
                           </div>
-                          <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5c6577]">Nilai</p>
-                            <p className="mt-1 text-[22px] font-bold leading-none text-[#111827] md:text-[24px]">{section.grade ?? '-'}</p>
+                        ) : (
+                          <div className="grid gap-0 divide-y divide-[#edf0f5]">
+                            {section.cloItems.map((item) => (
+                              <div key={item.id} className="grid gap-5 px-4 py-5 md:grid-cols-3">
+                                <div>
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5c6577]">Matkul</p>
+                                  <p className="mt-1 text-[13px] text-[#111827] md:text-[14px]">{item.matkul}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5c6577]">Nilai</p>
+                                  <p className="mt-1 text-[22px] font-bold leading-none text-[#111827] md:text-[24px]">{item.nilai}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5c6577]">CLO</p>
+                                  <p className="mt-1 text-[12px] font-semibold leading-relaxed text-[#23324a] md:text-[13px]">
+                                    {item.kode} — {item.deskripsi}
+                                  </p>
+                                </div>
+                                <div className="md:col-span-3 border-t border-[#edf0f5] pt-3 text-[11px] text-[#5c6577]">
+                                  Kemiripan {item.skorKemiripan}% × bobot nilai {item.bobotNilai.toFixed(2)} = {item.kontribusi}% kontribusi
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                          <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5c6577]">CLO</p>
-                            <p className="mt-1 text-[12px] font-semibold leading-relaxed text-[#23324a] md:text-[13px]">
-                              {section.bestClo ?? section.clo ?? '-'}
-                            </p>
-                          </div>
-                        </div>
+                        )
                       ) : null}
                     </div>
                   )
                 })
-              ) : (
-                <div className="grid gap-3">
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#0f766e]">Keahlian yang cocok</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {(detail.matchedSkills ?? []).length === 0 ? (
-                        <span className="text-[13px] text-[#5c6577]">Belum ada keahlian yang cocok.</span>
-                      ) : (
-                        (detail.matchedSkills ?? []).map((skill: any, i) => <Tag key={i} label={skill.name} />)
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#d92d20]">Keahlian yang belum dimiliki</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {(detail.gapSkills ?? []).length === 0 ? (
-                        <span className="text-[13px] text-[#5c6577]">Semua keahlian yang dibutuhkan sudah dimiliki.</span>
-                      ) : (
-                        (detail.gapSkills ?? []).map((skill: any, i) => <Tag key={i} label={skill.name} />)
-                      )}
-                    </div>
-                  </div>
-                </div>
               )}
             </div>
           </div>
@@ -253,11 +252,6 @@ const StudentJobDetail = () => {
               <span className="text-[42px] font-bold leading-none">{matchLabel}</span>
               <span className="mt-1 text-[11px] font-semibold uppercase tracking-wide">Match Score</span>
             </div>
-          </div>
-
-          <div className="px-4 py-4 text-[13px] leading-relaxed text-[#5a6270]">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6c7481]">Tentang Lowongan</p>
-            <p className="mt-2">{description || 'Deskripsi lowongan belum tersedia.'}</p>
           </div>
 
           <div className="border-t border-[#d9dce2] px-4 py-4">

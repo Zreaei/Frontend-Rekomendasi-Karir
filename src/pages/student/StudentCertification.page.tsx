@@ -134,7 +134,7 @@ const StudentCertification = () => {
 									</div>
 									<div className="p-4">
 										<p className="text-[14px] font-semibold text-[#050505]">{item.title}</p>
-										<p className="mt-1 text-[12px] text-[#4f5a6d]">{item.issuer ?? '-'} • {formatDate(item.created_at)}</p>
+										<p className="mt-1 text-[12px] text-[#4f5a6d]">{item.issuer ?? '-'} • {formatDate(item.issuedAt ?? item.created_at)}</p>
 										<div className="mt-4 flex items-center justify-between gap-3">
 											<Link
 												to={isRejected ? `/student/certification/${item.id}/denied` : `/student/certification/${item.id}`}

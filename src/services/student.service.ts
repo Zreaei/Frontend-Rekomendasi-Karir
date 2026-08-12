@@ -68,27 +68,77 @@ export interface JobMatch {
   deprioritized?: boolean
 }
 
+export interface AcademicCloItem {
+  id: string
+  code: string
+  description: string
+  skills: string[]
+  score: number | null
+}
+
+export interface AcademicCourse {
+  id: string
+  code?: string | null
+  name: string
+  sks?: number | null
+  semester?: number | null
+  grade?: string | null
+  score?: number | null
+  clos: AcademicCloItem[]
+}
+
+export interface AcademicTranscript {
+  student: {
+    id: string
+    nim?: string | null
+    major?: string | null
+    faculty?: string | null
+    semester?: number | null
+    gpa?: number | null
+    entryYear?: number | null
+    university?: { id: string; name: string } | null
+    user?: { id: string; name: string; email: string; phone?: string | null }
+  }
+  stats: {
+    gpa?: number | null
+    totalSks: number
+    totalClo: number
+    totalCourses: number
+  }
+  courses: AcademicCourse[]
+}
+
+export interface RequirementCloItem {
+  id: string
+  kode: string
+  deskripsi: string
+  matkul: string
+  nilai: string
+  skorKemiripan: number
+  bobotNilai: number
+  kontribusi: number
+}
+
+export interface RequirementAnalysis {
+  id: string
+  deskripsi: string
+  matchScore: number
+  cloItems: RequirementCloItem[]
+}
+
 export interface JobMatchDetail {
   job: {
     id: string
     title: string
     department?: string | null
-    description?: string | null
     company?: { id: string; name: string }
     requiredSkills: { id: string; name: string }[]
     requirements: { id: string; requirement: string; skills: string[] }[]
   }
   matchScore: number
   matchMethod?: string
-  requirementBreakdown: {
-    requirement?: string
-    score?: number
-    bestClo?: string
-    bestSubject?: string
-    grade?: number | string | null
-    similarity?: number
-    [key: string]: any
-  }[]
+  // analisis per persyaratan: sama dengan yang dilihat HRD di detail kandidat
+  requirementAnalysis: RequirementAnalysis[]
   coveredRequirements?: number | null
   matchedSkills?: { skillId?: string; id?: string; name: string }[]
   gapSkills?: { skillId?: string; id?: string; name: string }[]
@@ -128,6 +178,8 @@ export interface MyCertificate {
   id: string
   title: string
   issuer?: string | null
+  issuedAt?: string | null
+  credentialId?: string | null
   status: 'pending' | 'approved' | 'rejected' | string
   fileUrl?: string | null
   fileType?: string | null
@@ -194,6 +246,10 @@ export const studentProfileApi = {
   // GET /students/me/competency
   getCompetency: async (): Promise<StudentCompetency> =>
     unwrap(await api.get('/students/me/competency')),
+
+  // GET /students/me/academic -> transkrip per matkul + nilai tiap CLO
+  getAcademic: async (): Promise<AcademicTranscript> =>
+    unwrap(await api.get('/students/me/academic')),
 }
 
 // ============================================================
@@ -257,11 +313,22 @@ export const studentCertificateApi = {
   listMine: async (): Promise<MyCertificate[]> =>
     unwrapList(await api.get('/certificates/me'), 'certificates'),
 
-  // POST /certificates (multipart: file + title + issuer)
-  upload: async (payload: { title: string; issuer?: string; file?: File }) => {
+  // POST /certificates (multipart: file + title + issuer + issuedAt +
+  // credentialId + skills). skills dikirim sebagai CSV, backend memecahnya.
+  upload: async (payload: {
+    title: string
+    issuer?: string
+    issuedAt?: string
+    credentialId?: string
+    skills?: string[]
+    file?: File
+  }) => {
     const fd = new FormData()
     fd.append('title', payload.title)
     if (payload.issuer) fd.append('issuer', payload.issuer)
+    if (payload.issuedAt) fd.append('issuedAt', payload.issuedAt)
+    if (payload.credentialId) fd.append('credentialId', payload.credentialId)
+    if (payload.skills?.length) fd.append('skills', payload.skills.join(','))
     if (payload.file) fd.append('file', payload.file)
     return unwrap(await api.post('/certificates', fd))
   },
