@@ -5,6 +5,7 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Tag from '../../components/common/Tag'
 import SectionHeader from '../../components/common/SectionHeader'
+import ConfirmModal from '../../components/common/ConfirmModal'
 import {
   Bookmark,
   Box,
@@ -12,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   MapPin,
+  Send,
   Sparkles,
 } from 'lucide-react'
 import {
@@ -34,6 +36,7 @@ const StudentJobDetail = () => {
   const [isFavorite, setIsFavorite] = useState(false)
   const [hasApplied, setHasApplied] = useState(false)
   const [applying, setApplying] = useState(false)
+  const [konfirmasiLamar, setKonfirmasiLamar] = useState(false)
 
   useEffect(() => {
     if (!jobId) return
@@ -81,7 +84,10 @@ const StudentJobDetail = () => {
     }
   }
 
+  // Lamaran tidak bisa ditarik kembali, jadi klik tombol hanya membuka
+  // konfirmasi lebih dulu agar tidak terkirim karena salah tekan.
   const applyToJob = async () => {
+    setKonfirmasiLamar(false)
     if (hasApplied) return
     setApplying(true)
     try {
@@ -144,7 +150,7 @@ const StudentJobDetail = () => {
                   className="h-10 min-w-50 rounded-sm px-4 text-[14px] shadow-none"
                   type="button"
                   disabled={hasApplied || applying}
-                  onClick={applyToJob}
+                  onClick={() => setKonfirmasiLamar(true)}
                 >
                   {hasApplied ? 'Sudah Dilamar' : applying ? 'Mengirim...' : 'Lamar Sekarang'}
                 </Button>
@@ -282,6 +288,24 @@ const StudentJobDetail = () => {
           </div>
         </Card>
       </div>
+
+      <ConfirmModal
+        isOpen={konfirmasiLamar}
+        icon={Send}
+        tone="primary"
+        title="Kirim Lamaran?"
+        message={
+          <>
+            Anda akan melamar posisi <strong>{job.title}</strong>
+            {job.company ? <> di <strong>{job.company.name}</strong></> : null}. Lamaran yang
+            sudah terkirim tidak dapat dibatalkan.
+          </>
+        }
+        confirmLabel="Ya, Lamar Sekarang"
+        cancelLabel="Batal"
+        onConfirm={applyToJob}
+        onCancel={() => setKonfirmasiLamar(false)}
+      />
     </StudentLayout>
   )
 }

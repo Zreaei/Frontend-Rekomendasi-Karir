@@ -4,7 +4,7 @@ import { Search, GraduationCap, Users, Plus, CheckCircle2, Clock, Trash2, Edit, 
 import { adminUniversityApi, getInitialsOf, formatDateID } from '../../services/admin.service'
 import type { AdminUniversity } from '../../services/admin.service'
 import Toast from './components/Toast'
-import ConfirmModal from './components/ConfirmModal'
+import ConfirmModal from '../../components/common/ConfirmModal'
 import StatusBadge from './components/StatusBadge'
 
 // baris tabel: bentuk turunan dari AdminUniversity agar mudah dirender

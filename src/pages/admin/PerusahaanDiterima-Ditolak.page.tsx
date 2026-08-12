@@ -4,7 +4,7 @@ import { ChevronRight, CheckCircle2, Ban, AlertTriangle, PencilLine, Building2, 
 import { adminCompanyApi, adminUserApi, formatDateID } from '../../services/admin.service'
 import type { AdminCompany } from '../../services/admin.service'
 import Toast from './components/Toast'
-import ConfirmModal from './components/ConfirmModal'
+import ConfirmModal from '../../components/common/ConfirmModal'
 
 const AdminPerusahaanDiterimaDitolak = () => {
   const { id } = useParams()

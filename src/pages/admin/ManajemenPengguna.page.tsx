@@ -3,7 +3,7 @@ import { Search, Users, UserX, GraduationCap, Building2, ChevronDown, CheckCircl
 import { adminUserApi, getInitialsOf, USER_STATUS_LABEL } from '../../services/admin.service'
 import type { AdminUser } from '../../services/admin.service'
 import Toast from './components/Toast'
-import ConfirmModal from './components/ConfirmModal'
+import ConfirmModal from '../../components/common/ConfirmModal'
 import StatusBadge from './components/StatusBadge'
 
 type TabKey = 'mahasiswa' | 'universitas' | 'perusahaan'
