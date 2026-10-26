@@ -1,12 +1,11 @@
-import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft,
   Bot,
   Building2,
   LifeBuoy,
   Rocket,
   Search,
 } from 'lucide-react'
+import StudentLayout from '../../layouts/StudentLayout'
 
 const helpTopics = [
   {
@@ -40,26 +39,8 @@ const helpTopics = [
 ]
 
 const StudentHelp = () => {
-  const navigate = useNavigate()
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1)
-      return
-    }
-
-    navigate('/student')
-  }
-
   return (
-    <main className="min-h-screen bg-gray-200 content-center">
-      <button
-        className="flex fixed top-8 left-8 py-2 items-center gap-2 rounded-md border border-[#d9dce5] bg-white px-3 text-[14px] font-semibold text-[#232342] shadow-sm transition-colors hover:bg-[#f4f6fb]"
-        type="button"
-        onClick={handleBack}
-      >
-        <ArrowLeft size={18} strokeWidth={2} aria-hidden="true" />
-      </button>
-
+    <StudentLayout>
       <section className="pb-10">
         <div className="relative mx-auto text-center">
           <h1 className="text-[30px] font-bold">
@@ -96,7 +77,7 @@ const StudentHelp = () => {
           )
         })}
       </section>
-    </main>
+    </StudentLayout>
   )
 }
 

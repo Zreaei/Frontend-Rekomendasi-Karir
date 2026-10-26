@@ -1,67 +1,115 @@
-import axios, { type AxiosInstance } from 'axios'
-import { useAuthStore } from '../store/auth.store'
+import axios from "axios";
 
-export const API_BASE_URL = 'http://localhost:5000/api'
-
-// Read persisted token from zustand storage
-export function getPersistedToken(): string | null {
-  try {
-    const raw = localStorage.getItem('auth-store')
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    const token = parsed?.state?.token || parsed?.token || null
-    return token ? String(token) : null
-  } catch {
-    return null
-  }
-}
-
-export function attachAuthInterceptor(instance: AxiosInstance) {
-  instance.interceptors.request.use((config) => {
-    // Normalize headers type
-    const headers: Record<string, any> = (config.headers as any) || {}
-    const hasAuth = !!headers.Authorization
-    if (!hasAuth) {
-      // Prefer persisted token; fallback to Zustand store state
-      let token = getPersistedToken()
-      if (!token) {
-        try {
-          token = useAuthStore.getState().token || null
-        } catch {
-          token = null
-        }
-      }
-      if (token) {
-        const t = String(token).replace(/^Bearer\s+/i, '')
-        headers.Authorization = `Bearer ${t}`
-      }
-    }
-    config.headers = headers as any
-    return config
-  })
-
-  // Response interceptor to handle 401/403 errors
-  instance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      const status = error?.response?.status
-      if (status === 401 || status === 403) {
-        // Token expired or invalid - logout and redirect to login
-        useAuthStore.getState().logout()
-        window.location.href = '/login'
-      }
-      return Promise.reject(error)
-    }
-  )
-}
-
-// Default API instance with interceptor (optional for services to reuse)
+// ============================================================
+// Axios instance untuk seluruh panggilan API backend.
+// - baseURL: alamat backend
+// - withCredentials: true -> cookie refresh token ikut terkirim
+// ============================================================
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: "http://localhost:5000/api",
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
+});
 
-attachAuthInterceptor(api)
+// ------------------------------------------------------------
+// REQUEST INTERCEPTOR: tempel access token otomatis di tiap request
+// ------------------------------------------------------------
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ------------------------------------------------------------
+// RESPONSE INTERCEPTOR: kalau 401 (token expired/invalid),
+// bersihkan sesi lalu lempar ke halaman login.
+// ------------------------------------------------------------
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // token tidak valid lagi -> hapus sesi lokal
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
+      // hindari loop: jangan redirect kalau memang lagi di halaman login
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+
+// ============================================================
+// AUTH API
+// ============================================================
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  data: {
+    accessToken: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;   // student | company | company_staff | university | university_staff | admin
+      status: string;
+    };
+  };
+}
+
+export const authApi = {
+  login: async (email: string, password: string) => {
+    const res = await api.post<LoginResponse>("/auth/login", { email, password });
+    return res.data;
+  },
+  logout: async () => {
+    const res = await api.post("/auth/logout");
+    return res.data;
+  },
+  me: async () => {
+    const res = await api.get("/auth/me");
+    return res.data;
+  },
+  updateMe: async (payload: { name?: string; phone?: string; email?: string; password?: string }) => {
+    const res = await api.patch("/auth/me", payload);
+    return res.data?.data;
+  },
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    // nama field mengikuti changePasswordSchema di backend
+    const res = await api.patch("/auth/password", {
+      oldPassword: currentPassword,
+      newPassword,
+    });
+    return res.data;
+  },
+  // POST /auth/forgot-password -> kirim tautan pemulihan ke email
+  // (respons selalu generik, baik email terdaftar maupun tidak)
+  forgotPassword: async (email: string) => {
+    const res = await api.post("/auth/forgot-password", { email });
+    return res.data;
+  },
+  resetPassword: async (token: string, newPassword: string) => {
+    const res = await api.post("/auth/reset-password", { token, newPassword });
+    return res.data;
+  },
+  verifyRecoveryEmail: async (token: string) => {
+    const res = await api.post("/auth/recovery-email/verify", { token });
+    return res.data;
+  },
+};
+
+// ============================================================
+// Peta role -> halaman tujuan setelah login.
+// Sesuaikan path-nya dengan Router.tsx milik frontend.
+// ============================================================
+export const ROLE_HOME: Record<string, string> = {
+  student: "/student",
+  company: "/company",
+  company_staff: "/company-staff",
+  university: "/university",
+  university_staff: "/university-staff",
+  admin: "/admin",
+};
+

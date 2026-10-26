@@ -13,7 +13,7 @@ const SectionHeader = ({ title, action, description }: SectionHeaderProps) => {
         <h2 className={`${description ? 'text-3xl' : 'text-xl'} font-bold leading-tight text-[#050505]`}>
           {title}
         </h2>
-        {description ? <p className="mt-2 text-[14px] text-[#050505]">{description}</p> : null}
+        {description ? <p className="mt-2 text-[16px] text-[#050505]">{description}</p> : null}
       </div>
       {action}
     </div>

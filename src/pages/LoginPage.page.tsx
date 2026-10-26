@@ -1,136 +1,240 @@
-import { useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
-import { login } from '../services/auth.service'
+import { authApi, ROLE_HOME } from '../services/api.service'
+
+interface LoginForm {
+  email: string
+  password: string
+}
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const loginWithApi = useAuthStore((state) => state.loginWithApi)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const [form, setForm] = useState<LoginForm>({
+    email: '',
+    password: '',
+  })
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-	const [email, setEmail] = useState('')
-	const [password, setPassword] = useState('')
-	const [loading, setLoading] = useState(false)
-	const [error, setError] = useState<string | null>(null)
-	const { loginAsAdmin, loginAsUniversity, loginAsCompany, loginAsUniversityStaff, loginAsCompanyStaff, loginAsStudent, } = useAuthStore()
+  const [rememberMe, setRememberMe] = useState(false)
 
-	async function handleSubmit(e: React.FormEvent) {
-		e.preventDefault()
-		setError(null)
-		setLoading(true)
-		try {
-      const data = await login({ email, password });
+  const updateField = (field: keyof LoginForm, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }))
+    setError('')
+  }
+const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
 
-      // Get the exact role from the server response
-      const role = data.user?.role; 
+    const trimmedEmail = form.email.trim()
+    const trimmedPassword = form.password.trim()
 
-      // Extract the token
-      const token = data.accessToken 
-        || data.token 
-        || (data as any).jwt
-        || (data as any)?.data?.token
-        || (data as any)?.data?.accessToken
-        || null;
+    if (!trimmedEmail && !trimmedPassword) {
+      setError('Email dan kata sandi wajib diisi.')
+      return
+    }
+    if (!trimmedEmail) {
+      setError('Email wajib diisi sebelum masuk.')
+      return
+    }
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Format email tidak valid. Contoh: nama@email.com')
+      return
+    }
+    if (!trimmedPassword) {
+      setError('Kata sandi wajib diisi.')
+      return
+    }
 
-      if (!token) {
-        throw new Error('Token tidak ditemukan dalam respons');
-      }
+    if (trimmedPassword.length < 8) {
+      setError('Kata sandi minimal 8 karakter.')
+      return
+    }
 
-      // Check based on the role, call the appropriate login function and navigate to the corresponding dashboard
-      if (role === 'admin') {
-        loginAsAdmin(token);
-        navigate('/admin/dashboard');
-      } else if (role === 'university') {
-        loginAsUniversity(token);
-        navigate('/university/dashboard');
-      } else if (role === 'company') {
-        loginAsCompany(token);
-        navigate('/company/dashboard');
-      } else if (role === 'university_staff') {
-        loginAsUniversityStaff(token);
-        navigate('/university-staff/dashboard');
-      } else if (role === 'company_staff') {
-        loginAsCompanyStaff(token);
-        navigate('/company-staff/dashboard');
-      } else if (role === 'student') {
-        loginAsStudent(token);
-        navigate('/student/dashboard');
-      } else {
-        throw new Error(`Role tidak valid atau tidak dikenali: ${role}`);
-      }
-		} catch (err: any) {
-			const message = err?.message || err?.data?.message || 'Gagal masuk. Coba lagi.'
-			setError(message)
-		} finally {
-			setLoading(false)
-		}
-	}
+    setIsSubmitting(true)
+    try {
+      // panggil API login backend
+      const res = await authApi.login(trimmedEmail, trimmedPassword)
+      const { accessToken, user } = res.data
+
+      // simpan sesi (store + localStorage untuk interceptor)
+      loginWithApi(
+        {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role as Exclude<import('../store/auth.store').UserRole, null>,
+          status: user.status,
+        },
+        accessToken,
+      )
+
+      // redirect sesuai role
+      const target = ROLE_HOME[user.role] ?? '/landing'
+      navigate(target, { replace: true })
+    } catch (err: any) {
+      // tampilkan pesan dari backend (mis. "Email atau password salah", akun suspended)
+      const msg =
+        err?.response?.data?.message ??
+        'Gagal terhubung ke server. Pastikan backend berjalan.'
+      setError(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
-    <main className="min-h-screen bg-gray-200 px-5 py-10 text-[#111318]">
-      <section className="flex min-h-[calc(100vh-80px)] items-center justify-center">
-        <form
-          className="w-full max-w-100 rounded-[7px] bg-white px-6 py-6 shadow-xl sm:px-8"
-          onSubmit={handleSubmit}
-        >
-          <div className="mb-7">
-            <h1 className="text-[26px] font-semibold leading-tight tracking-normal">Welcome back!</h1>
-            <p className="mt-2 text-[15px] leading-none text-[#202329]">Login into your account</p>
-          </div>
-
-          <div className="space-y-3">
-            <label className="block text-[14px] font-semibold leading-none" htmlFor="email">
-              Email
-            </label>
-            <input
-              className="h-10 w-full rounded-[5px] border border-[#d8dce2] px-3 text-[14px] outline-none transition focus:border-[#0d6efd] focus:ring-2 focus:ring-[#0d6efd]/15"
-              id="email"
-              name="email"
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="email@example.com"
-              type="email"
-              value={email}
-              required
-            />
-
-            <label className="block text-[14px] font-semibold leading-none" htmlFor="password">
-              Password
-            </label>
-            <input
-              className="h-10 w-full rounded-[5px] border border-[#d8dce2] px-3 text-[14px] outline-none transition focus:border-[#0d6efd] focus:ring-2 focus:ring-[#0d6efd]/15"
-              id="password"
-              name="password"
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Password"
-              type="password"
-              value={password}
-              required
-            />
-          </div>
-
-          <div className="mt-6">
-            <button className="text-[13px] font-semibold text-[#006fff]" type="button">
-              Forgot password?
-            </button>
-          </div>
-
-          {error ? <p className="mt-4 text-[13px] font-medium text-[#c62828]">{error}</p> : null}
-
-          <button
-            className="mt-6 h-10 w-full rounded-[7px] bg-[#0d6efd] text-[14px] font-medium text-white transition hover:bg-[#075bd8] focus:outline-none focus:ring-2 focus:ring-[#0d6efd]/30 disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={loading}
-            type="submit"
+      <main className="min-h-screen bg-[#f6f8fb] px-4 py-8 sm:px-6 lg:px-8">
+        <section className="flex min-h-screen items-center justify-center">
+          <form
+            className="w-full max-w-[440px] rounded-[12px] bg-white p-6 sm:p-8"
+            onSubmit={handleSubmit}
+            noValidate
           >
-            {loading ? 'Continuing...' : 'Continue'}
-          </button>
+            {/* Header */}
+            <div className="mb-8 text-center">
+              <p className="text-[22px] font-medium text-[#666666] mb-4">Selamat Datang kembali!</p>
+              <div className="flex items-center justify-center mb-4">
+                <img
+                  src="/src/assets/login/logo.png"
+                  alt="Talentry Logo"
+                  className="h-16 w-auto object-contain"
+                />
+            </div>
+            <p className="text-[13px] text-[#666666] leading-relaxed">
+              Silakan masuk untuk melanjutkan perjalanan karir Anda.
+            </p>
+          </div>
 
-          <p className="mt-6 text-center text-[12px] text-[#17191d]">
-            Don&apos;t have an account?{' '}
-            <Link className="font-semibold text-[#006fff]" to="/register">
-              Sign up
+            {/* Error Message */}
+            {error ? (
+              <p className="mb-4 rounded-[6px] bg-red-50 px-3 py-2 text-[13px] font-medium text-[#c62828]">
+                {error}
+              </p>
+            ) : null}
+
+            {/* Email Field */}
+            <div className="mb-5">
+              <label className="block text-[13px] font-semibold text-[#1a1a1a] mb-3" htmlFor="email">
+                Alamat Email
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[16px]">
+                  <img
+                    src="/src/assets/login/email.png"
+                    alt="Email Icon"
+                    className="h-4 w-4 object-contain"
+                  />
+                </span>
+                <input
+                  className="h-11 w-full rounded-[8px] border border-[#e0e0e0] pl-10 pr-3 text-[14px] placeholder-[#999999] outline-none transition focus:border-[#0d6efd] focus:ring-2 focus:ring-[#0d6efd]/15"
+                  id="email"
+                  name="email"
+                  onChange={(event) => updateField('email', event.target.value)}
+                  placeholder="nama@Gmail.com"
+                  type="email"
+                  value={form.email}
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="mb-2">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-[13px] font-semibold text-[#1a1a1a]" htmlFor="password">
+                  Kata Sandi
+                </label>
+                <Link className="text-[12px] font-semibold text-[#006fff] hover:underline" to="/forgot-password">
+                  Lupa Sandi?
+                </Link>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[16px]">
+                  <img
+                    src="/src/assets/login/sandi.png"
+                    alt="Password Icon"
+                    className="h-4 w-4 object-contain"
+                  />
+                </span>
+                <input
+                  className="h-11 w-full rounded-[8px] border border-[#e0e0e0] pl-10 pr-10 text-[14px] placeholder-[#999999] outline-none transition focus:border-[#0d6efd] focus:ring-2 focus:ring-[#0d6efd]/15"
+                  id="password"
+                  name="password"
+                  onChange={(event) => updateField('password', event.target.value)}
+                  placeholder="••••••••"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                />
+                <button
+                  className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition flex items-center justify-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                  type="button"
+                >
+                  {}
+                  <img
+                    src={showPassword ? "/src/assets/login/eye-open.png" : "/src/assets/login/eye-close.png"}
+                    alt={showPassword ? "Sembunyikan Sandi" : "Tampilkan Sandi"}
+                    className="h-6 w-6 object-contain"
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="mb-3 flex items-center gap-2">
+              <input
+                checked={rememberMe}
+                className="h-4 w-4 cursor-pointer accent-[#0058BE]"
+                id="remember"
+                onChange={(e) => setRememberMe(e.target.checked)}
+                type="checkbox"
+              />
+              <label className="text-[12px] text-[#666666] cursor-pointer" htmlFor="remember">
+                Ingat saya untuk login berikutnya
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              className="mb-6 h-11 w-full rounded-[8px] bg-[#0f5ce0] text-[14px] font-semibold text-white transition hover:bg-[#0d4ebf] focus:outline-none focus:ring-2 focus:ring-[#0f5ce0]/30 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              type="submit"
+            >
+              {isSubmitting ? 'Memproses...' : 'Masuk Ke Akun'}
+            </button>
+
+            {/* Divider */}
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex-1 border-t border-[#e0e0e0]"></div>
+              <span className="text-[11px] font-semibold text-[#999999]">ATAU DAFTAR BARU</span>
+              <div className="flex-1 border-t border-[#e0e0e0]"></div>
+            </div>
+
+            {/* Company Login Option */}
+            <Link
+              className="mb-6 block rounded-[8px] border border-[#e0e0e0] p-4 text-center transition hover:bg-[#f5f5f5]"
+              to="/register"
+            >
+              <div className="mb-2 flex justify-center">
+                <img
+                  src="/src/assets/login/perusahaan.png"
+                  alt="Perusahaan Icon"
+                  className="h-8 w-8 object-contain"
+                />
+              </div>
+              <div className="text-[13px] font-semibold text-[#1a1a1a]">Perusahaan</div>
+              <div className="text-[11px] text-[#999999]">Find Talent</div>
             </Link>
-          </p>
-        </form>
-      </section>
-    </main>
+
+            {/* Footer Text */}
+            <p className="text-center text-[11px] text-[#999999] leading-relaxed">
+              Dengan masuk, Anda menyetujui Kebijakan Layanan dan Kebijakan Privasi kami.
+            </p>
+          </form>
+        </section>
+      </main>
   )
 }
 

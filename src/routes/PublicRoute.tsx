@@ -14,8 +14,10 @@ const PublicRoute = ({ children }: PublicRouteProps) => {
   if (role === 'admin') return <Navigate to="/admin" replace />
   if (role === 'university') return <Navigate to="/university" replace />
   if (role === 'company') return <Navigate to="/company" replace />
-  if (role === 'university_staff') return <Navigate to="/university-staff" replace />
-  if (role === 'company_staff') return <Navigate to="/company-staff" replace />
+  
+  // Buat pengembangan lanjutan
+  // if (role === 'university_staff') return <Navigate to="/university-staff" replace />
+  // if (role === 'company_staff') return <Navigate to="/company-staff" replace />
   if (role === 'student') return <Navigate to="/student" replace />
 
   return <Navigate to="/landing" replace />
